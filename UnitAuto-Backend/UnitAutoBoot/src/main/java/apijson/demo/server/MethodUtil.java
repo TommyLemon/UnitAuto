@@ -6,6 +6,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -138,78 +139,83 @@ public class MethodUtil {
 				throw new ClassNotFoundException("找不到 " + dot2Separator(pkgName) + "/" + clsName + " 对应的类！");
 			}
 
-			//new 出实例
+			boolean isStatic = req.getBooleanValue("static");
+
 			Object instance = null;
 
-			Map<String, Map<Object, Object>> pkgMap = INSTANCE_MAP.get(pkgName);
-			if (pkgMap == null) {
-				pkgMap = new HashMap<>();
-				INSTANCE_MAP.put(pkgName, pkgMap);
-			}
-			Map<Object, Object> clsMap = pkgMap.get(clsName);
-			if (clsMap == null) {
-				clsMap = new HashMap<>();
-				pkgMap.put(clsName, clsMap);
-			}
-
-			if (classArgs == null || classArgs.isEmpty()) {
-				instance = clsMap.get(null);
-			}
-			else { //通过构造方法
-				boolean exactContructor = false;  //指定某个构造方法，只要某一项 type 不为空就是
-				for (int i = 0; i < classArgs.size(); i++) {
-					JSONObject obj = classArgs.getJSONObject(i);
-					if (obj != null && StringUtil.isEmpty(obj.getString("type"), true) == false) {
-						exactContructor = true;
-						break;
-					}
+			if (isStatic == false) {  //new 出实例
+				Map<String, Map<Object, Object>> pkgMap = INSTANCE_MAP.get(pkgName);
+				if (pkgMap == null) {
+					pkgMap = new HashMap<>();
+					INSTANCE_MAP.put(pkgName, pkgMap);
+				}
+				Map<Object, Object> clsMap = pkgMap.get(clsName);
+				if (clsMap == null) {
+					clsMap = new HashMap<>();
+					pkgMap.put(clsName, clsMap);
 				}
 
-				Class<?>[] classArgTypes = new Class<?>[classArgs.size()];
-				Object[] classArgValues = new Object[classArgs.size()];
-				initTypesAndValues(classArgs, classArgTypes, classArgValues, exactContructor);
-
-				Object cttr;
-				if (exactContructor) {  //指定某个构造方法
-					cttr = classArgTypes;
-					instance = clsMap.get(cttr);
-
-					if (instance == null) {
-						Constructor<?> constructor = clazz.getConstructor(classArgTypes);
-						instance = constructor.newInstance(classArgs.toArray());//new Object[constructors[0].getParameterCount()]);
-					}
+				if (classArgs == null || classArgs.isEmpty()) {
+					instance = clsMap.get(null);
 				}
-				else {  //参数数量一致即可
-					cttr = classArgValues.length;
-					instance = clsMap.get(cttr);
+				else { //通过构造方法
+					boolean exactContructor = false;  //指定某个构造方法，只要某一项 type 不为空就是
+					for (int i = 0; i < classArgs.size(); i++) {
+						JSONObject obj = classArgs.getJSONObject(i);
+						if (obj != null && StringUtil.isEmpty(obj.getString("type"), true) == false) {
+							exactContructor = true;
+							break;
+						}
+					}
 
-					if (instance == null) {
-						Constructor<?>[] constructors = clazz.getConstructors();
-						if (constructors != null) {
-							for (int i = 0; i < constructors.length; i++) {
-								if (constructors[i] != null && constructors[i].getParameterCount() == classArgValues.length) {
-									try {
-										instance = constructors[i].newInstance(classArgValues);//new Object[constructors[0].getParameterCount()]);
-										break;
-									} catch (Exception e) {}
+					Class<?>[] classArgTypes = new Class<?>[classArgs.size()];
+					Object[] classArgValues = new Object[classArgs.size()];
+					initTypesAndValues(classArgs, classArgTypes, classArgValues, exactContructor);
+
+					Object cttr;
+					if (exactContructor) {  //指定某个构造方法
+						cttr = classArgTypes;
+						instance = clsMap.get(cttr);
+
+						if (instance == null) {
+							Constructor<?> constructor = clazz.getConstructor(classArgTypes);
+							instance = constructor.newInstance(classArgs.toArray());//new Object[constructors[0].getParameterCount()]);
+						}
+					}
+					else {  //参数数量一致即可
+						cttr = classArgValues.length;
+						instance = clsMap.get(cttr);
+
+						if (instance == null) {
+							Constructor<?>[] constructors = clazz.getConstructors();
+							if (constructors != null) {
+								for (int i = 0; i < constructors.length; i++) {
+									if (constructors[i] != null && constructors[i].getParameterCount() == classArgValues.length) {
+										try {
+											instance = constructors[i].newInstance(classArgValues);//new Object[constructors[0].getParameterCount()]);
+											break;
+										} catch (Exception e) {}
+									}
 								}
 							}
 						}
 					}
+
+					if (instance == null) { //通过默认方法
+						throw new NullPointerException("找不到 " + dot2Separator(pkgName) + "/" + clsName + " 以及 classArgs 对应的构造方法！");
+					}
+
+					clsMap.put(cttr, instance);
 				}
 
 				if (instance == null) { //通过默认方法
-					throw new NullPointerException("找不到 " + dot2Separator(pkgName) + "/" + clsName + " 以及 classArgs 对应的构造方法！");
+					instance = clazz.newInstance();//new Object[constructors[0].getParameterCount()]);
+					clsMap.put(null, instance);
 				}
 
-				clsMap.put(cttr, instance);
 			}
 
-			if (instance == null) { //通过默认方法
-				instance = clazz.newInstance();//new Object[constructors[0].getParameterCount()]);
-				clsMap.put(null, instance);
-			}
-
+			//method argument, types and values
 			Class<?>[] types = null;
 			Object[] args = null;
 
@@ -220,7 +226,6 @@ public class MethodUtil {
 			}
 
 			//TODO method 也缓存起来
-
 			result = DemoParser.newSuccessResult();
 			result.put("invoke", clazz.getDeclaredMethod(methodName, types).invoke(instance, args));
 		}
@@ -306,8 +311,11 @@ public class MethodUtil {
 
 					JSONArray methodList = null;
 					if (allMethod == false && argTypes != null && argTypes.length > 0) {
-						methodList = new JSONArray(1);
-						methodList.add(parseMethodObject(cls.getDeclaredMethod(methodName, argTypes)));
+						Object mObj = parseMethodObject(cls.getDeclaredMethod(methodName, argTypes));
+						if (mObj != null) {
+							methodList = new JSONArray(1);
+							methodList.add(mObj);
+						}
 					}
 					else {
 						Method[] methods = cls.getDeclaredMethods();
@@ -391,11 +399,26 @@ public class MethodUtil {
 		if (m == null) {
 			return null;
 		}
+		//排除 private 和 protected 等访问不到的方法，以后可以通过 IDE 插件为这些方法新增代理方法
+		/*
+		  public Type $_delegate_$method(Type0 arg0, Type1 arg1...) {
+		    Type returnVal = method(arg0, arg1...)
+		    if (returnVal instanceof Void) {
+		      return new Object[]{ watchVar0, watchVar1... }  //FIXME void 方法需要指定要观察的变量
+		    }
+		    return returnVal;
+		  }
+		 */
+		int mod = m.getModifiers();
+		if (Modifier.isPrivate(mod) || Modifier.isProtected(mod)) {
+			return null;
+		}
 
 		JSONObject obj = new JSONObject(true);
 		obj.put("name", m.getName());
 		obj.put("parameterTypeList", trimTypes(m.getGenericParameterTypes()));
 		obj.put("returnType", trimType(m.getGenericReturnType()));
+		obj.put("static", Modifier.isStatic(m.getModifiers()));
 		obj.put("exceptionTypeList", trimTypes(m.getGenericExceptionTypes()));
 		return obj;
 	}
@@ -424,7 +447,7 @@ public class MethodUtil {
 				return e.getKey();
 			}
 		}
-		
+
 		String child = "";
 		int index;
 		do {
@@ -436,7 +459,7 @@ public class MethodUtil {
 			name = name.substring(0, index);
 		}
 		while (index >= 0);
-		
+
 		if (name.startsWith("java.lang.")) {
 			name = name.substring("java.lang.".length());
 		}
@@ -570,7 +593,7 @@ public class MethodUtil {
 							try {
 								Class<?> clazz = loader.loadClass(packageOrFileName.replaceAll(File.separator, "\\.") + "." + name);
 								list.add(clazz);
-								
+
 								if (allName == false) {
 									break;
 								}
@@ -580,7 +603,7 @@ public class MethodUtil {
 								}
 								e.printStackTrace();
 							}
-							
+
 						}
 					}
 				}

@@ -263,6 +263,9 @@ var JSONResponse = {
   },
 
 
+
+
+  COMPARE_ERROR: -2,
   COMPARE_NO_STANDARD: -1,
   COMPARE_EQUAL: 0,
   COMPARE_KEY_MORE: 1,

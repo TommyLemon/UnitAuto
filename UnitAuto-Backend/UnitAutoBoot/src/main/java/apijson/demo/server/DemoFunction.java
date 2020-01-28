@@ -705,12 +705,17 @@ public class DemoFunction extends RemoteFunction {
 		}
 		
 		req = "{";
+		Boolean isStatic = request.getBoolean("static");
 		String methodArgs = request.getString("methodArgs");
 		String classArgs = request.getString("classArgs");
 
 		boolean comma = false;
+		if (isStatic != null && isStatic) {
+			req += "\n    \"static\": " + true;
+			comma = true;
+		}
 		if (StringUtil.isEmpty(methodArgs, true) == false) {
-			req += "\n    \"methodArgs\": " + methodArgs;
+			req += (comma ? "," : "") + "\n    \"methodArgs\": " + methodArgs;
 			comma = true;
 		} 
 		if (StringUtil.isEmpty(classArgs, true) == false) {

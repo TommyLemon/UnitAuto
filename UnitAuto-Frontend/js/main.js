@@ -1494,6 +1494,7 @@
               'classArgs': classArgs,
               'methodArgs': App.getArgs4Sync(methodItem.parameterTypeList),
               'type': methodItem.returnType == null ? null : methodItem.returnType.replace(/[.]/g, '/'),
+              'static': methodItem.static ? 1 : 0,
               'exceptions': methodItem.exceptionTypeList == null ? null : methodItem.exceptionTypeList.replace(/[.]/g, '/').join(),
               'detail': methodItem.name
             },
@@ -1518,6 +1519,10 @@
               App.isSyncing = false
               App.showTestCase(false, false)
               App.remotes = []
+              var branch = vUrl.value
+              vUrl.value = StringUtil.get(App.host) + branch
+              App.host = ''
+              App.showUrl(false, branch)
               App.showTestCase(true, false)
             }
 
@@ -1692,18 +1697,20 @@
 
         if (show) {
           var testCases = App.testCases
-          if (testCases.length > 0) {
+          var allCount = testCases == null ? 0 : testCases.length
+          if (allCount > 0) {
             var accountIndex = (App.accounts[App.currentAccountIndex] || {}).isLoggedIn ? App.currentAccountIndex : -1
             App.currentAccountIndex = accountIndex  //解决 onTestResponse 用 -1 存进去， handleTest 用 currentAccountIndex 取出来为空
 
-            var tests = App.tests[String(accountIndex)] || []
-            if (tests.length > 0) {
-              for (var i = 0; i <= testCases.length; i++) {
-                if (testCases[i] == null) {
+            var tests = App.tests[String(accountIndex)] || {}
+            if (tests != null && $.isEmptyObject(tests) != true) {
+              for (var i = 0; i < allCount; i++) {
+                var item = testCases[i]
+                if (item == null) {
                   continue
                 }
-                var document = testCases[i].Method || {}
-                App.compareResponse(0, i, testCases[i], ((tests[document.id] || {})[0] || {}).response || {}, false, accountIndex, true)
+                var d = item.Document || {}
+                App.compareResponse(allCount, i, item, (tests[d.id] || {})[0], false, accountIndex, true)
               }
             }
             return;
@@ -2371,7 +2378,8 @@
           "class": req.class || App.getClass(url),
           "classArgs": req.classArgs,
           "method": req.method || App.getMethod(url),
-          "methodArgs": req.methodArgs
+          "methodArgs": req.methodArgs,
+          "static": req.static
         }
 
         vOutput.value = "requesting... \nURL = " + url
@@ -2433,7 +2441,9 @@
               else {
                 // alert('request App.accounts[App.currentAccountIndex].isLoggedIn = false ')
 
-                App.accounts[App.currentAccountIndex].isLoggedIn = false
+                if (App.accounts[App.currentAccountIndex] != null) {
+                  App.accounts[App.currentAccountIndex].isLoggedIn = false
+                }
               }
             }
 
@@ -2571,7 +2581,7 @@
        * @param d
        **/
       setDoc: function (d) {
-        if (d == null || d == '') {
+        if (d == null) { //解决死循环 || d == '') {
           return false;
         }
         doc = d;
@@ -2917,7 +2927,7 @@
                 App.log('test  App.request >> } catch (e) {\n' + e.message)
               }
 
-              App.compareResponse(allCount, index, item, res.data, true)
+              App.compareResponse(allCount, index, item, res.data, true, App.currentAccountIndex, false, err)
             })
           }
         }
@@ -3136,7 +3146,7 @@
           var isCrossDone = accountIndex >= accounts.length
           this.crossProcess = isCrossDone ? (isCrossEnabled ? '交叉账号:已开启' : '交叉账号:已关闭') : ('交叉账号: ' + (accountIndex + 1) + '/' + accounts.length)
           if (isCrossDone) {
-            alert('test  isCrossDone')
+            alert('已完成账号交叉测试: 退出登录状态 和 每个账号登录状态')
             return
           }
         }
@@ -3166,7 +3176,7 @@
         }
 
         if (isCrossEnabled) {
-          if (accountIndex < 0) {  //退出登录已登录的账号
+          if (accountIndex < 0 && accounts[this.currentAccountIndex] != null) {  //退出登录已登录的账号
             accounts[this.currentAccountIndex].isLoggedIn = true
           }
           var index = accountIndex < 0 ? this.currentAccountIndex : accountIndex
@@ -3181,7 +3191,7 @@
       },
 
       startTest: function (list, allCount, isRandom, accountIndex) {
-        App.testProcess = '正在测试: ' + 0 + '/' + allCount
+        this.testProcess = '正在测试: ' + 0 + '/' + allCount
 
         for (var i = 0; i < allCount; i++) {
           const item = list[i]
@@ -3208,7 +3218,8 @@
               "class": document.class,
               "classArgs": App.getRequest(document.classArgs, []),
               "method": document.method,
-              "methodArgs": App.getRequest(document.methodArgs, [])
+              "methodArgs": App.getRequest(document.methodArgs, []),
+              "static": document.static
             }
           }
           else {
@@ -3239,23 +3250,32 @@
               App.log('test  App.request >> } catch (e) {\n' + e.message)
             }
 
-            App.compareResponse(allCount, index, item, res.data, isRandom, accountIndex)
+            App.compareResponse(allCount, index, item, res.data, isRandom, accountIndex, false, err)
           })
         }
       },
 
-      compareResponse: function (allCount, index, item, response, isRandom, accountIndex, justRecoverTest) {
+      compareResponse: function (allCount, index, item, response, isRandom, accountIndex, justRecoverTest, err) {
         var it = item || {} //请求异步
         var d = (isRandom ? App.currentRemoteItem.Method : it.Method) || {} //请求异步
         var r = isRandom ? it.Random : null //请求异步
         var tr = it.TestRecord || {} //请求异步
 
-        var releaseResponse = App.removeDebugInfo(response)
 
+      if (err != null) {
+          tr.compare = {
+            code: JSONResponse.COMPARE_ERROR, //请求出错
+            msg: '请求出错！',
+            path: err.message + '\n\n'
+          }
+        }
+        else {
         var standardKey = App.isMLEnabled != true ? 'response' : 'standard'
         var standard = StringUtil.isEmpty(tr[standardKey], true) ? null : JSON.parse(tr[standardKey])
-        tr.compare = JSONResponse.compareResponse(standard, releaseResponse, '', App.isMLEnabled) || {}
-        App.onTestResponse(allCount, index, it, d, r, tr, response, tr.compare || {}, isRandom, accountIndex, justRecoverTest);
+          tr.compare = JSONResponse.compareResponse(standard, App.removeDebugInfo(response), '', App.isMLEnabled) || {}
+        }
+	
+	App.onTestResponse(allCount, index, it, d, r, tr, response, tr.compare || {}, isRandom, accountIndex, justRecoverTest);
       },
 
       onTestResponse: function(allCount, index, it, d, r, tr, response, cmp, isRandom, accountIndex, justRecoverTest) {
@@ -3264,7 +3284,11 @@
         it.compareType = tr.compare.code;
         it.hintMessage = tr.compare.path + '  ' + tr.compare.msg;
         switch (it.compareType) {
-          case JSONResponse.COMPARE_NO_STANDARD:
+          case JSONResponse.COMPARE_ERROR:
+            it.compareColor = 'red'
+            it.compareMessage = '请求出错！'
+            break;
+	  case JSONResponse.COMPARE_NO_STANDARD:
             it.compareColor = 'white'
             it.compareMessage = '确认正确后点击[对的，纠正]'
             break;
@@ -3304,32 +3328,32 @@
         }
 
         doneCount ++
-        App.testProcess = doneCount >= allCount ? (App.isMLEnabled ? '机器学习:已开启' : '机器学习:已关闭') : '正在测试: ' + doneCount + '/' + allCount
+        this.testProcess = doneCount >= allCount ? (App.isMLEnabled ? '机器学习:已开启' : '机器学习:已关闭') : '正在测试: ' + doneCount + '/' + allCount
 
-        App.log('doneCount = ' + doneCount + '; d.name = ' + (isRandom ? r.name : d.method) + '; tr.compareType = ' + tr.compareType)
+        this.log('doneCount = ' + doneCount + '; d.name = ' + (isRandom ? r.name : d.name) + '; tr.compareType = ' + tr.compareType)
 
         var documentId = isRandom ? r.documentId : d.id
-        if (App.tests == null) {
-          App.tests = {}
+        if (this.tests == null) {
+          this.tests = {}
         }
-        if (App.tests[String(accountIndex)] == null) {
-          App.tests[String(accountIndex)] = {}
+        if (this.tests[String(accountIndex)] == null) {
+          this.tests[String(accountIndex)] = {}
         }
 
-        var tests = App.tests[String(accountIndex)] || {}
+        var tests = this.tests[String(accountIndex)] || {}
         var t = tests[documentId]
         if (t == null) {
           t = tests[documentId] = {}
         }
         t[isRandom ? r.id : 0] = response
 
-        App.tests[String(accountIndex)] = tests
-        console.log('tests = ' + JSON.stringify(tests, null, '    '))
-        // App.showTestCase(true)
+        this.tests[String(accountIndex)] = tests
+        this.log('tests = ' + JSON.stringify(tests, null, '    '))
+        // this.showTestCase(true)
 
-        if (doneCount >= allCount && App.isCrossEnabled) {
+        if (doneCount >= allCount && App.isCrossEnabled && isRandom != true) {
           // alert('onTestResponse  accountIndex = ' + accountIndex)
-          App.test(false, accountIndex + 1)
+          this.test(false, accountIndex + 1)
         }
       },
 
@@ -3492,7 +3516,7 @@
               var data = res.data || {}
               if (data.code != 200) {
                 if (isML) {
-                  alert('机器学习更新标准 异常：\n' + data.msg)
+                  alert('机器学习更新标准 异常：\n' + (data == null ? null : data.msg))
                 }
               }
               else {
