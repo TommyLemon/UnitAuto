@@ -285,6 +285,14 @@ var JSONResponse = {
    4-code/值类型 改变，红色；
    */
   compareResponse: function(target, real, folder, isMachineLearning) {
+    //解决了弹窗提示机器学习更新标准异常，但导致所有项测试结果都变成状态码 code 改变
+    // if (real == null) {
+    //   return {
+    //     code: JSONResponse.COMPARE_ERROR, //未上传对比标准
+    //     msg: 'response 为 null！',
+    //     path: folder == null ? '' : folder
+    //   };
+    // }
     if (target == null || target.code == null) {
       return {
         code: JSONResponse.COMPARE_NO_STANDARD, //未上传对比标准
@@ -292,7 +300,7 @@ var JSONResponse = {
         path: folder == null ? '' : folder
       };
     }
-    if (target.code != real.code) {
+    if (target.code != real.code) {  //解决了弹窗提示机器学习更新标准异常，但导致所有项测试结果都变成状态码 code 改变    if (real == null || target.code != real.code) {
       return {
         code: JSONResponse.COMPARE_CODE_CHANGE,
         msg: '状态码 code 改变！',

@@ -1598,7 +1598,12 @@
 
       onClickAccount: function (index, item, callback) {
         if (this.currentAccountIndex == index) {
-          if (item != null) {
+          if (item == null) {
+            if (callback != null) {
+              callback(false)
+            }
+          }
+          else {
             this.setRememberLogin(item.remember)
             vAccount.value = item.phone
             vPassword.value = item.password
@@ -1626,7 +1631,12 @@
 
                 var data = res.data || {}
                 var user = data.code == 200 ? data.user : null
-                if (user != null) {
+                if (user == null) {
+                  if (callback != null) {
+                    callback(false)
+                  }
+                }
+                else {
                   item.name = user.name
                   item.remember = data.remember
 
@@ -1659,6 +1669,11 @@
         if (item != null) {
           item.isLoggedIn = false
           this.onClickAccount(index, item, callback)
+        }
+        else {
+          if (callback != null) {
+            callback(false)
+          }
         }
       },
 
@@ -1840,10 +1855,10 @@
       saveCache: function (url, key, value) {
         var cache = this.getCache(url);
         cache[key] = value
-        localStorage.setItem(url, JSON.stringify(cache))
+        localStorage.setItem('UnitAuto:' + url, JSON.stringify(cache))
       },
       getCache: function (url, key) {
-        var cache = localStorage.getItem(url)
+        var cache = localStorage.getItem('UnitAuto:' + url)
         try {
           cache = JSON.parse(cache)
         } catch(e) {
@@ -1940,6 +1955,9 @@
               //保存User到缓存
               App.saveCache(App.server, 'User', user)
 
+              if (App.currentAccountIndex == null || App.currentAccountIndex < 0) {
+                App.currentAccountIndex = 0
+              }
               var item = App.accounts[App.currentAccountIndex]
               item.isLoggedIn = false
               App.onClickAccount(App.currentAccountIndex, item) //自动登录测试账号
@@ -3516,7 +3534,7 @@
               var data = res.data || {}
               if (data.code != 200) {
                 if (isML) {
-                  alert('机器学习更新标准 异常：\n' + (data == null ? null : data.msg))
+                  alert('机器学习更新标准 异常：\n' + data.msg)
                 }
               }
               else {
