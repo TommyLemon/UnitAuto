@@ -953,7 +953,7 @@
                 alert('多个类型用 , 隔开，可填类型:\nPARAM(对应GET),FORM(对应POST),JSON(对应POST)')
               }
               else if (index == 10) {
-                vInput.value = '{'
+                vInput.value = App.getCache(App.project, 'request4MethodList') || '{'
                   + '\n    "sync": false,  //同步到数据库'
                   + '\n    "package": "' + App.getPackage() + '",  //包名，不填默认全部'
                   + '\n    "class": "' + App.getClass() + '"  //类名，不填默认全部'
@@ -1425,6 +1425,7 @@
             }
             break
           case 10:
+            App.saveCache(App.project, 'request4MethodList', vInput.value)
             App.request(false, REQUEST_TYPE_JSON, App.project + App.exTxt.name, App.getRequest(vInput.value), App.getHeader(vHeader.value), function (url, res, err) {
               if (App.isSyncing) {
                 alert('正在同步，请等待完成')
