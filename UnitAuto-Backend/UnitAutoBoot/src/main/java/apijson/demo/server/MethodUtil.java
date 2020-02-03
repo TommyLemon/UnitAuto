@@ -227,7 +227,8 @@ public class MethodUtil {
 
 			//TODO method 也缓存起来
 			result = DemoParser.newSuccessResult();
-			result.put("invoke", clazz.getDeclaredMethod(methodName, types).invoke(instance, args));
+			result.put("invoke", clazz.getMethod(methodName, types).invoke(instance, args));
+			result.put("watch", instance);
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -311,14 +312,14 @@ public class MethodUtil {
 
 					JSONArray methodList = null;
 					if (allMethod == false && argTypes != null && argTypes.length > 0) {
-						Object mObj = parseMethodObject(cls.getDeclaredMethod(methodName, argTypes));
+						Object mObj = parseMethodObject(cls.getMethod(methodName, argTypes));
 						if (mObj != null) {
 							methodList = new JSONArray(1);
 							methodList.add(mObj);
 						}
 					}
 					else {
-						Method[] methods = cls.getDeclaredMethods();
+						Method[] methods = cls.getMethods();
 						if (methods != null && methods.length > 0) {
 							methodList = new JSONArray(methods.length);
 
