@@ -155,64 +155,57 @@ public class MethodUtil {
 					pkgMap.put(clsName, clsMap);
 				}
 
-				if (classArgs == null || classArgs.isEmpty()) {
-					instance = clsMap.get(null);
-				}
-				else { //通过构造方法
-					boolean exactContructor = false;  //指定某个构造方法，只要某一项 type 不为空就是
-					for (int i = 0; i < classArgs.size(); i++) {
-						JSONObject obj = classArgs.getJSONObject(i);
-						if (obj != null && StringUtil.isEmpty(obj.getString("type"), true) == false) {
-							exactContructor = true;
-							break;
-						}
+				String key = classArgs == null || classArgs.isEmpty() ? "" : classArgs.toJSONString();
+				instance = clsMap.get(key);  //必须精确对应值，否则去除缓存的和需要的很可能不符
+
+				if (instance == null) {
+					if (classArgs == null || classArgs.isEmpty()) {
+						instance = clazz.newInstance();
 					}
-
-					Class<?>[] classArgTypes = new Class<?>[classArgs.size()];
-					Object[] classArgValues = new Object[classArgs.size()];
-					initTypesAndValues(classArgs, classArgTypes, classArgValues, exactContructor);
-
-					Object cttr;
-					if (exactContructor) {  //指定某个构造方法
-						cttr = classArgTypes;
-						instance = clsMap.get(cttr);
-
-						if (instance == null) {
-							Constructor<?> constructor = clazz.getConstructor(classArgTypes);
-							instance = constructor.newInstance(classArgs.toArray());//new Object[constructors[0].getParameterCount()]);
+					else { //通过构造方法
+						boolean exactContructor = false;  //指定某个构造方法，只要某一项 type 不为空就是
+						for (int i = 0; i < classArgs.size(); i++) {
+							JSONObject obj = classArgs.getJSONObject(i);
+							if (obj != null && StringUtil.isEmpty(obj.getString("type"), true) == false) {
+								exactContructor = true;
+								break;
+							}
 						}
-					}
-					else {  //参数数量一致即可
-						cttr = classArgValues.length;
-						instance = clsMap.get(cttr);
 
-						if (instance == null) {
-							Constructor<?>[] constructors = clazz.getConstructors();
-							if (constructors != null) {
-								for (int i = 0; i < constructors.length; i++) {
-									if (constructors[i] != null && constructors[i].getParameterCount() == classArgValues.length) {
-										try {
-											instance = constructors[i].newInstance(classArgValues);//new Object[constructors[0].getParameterCount()]);
-											break;
-										} catch (Exception e) {}
+						Class<?>[] classArgTypes = new Class<?>[classArgs.size()];
+						Object[] classArgValues = new Object[classArgs.size()];
+						initTypesAndValues(classArgs, classArgTypes, classArgValues, exactContructor);
+
+						if (exactContructor) {  //指定某个构造方法
+							if (instance == null) {
+								Constructor<?> constructor = clazz.getConstructor(classArgTypes);
+								instance = constructor.newInstance(classArgs.toArray());
+							}
+						}
+						else {  //尝试参数数量一致的构造方法
+							if (instance == null) {
+								Constructor<?>[] constructors = clazz.getConstructors();
+								if (constructors != null) {
+									for (int i = 0; i < constructors.length; i++) {
+										if (constructors[i] != null && constructors[i].getParameterCount() == classArgValues.length) {
+											try {
+												instance = constructors[i].newInstance(classArgValues);
+												break;
+											} catch (Exception e) {}
+										}
 									}
 								}
 							}
 						}
-					}
 
-					if (instance == null) { //通过默认方法
-						throw new NullPointerException("找不到 " + dot2Separator(pkgName) + "/" + clsName + " 以及 classArgs 对应的构造方法！");
 					}
-
-					clsMap.put(cttr, instance);
 				}
 
 				if (instance == null) { //通过默认方法
-					instance = clazz.newInstance();//new Object[constructors[0].getParameterCount()]);
-					clsMap.put(null, instance);
+					throw new NullPointerException("找不到 " + dot2Separator(pkgName) + "/" + clsName + " 以及 classArgs 对应的构造方法！");
 				}
 
+				clsMap.put(key, instance);
 			}
 
 			//method argument, types and values
@@ -522,8 +515,21 @@ public class MethodUtil {
 		//根目录 Objects.requireNonNull(packageName);
 		Objects.requireNonNull(className);
 
-		List<Class<?>> list = findClassList(packageOrFileName, className, ignoreError);
-		return list == null || list.isEmpty() ? null : list.get(0);
+		//FIXME 这个方法在 jar 包里获取不到 class，主要是 ClassLoader.getResource(packageOrFileName) 取出来为 null，试了多种方法都没解决
+		try {
+			List<Class<?>> list = findClassList(packageOrFileName, className, ignoreError);
+			Class<?> cls = list == null || list.isEmpty() ? null : list.get(0);
+			if (cls != null) {
+				return cls;
+			}
+		} catch(Exception e) { }
+
+		int index = className.indexOf("<");
+		if (index >= 0) {
+			className = className.substring(0, index);
+		}
+		//这个方法保证在 jar 包里能正常执行
+		return Class.forName(StringUtil.isEmpty(packageOrFileName, true) ? className : packageOrFileName.replaceAll("/", ".") + "." + className);
 	}
 
 	/**
@@ -536,6 +542,11 @@ public class MethodUtil {
 	 */
 	public static List<Class<?>> findClassList(String packageOrFileName, String className, boolean ignoreError) throws ClassNotFoundException {
 		List<Class<?>> list = new ArrayList<>();
+
+		int index = className.indexOf("<");
+		if (index >= 0) {
+			className = className.substring(0, index);
+		}		
 
 		boolean allPackage = StringUtil.isEmpty(packageOrFileName, true);
 		boolean allName = StringUtil.isEmpty(className, true);
@@ -585,9 +596,12 @@ public class MethodUtil {
 					}
 				}
 				else {  //如果是class文件
-					String name = f.getName();
+					String name = StringUtil.getTrimedString(f.getName());
 					if (name != null && name.endsWith(".class")) {
 						name = name.substring(0, name.length() - ".class".length());
+						if (name.isEmpty() || name.equals("package-info") || name.contains("$")) {
+							continue;
+						}
 
 						if (allName || className.equals(name)) {
 							//反射出实例
