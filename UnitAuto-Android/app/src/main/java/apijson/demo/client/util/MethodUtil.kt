@@ -226,7 +226,8 @@ object MethodUtil {
 
             //TODO method 也缓存起来
             result = CALLBACK.newSuccessResult()
-            result["invoke"] = clazz.getMethod(methodName, *types!!).invoke(instance, *args!!)
+            val m = if (types == null || types.isEmpty()) clazz.getMethod(methodName) else clazz.getMethod(methodName, *types!!)
+            result["invoke"] = if (args == null || args.isEmpty()) m.invoke(instance) else m.invoke(instance, *args!!)
             result["watch"] = instance
         } catch (e: Exception) {
             e.printStackTrace()
