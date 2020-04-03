@@ -18,8 +18,6 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 
-import javax.validation.constraints.NotNull;
-
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
@@ -32,6 +30,9 @@ public class MethodUtil {
 		JSONObject newErrorResult(Exception e);
 	}
 
+	public static String KEY_CODE = "code";
+	public static String KEY_MSG = "msg";
+
 	public static int CODE_SUCCESS = 200;
 	public static int CODE_SERVER_ERROR = 500;
 	public static String MSG_SUCCESS = "success";
@@ -40,16 +41,16 @@ public class MethodUtil {
 		@Override 
 		public JSONObject newSuccessResult() {
 			JSONObject result = new JSONObject(true);
-			result.put("code", CODE_SUCCESS);
-			result.put("msg", MSG_SUCCESS);
+			result.put(KEY_CODE, CODE_SUCCESS);
+			result.put(KEY_MSG, MSG_SUCCESS);
 			return result;
 		}
 
 		@Override 
 		public JSONObject newErrorResult(Exception e) {
 			JSONObject result = new JSONObject(true);
-			result.put("code", CODE_SERVER_ERROR);
-			result.put("msg", e.getMessage());
+			result.put(KEY_CODE, CODE_SERVER_ERROR);
+			result.put(KEY_MSG, e.getMessage());
 			return result;
 		}
 	};
@@ -97,9 +98,64 @@ public class MethodUtil {
 		CLASS_MAP.put(Set.class.getSimpleName(), Set.class);//不允许指定<T>
 		CLASS_MAP.put(HashSet.class.getSimpleName(), HashSet.class);//不允许指定<T>
 
-		CLASS_MAP.put(com.alibaba.fastjson.JSON.class.getSimpleName(), com.alibaba.fastjson.JSON.class);//必须有，Map中没有getLongValue等方法
+		CLASS_MAP.put(JSON.class.getSimpleName(), JSON.class);//必须有，Map中没有getLongValue等方法
 		CLASS_MAP.put(JSONObject.class.getSimpleName(), JSONObject.class);//必须有，Map中没有getLongValue等方法
 		CLASS_MAP.put(JSONArray.class.getSimpleName(), JSONArray.class);//必须有，Collection中没有getJSONObject等方法
+	}
+
+
+
+	/**查方法列表
+	 * @param request : {
+		    "sync": true,  //同步到数据库
+		    "package": "apijson.demo.server",
+		    "class": "DemoFunction",
+		    "method": "plus",
+		    "types": ["Integer", "String", "com.alibaba.fastjson.JSONObject"]
+		    //不返回的话，这个接口没意义		    "return": true,  //返回 class list，方便调试
+		}
+	 * @return
+	 */
+	public static JSONObject listMethod(String request) {
+		JSONObject result;
+
+		try {
+			JSONObject req = JSON.parseObject(request);
+			if (req  == null) {
+				req = new JSONObject(true);
+			}
+			boolean sync = req.getBooleanValue("sync");
+			//			boolean returnList = req.getBooleanValue("return");
+			String pkgName = req.getString("package");
+			String clsName = req.getString("class");
+			String methodName = req.getString("method");
+			JSONArray methodArgTypes = null;
+
+			boolean allMethod = isEmpty(methodName, true);
+
+			Class<?>[] argTypes = null;
+			if (allMethod == false) {
+				methodArgTypes = req.getJSONArray("types");
+				if (methodArgTypes != null && methodArgTypes.isEmpty() == false) {
+					argTypes = new Class<?>[methodArgTypes.size()];
+
+					for (int i = 0; i < methodArgTypes.size(); i++) {
+						argTypes[i] = getType(methodArgTypes.getString(i), null, true);
+					}
+				}
+			}
+			
+			JSONArray list = getMethodListGroupByClass(pkgName, clsName, methodName, argTypes);
+			result = CALLBACK.newSuccessResult();
+			//			if (returnList) {
+			result.put("classList", list);  //序列化 Class	只能拿到 name		result.put("Class[]", JSON.parseArray(JSON.toJSONString(classlist)));
+			//			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			result = CALLBACK.newErrorResult(e);
+		}
+
+		return result;
 	}
 
 
@@ -186,7 +242,7 @@ public class MethodUtil {
 	}
 	public static JSONObject invokeMethod(JSONObject req, Object instance) {
 		if (req == null) {
-			req = new JSONObject();
+			req = new JSONObject(true);
 		}
 		String pkgName = req.getString("package");
 		String clsName = req.getString("class");
@@ -194,98 +250,12 @@ public class MethodUtil {
 
 		JSONObject result;
 		try {
-			Objects.requireNonNull(pkgName);
-			Objects.requireNonNull(clsName);
-			Objects.requireNonNull(methodName);
-
-			JSONArray classArgs = req.getJSONArray("classArgs");
-			JSONArray methodArgs = req.getJSONArray("methodArgs");
-
-			Class<?> clazz = findClass(pkgName, clsName, false);
-			if (clazz == null) {
-				throw new ClassNotFoundException("找不到 " + dot2Separator(pkgName) + "/" + clsName + " 对应的类！");
-			}
-
 			boolean isStatic = req.getBooleanValue("static");
-
-			if (isStatic == false && instance == null) {  //new 出实例
-				Map<String, Map<Object, Object>> pkgMap = INSTANCE_MAP.get(pkgName);
-				if (pkgMap == null) {
-					pkgMap = new HashMap<>();
-					INSTANCE_MAP.put(pkgName, pkgMap);
-				}
-				Map<Object, Object> clsMap = pkgMap.get(clsName);
-				if (clsMap == null) {
-					clsMap = new HashMap<>();
-					pkgMap.put(clsName, clsMap);
-				}
-
-				String key = classArgs == null || classArgs.isEmpty() ? "" : classArgs.toJSONString();
-				instance = clsMap.get(key);  //必须精确对应值，否则去除缓存的和需要的很可能不符
-
-				if (instance == null) {
-					if (classArgs == null || classArgs.isEmpty()) {
-						instance = clazz.newInstance();
-					}
-					else { //通过构造方法
-						boolean exactContructor = false;  //指定某个构造方法，只要某一项 type 不为空就是
-						for (int i = 0; i < classArgs.size(); i++) {
-							JSONObject obj = classArgs.getJSONObject(i);
-							if (obj != null && isEmpty(obj.getString("type"), true) == false) {
-								exactContructor = true;
-								break;
-							}
-						}
-
-						Class<?>[] classArgTypes = new Class<?>[classArgs.size()];
-						Object[] classArgValues = new Object[classArgs.size()];
-						initTypesAndValues(classArgs, classArgTypes, classArgValues, exactContructor);
-
-						if (exactContructor) {  //指定某个构造方法
-							if (instance == null) {
-								Constructor<?> constructor = clazz.getConstructor(classArgTypes);
-								instance = constructor.newInstance(classArgs.toArray());
-							}
-						}
-						else {  //尝试参数数量一致的构造方法
-							if (instance == null) {
-								Constructor<?>[] constructors = clazz.getConstructors();
-								if (constructors != null) {
-									for (int i = 0; i < constructors.length; i++) {
-										if (constructors[i] != null && constructors[i].getParameterCount() == classArgValues.length) {
-											try {
-												instance = constructors[i].newInstance(classArgValues);
-												break;
-											} catch (Exception e) {}
-										}
-									}
-								}
-							}
-						}
-
-					}
-				}
-
-				if (instance == null) { //通过默认方法
-					throw new NullPointerException("找不到 " + dot2Separator(pkgName) + "/" + clsName + " 以及 classArgs 对应的构造方法！");
-				}
-
-				clsMap.put(key, instance);
-			}
-
-			//method argument, types and values
-			Class<?>[] types = null;
-			Object[] args = null;
-
-			if (methodArgs != null && methodArgs.isEmpty() == false) {
-				types = new Class<?>[methodArgs.size()];
-				args = new Object[methodArgs.size()];
-				initTypesAndValues(methodArgs, types, args, true);
-			}
-
+			List<Argument> classArgs = JSON.parseArray(req.getString("classArgs"), Argument.class);
+			List<Argument> methodArgs = JSON.parseArray(req.getString("methodArgs"), Argument.class);
 			//TODO method 也缓存起来
 			result = CALLBACK.newSuccessResult();
-			result.put("invoke", clazz.getMethod(methodName, types).invoke(instance, args));
+			result.put("invoke", getInvokeResult(pkgName, clsName, methodName, isStatic, classArgs, methodArgs, instance));
 			result.put("instance", instance);
 		}
 		catch (Exception e) {
@@ -312,113 +282,183 @@ public class MethodUtil {
 	}
 
 
-	/**查方法列表
-	 * @param request : {
-		    "sync": true,  //同步到数据库
-		    "package": "apijson.demo.server",
-		    "class": "DemoFunction",
-		    "method": "plus",
-		    "types": ["Integer", "String", "com.alibaba.fastjson.JSONObject"]
-		    //不返回的话，这个接口没意义		    "return": true,  //返回 class list，方便调试
-		}
+	/**执行方法并返回结果
+	 * @param pkgName
+	 * @param clsName
+	 * @param methodName
+	 * @param isStatic
+	 * @param classArgs
+	 * @param methodArgs
 	 * @return
+	 * @throws Exception
 	 */
-	public static JSONObject listMethod(String request) {
-		JSONObject result;
+	public static Object getInvokeResult(String pkgName, String clsName, String methodName
+			, boolean isStatic, List<Argument> classArgs, List<Argument> methodArgs) throws Exception {
+		return getInvokeResult(pkgName, clsName, methodName, isStatic, classArgs, methodArgs, null);
+	}
+	/**执行方法并返回结果
+	 * @param pkgName
+	 * @param clsName
+	 * @param methodName
+	 * @param isStatic
+	 * @param classArgs
+	 * @param methodArgs
+	 * @param instance
+	 * @return
+	 * @throws Exception
+	 */
+	public static Object getInvokeResult(String pkgName, String clsName, String methodName
+			, boolean isStatic, List<Argument> classArgs, List<Argument> methodArgs, Object instance) throws Exception {
+		Objects.requireNonNull(pkgName);
+		Objects.requireNonNull(clsName);
+		Objects.requireNonNull(methodName);
 
-		try {
-			JSONObject req = JSON.parseObject(request);
-			if (req == null) {
-				req = new JSONObject();
+		Class<?> clazz = findClass(pkgName, clsName, false);
+		if (clazz == null) {
+			throw new ClassNotFoundException("找不到 " + dot2Separator(pkgName) + "/" + clsName + " 对应的类！");
+		}
+
+		if (isStatic == false && instance == null) {  //new 出实例
+			Map<String, Map<Object, Object>> pkgMap = INSTANCE_MAP.get(pkgName);
+			if (pkgMap == null) {
+				pkgMap = new HashMap<>();
+				INSTANCE_MAP.put(pkgName, pkgMap);
 			}
-			boolean sync = req.getBooleanValue("sync");
-			//			boolean returnList = req.getBooleanValue("return");
-			String pkgName = req.getString("package");
-			String clsName = req.getString("class");
-			String methodName = req.getString("method");
-			JSONArray methodArgTypes = null;
+			Map<Object, Object> clsMap = pkgMap.get(clsName);
+			if (clsMap == null) {
+				clsMap = new HashMap<>();
+				pkgMap.put(clsName, clsMap);
+			}
 
-			boolean allMethod = isEmpty(methodName, true);
+			String key = classArgs == null || classArgs.isEmpty() ? "" : JSON.toJSONString(classArgs);
+			instance = clsMap.get(key);  //必须精确对应值，否则去除缓存的和需要的很可能不符
 
-			Class<?>[] argTypes = null;
-			if (allMethod == false) {
-				methodArgTypes = req.getJSONArray("types");
-				if (methodArgTypes != null && methodArgTypes.isEmpty() == false) {
-					argTypes = new Class<?>[methodArgTypes.size()];
-
-					for (int i = 0; i < methodArgTypes.size(); i++) {
-						argTypes[i] = getType(methodArgTypes.getString(i), null, true);
-					}
+			if (instance == null) {
+				if (classArgs == null || classArgs.isEmpty()) {
+					instance = clazz.newInstance();
 				}
-			}
-
-			List<Class<?>> classlist = findClassList(pkgName, clsName, true);
-			JSONArray list = null;
-			if (classlist != null) {
-				list = new JSONArray(classlist.size());
-
-				for (Class<?> cls : classlist) {
-					if (cls == null) {
-						continue;
-					}
-
-					JSONObject clsObj = new JSONObject(true);
-
-					clsObj.put("name", cls.getSimpleName());
-					clsObj.put("type", trimType(cls.getGenericSuperclass()));
-					clsObj.put("package", dot2Separator(cls.getPackage().getName()));
-
-					JSONArray methodList = null;
-					if (allMethod == false && argTypes != null && argTypes.length > 0) {
-						Object mObj = parseMethodObject(cls.getMethod(methodName, argTypes));
-						if (mObj != null) {
-							methodList = new JSONArray(1);
-							methodList.add(mObj);
+				else { //通过构造方法
+					boolean exactContructor = false;  //指定某个构造方法，只要某一项 type 不为空就是
+					for (int i = 0; i < classArgs.size(); i++) {
+						Argument obj = classArgs.get(i);
+						if (obj != null && isEmpty(obj.getType(), true) == false) {
+							exactContructor = true;
+							break;
 						}
 					}
-					else {
-						Method[] methods = cls.getMethods();
-						if (methods != null && methods.length > 0) {
-							methodList = new JSONArray(methods.length);
 
-							for (Method m : methods) {
-								if (m == null) {
-									continue;
-								}
-								if (allMethod || methodName.equals(m.getName())) {
-									methodList.add(parseMethodObject(m));
+					Class<?>[] classArgTypes = new Class<?>[classArgs.size()];
+					Object[] classArgValues = new Object[classArgs.size()];
+					initTypesAndValues(classArgs, classArgTypes, classArgValues, exactContructor);
+
+					if (exactContructor) {  //指定某个构造方法
+						if (instance == null) {
+							Constructor<?> constructor = clazz.getConstructor(classArgTypes);
+							instance = constructor.newInstance(classArgs.toArray());
+						}
+					}
+					else {  //尝试参数数量一致的构造方法
+						if (instance == null) {
+							Constructor<?>[] constructors = clazz.getConstructors();
+							if (constructors != null) {
+								for (int i = 0; i < constructors.length; i++) {
+									if (constructors[i] != null && constructors[i].getParameterCount() == classArgValues.length) {
+										try {
+											instance = constructors[i].newInstance(classArgValues);
+											break;
+										} catch (Exception e) {}
+									}
 								}
 							}
 						}
 					}
-					clsObj.put("methodList", methodList);  //太多不需要的信息，导致后端返回慢、前端卡 UI	clsObj.put("Method[]", JSON.parseArray(methods));
-
-					list.add(clsObj);
-
-
-					//同步到数据库，前端做？  FIXME
-					if (sync) {
-
-					}
 
 				}
-
 			}
 
-			result = CALLBACK.newSuccessResult();
-			//			if (returnList) {
-			result.put("classList", list);  //序列化 Class	只能拿到 name		result.put("Class[]", JSON.parseArray(JSON.toJSONString(classlist)));
-			//			}
-		} catch (Exception e) {
-			e.printStackTrace();
-			result = CALLBACK.newErrorResult(e);
+			if (instance == null) { //通过默认方法
+				throw new NullPointerException("找不到 " + dot2Separator(pkgName) + "/" + clsName + " 以及 classArgs 对应的构造方法！");
+			}
+
+			clsMap.put(key, instance);
 		}
 
-		return result;
+		//method argument, types and values
+		Class<?>[] types = null;
+		Object[] args = null;
+
+		if (methodArgs != null && methodArgs.isEmpty() == false) {
+			types = new Class<?>[methodArgs.size()];
+			args = new Object[methodArgs.size()];
+			initTypesAndValues(methodArgs, types, args, true);
+		}
+
+		return clazz.getMethod(methodName, types).invoke(instance, args);
 	}
 
 
-	private static String dot2Separator(String name) {
+	/**获取用 Class 分组的 Method 二级嵌套列表
+	 * @param request
+	 * @return
+	 * @throws Exception
+	 */
+	public static JSONArray getMethodListGroupByClass(String pkgName, String clsName
+			, String methodName, Class<?>[] argTypes) throws Exception {
+		
+		boolean allMethod = isEmpty(methodName, true);
+
+		List<Class<?>> classlist = findClassList(pkgName, clsName, true);
+		JSONArray list = null;
+		if (classlist != null) {
+			list = new JSONArray(classlist.size());
+
+			for (Class<?> cls : classlist) {
+				if (cls == null) {
+					continue;
+				}
+
+				JSONObject clsObj = new JSONObject(true);
+
+				clsObj.put("name", cls.getSimpleName());
+				clsObj.put("type", trimType(cls.getGenericSuperclass()));
+				clsObj.put("package", dot2Separator(cls.getPackage().getName()));
+
+				JSONArray methodList = null;
+				if (allMethod == false && argTypes != null && argTypes.length > 0) {
+					Object mObj = parseMethodObject(cls.getMethod(methodName, argTypes));
+					if (mObj != null) {
+						methodList = new JSONArray(1);
+						methodList.add(mObj);
+					}
+				}
+				else {
+					Method[] methods = cls.getMethods();
+					if (methods != null && methods.length > 0) {
+						methodList = new JSONArray(methods.length);
+
+						for (Method m : methods) {
+							if (m == null) {
+								continue;
+							}
+							if (allMethod || methodName.equals(m.getName())) {
+								methodList.add(parseMethodObject(m));
+							}
+						}
+					}
+				}
+				clsObj.put("methodList", methodList);  //太多不需要的信息，导致后端返回慢、前端卡 UI	clsObj.put("Method[]", JSON.parseArray(methods));
+
+				list.add(clsObj);
+			}
+
+		}
+
+		return list;
+	}
+
+
+
+	public static String dot2Separator(String name) {
 		return name == null ? null : name.replaceAll("\\.", File.separator);
 	}
 
@@ -427,7 +467,7 @@ public class MethodUtil {
 	//		initTypesAndValues(methodArgs, types, args, false);
 	//	}
 
-	public static void initTypesAndValues(JSONArray methodArgs, Class<?>[] types, Object[] args, boolean defaultType)
+	public static void initTypesAndValues(List<Argument> methodArgs, Class<?>[] types, Object[] args, boolean defaultType)
 			throws IllegalArgumentException, ClassNotFoundException {
 		if (methodArgs == null || methodArgs.isEmpty()) {
 			return;
@@ -439,15 +479,15 @@ public class MethodUtil {
 			throw new IllegalArgumentException("methodArgs.isEmpty() || types.length != methodArgs.size() || args.length != methodArgs.size() !");
 		}
 
-		JSONObject argObj;
+		Argument argObj;
 
 		String typeName;
 		Object value;
 		for (int i = 0; i < methodArgs.size(); i++) {
-			argObj = methodArgs.getJSONObject(i);
+			argObj = methodArgs.get(i);
 
-			typeName = argObj == null ? null : argObj.getString("type");
-			value = argObj == null ? null : argObj.get("value");
+			typeName = argObj == null ? null : argObj.getType();
+			value = argObj == null ? null : argObj.getValue();
 
 			if (typeName != null && typeName.equals(value.getClass().getSimpleName()) == false) {
 				value = JSON.parseObject(JSON.toJSONString(value), Class.forName(typeName));
@@ -580,7 +620,7 @@ public class MethodUtil {
 	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
-	public static Class<?> findClass(String packageOrFileName, @NotNull String className, boolean ignoreError) throws ClassNotFoundException {
+	public static Class<?> findClass(String packageOrFileName, String className, boolean ignoreError) throws ClassNotFoundException {
 		//根目录 Objects.requireNonNull(packageName);
 		Objects.requireNonNull(className);
 
@@ -726,6 +766,31 @@ public class MethodUtil {
 	}
 
 
+	/**参数，包括类型和值
+	 */
+	public static class Argument {
+		private String type;
+		private Object value;
 
+		public Argument() {
+		}
+		public Argument(String type, Object value) {
+			setType(type);
+			setValue(value);
+		}
+
+		public String getType() {
+			return type;
+		}
+		public void setType(String type) {
+			this.type = type;
+		}
+		public Object getValue() {
+			return value;
+		}
+		public void setValue(Object value) {
+			this.value = value;
+		}
+	}
 
 }
