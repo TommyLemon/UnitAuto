@@ -20,16 +20,39 @@ import java.util.Set;
 
 import javax.validation.constraints.NotNull;
 
-import org.springframework.web.bind.annotation.RequestBody;
-
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 
-import zuo.biao.apijson.JSON;
-import zuo.biao.apijson.StringUtil;
-
 public class MethodUtil {
 
+
+	public interface Callback {
+		JSONObject newSuccessResult();
+		JSONObject newErrorResult(Exception e);
+	}
+
+	public static int CODE_SUCCESS = 200;
+	public static int CODE_SERVER_ERROR = 500;
+	public static String MSG_SUCCESS = "success";
+	public static Callback CALLBACK = new Callback() {
+
+		@Override 
+		public JSONObject newSuccessResult() {
+			JSONObject result = new JSONObject(true);
+			result.put("code", CODE_SUCCESS);
+			result.put("msg", MSG_SUCCESS);
+			return result;
+		}
+
+		@Override 
+		public JSONObject newErrorResult(Exception e) {
+			JSONObject result = new JSONObject(true);
+			result.put("code", CODE_SERVER_ERROR);
+			result.put("msg", e.getMessage());
+			return result;
+		}
+	};
 
 	//  Map<package,   <class,     <constructorArgs, instance>>>
 	public static final Map<String, Map<String, Map<Object, Object>>> INSTANCE_MAP;
@@ -116,8 +139,52 @@ public class MethodUtil {
 	}
 	 * @return
 	 */
-	public static JSONObject invokeMethod(@RequestBody String request) {
-		JSONObject req = JSON.parseObject(request);
+	public static JSONObject invokeMethod(String request) {
+		return invokeMethod(request, null);
+	}
+	public static JSONObject invokeMethod(JSONObject request) {
+		return invokeMethod(request, null);
+	}
+	/**
+	 * @param request : {
+	    "package": "apijson.demo.server",
+	    "class": "DemoFunction",
+	    "classArgs": [
+	        null,
+	        null,
+	        0,
+	        null
+	    ],
+	    "method": "plus",
+	    "methodArgs": [
+	        {
+	            "type": "Integer",  //可缺省，自动根据 value 来判断
+	            "value": 1
+	        },
+	        {
+	            "type": "String",
+	            "value": "APIJSON"
+	        },
+	        {
+	            "type": "JSONObject",  //可缺省，JSONObject 已缓存到 CLASS_MAP
+	            "value": {}
+	        },
+	        {
+	            "type": "apijson.demo.server.model.User",  //不可缺省，且必须全称
+	            "value": {
+	                "id": 1,
+	                "name": "Tommy"
+	            }
+	        }
+	    ]
+	}
+	 * @param instance Spring 自动注入的 Service, Component, Mapper 等不能自己 new
+	 * @return
+	 */
+	public static JSONObject invokeMethod(String request, Object instance) {
+		return invokeMethod(JSON.parseObject(request), instance);
+	}
+	public static JSONObject invokeMethod(JSONObject req, Object instance) {
 		if (req == null) {
 			req = new JSONObject();
 		}
@@ -141,9 +208,7 @@ public class MethodUtil {
 
 			boolean isStatic = req.getBooleanValue("static");
 
-			Object instance = null;
-
-			if (isStatic == false) {  //new 出实例
+			if (isStatic == false && instance == null) {  //new 出实例
 				Map<String, Map<Object, Object>> pkgMap = INSTANCE_MAP.get(pkgName);
 				if (pkgMap == null) {
 					pkgMap = new HashMap<>();
@@ -166,7 +231,7 @@ public class MethodUtil {
 						boolean exactContructor = false;  //指定某个构造方法，只要某一项 type 不为空就是
 						for (int i = 0; i < classArgs.size(); i++) {
 							JSONObject obj = classArgs.getJSONObject(i);
-							if (obj != null && StringUtil.isEmpty(obj.getString("type"), true) == false) {
+							if (obj != null && isEmpty(obj.getString("type"), true) == false) {
 								exactContructor = true;
 								break;
 							}
@@ -219,9 +284,9 @@ public class MethodUtil {
 			}
 
 			//TODO method 也缓存起来
-			result = DemoParser.newSuccessResult();
+			result = CALLBACK.newSuccessResult();
 			result.put("invoke", clazz.getMethod(methodName, types).invoke(instance, args));
-			result.put("watch", instance);
+			result.put("instance", instance);
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -231,13 +296,13 @@ public class MethodUtil {
 			}
 			if (e instanceof InvocationTargetException) {
 				Throwable te = ((InvocationTargetException) e).getTargetException();
-				if (StringUtil.isEmpty(te.getMessage(), true) == false) { //到处把函数声明throws Exception改成throws Throwable挺麻烦
+				if (isEmpty(te.getMessage(), true) == false) { //到处把函数声明throws Exception改成throws Throwable挺麻烦
 					e = te instanceof Exception ? (Exception) te : new Exception(te.getMessage());
 				}
 				e = new IllegalArgumentException("字符 " + methodName + " 对应的方法传参类型错误！"
 						+ "\n请检查 key:value 中value的类型是否满足已定义的函数的要求！\n" + e.getMessage());
 			}
-			result = DemoParser.newErrorResult(e);
+			result = CALLBACK.newErrorResult(e);
 			result.put("throw", e.getClass().getTypeName());
 			result.put("cause", e.getCause());
 			result.put("trace", e.getStackTrace());
@@ -258,7 +323,7 @@ public class MethodUtil {
 		}
 	 * @return
 	 */
-	public static JSONObject listMethod(@RequestBody String request) {
+	public static JSONObject listMethod(String request) {
 		JSONObject result;
 
 		try {
@@ -273,7 +338,7 @@ public class MethodUtil {
 			String methodName = req.getString("method");
 			JSONArray methodArgTypes = null;
 
-			boolean allMethod = StringUtil.isEmpty(methodName, true);
+			boolean allMethod = isEmpty(methodName, true);
 
 			Class<?>[] argTypes = null;
 			if (allMethod == false) {
@@ -340,13 +405,13 @@ public class MethodUtil {
 
 			}
 
-			result = DemoParser.newSuccessResult();
+			result = CALLBACK.newSuccessResult();
 			//			if (returnList) {
 			result.put("classList", list);  //序列化 Class	只能拿到 name		result.put("Class[]", JSON.parseArray(JSON.toJSONString(classlist)));
 			//			}
 		} catch (Exception e) {
 			e.printStackTrace();
-			result = DemoParser.newErrorResult(e);
+			result = CALLBACK.newErrorResult(e);
 		}
 
 		return result;
@@ -383,6 +448,10 @@ public class MethodUtil {
 
 			typeName = argObj == null ? null : argObj.getString("type");
 			value = argObj == null ? null : argObj.get("value");
+
+			if (typeName != null && typeName.equals(value.getClass().getSimpleName()) == false) {
+				value = JSON.parseObject(JSON.toJSONString(value), Class.forName(typeName));
+			}
 
 			types[i] = getType(typeName, value, defaultType);
 			args[i] = value;
@@ -476,7 +545,7 @@ public class MethodUtil {
 	//	}
 	public static Class<?> getType(String name, Object value, boolean defaultType) throws ClassNotFoundException {
 		Class<?> type = null;
-		if (StringUtil.isEmpty(name, true)) {  //根据值来自动判断
+		if (isEmpty(name, true)) {  //根据值来自动判断
 			if (value == null || defaultType == false) {
 				//nothing
 			}
@@ -529,7 +598,7 @@ public class MethodUtil {
 			className = className.substring(0, index);
 		}
 		//这个方法保证在 jar 包里能正常执行
-		return Class.forName(StringUtil.isEmpty(packageOrFileName, true) ? className : packageOrFileName.replaceAll("/", ".") + "." + className);
+		return Class.forName(isEmpty(packageOrFileName, true) ? className : packageOrFileName.replaceAll("/", ".") + "." + className);
 	}
 
 	/**
@@ -548,8 +617,8 @@ public class MethodUtil {
 			className = className.substring(0, index);
 		}		
 
-		boolean allPackage = StringUtil.isEmpty(packageOrFileName, true);
-		boolean allName = StringUtil.isEmpty(className, true);
+		boolean allPackage = isEmpty(packageOrFileName, true);
+		boolean allName = isEmpty(className, true);
 
 		//将报名替换成目录
 		String fileName = allPackage ? File.separator : dot2Separator(packageOrFileName);
@@ -596,7 +665,7 @@ public class MethodUtil {
 					}
 				}
 				else {  //如果是class文件
-					String name = StringUtil.getTrimedString(f.getName());
+					String name = trim(f.getName());
 					if (name != null && name.endsWith(".class")) {
 						name = name.substring(0, name.length() - ".class".length());
 						if (name.isEmpty() || name.equals("package-info") || name.contains("$")) {
@@ -627,5 +696,36 @@ public class MethodUtil {
 
 		return list;
 	}
+
+
+	/**判断字符是否为空
+	 * @param s
+	 * @param trim
+	 * @return
+	 */
+	public static boolean isEmpty(String s, boolean trim) {
+		//		Log.i(TAG, "isEmpty   s = " + s);
+		if (s == null) {
+			return true;
+		}
+
+		if (trim) {
+			s = s.trim();
+		}
+
+		return s.isEmpty();
+	}
+
+	/**判断字符是否为空
+	 * @param s
+	 * @return
+	 */
+	public static String trim(String s) {
+		//		Log.i(TAG, "trim   s = " + s);
+		return s == null ? null : s.trim();
+	}
+
+
+
 
 }
