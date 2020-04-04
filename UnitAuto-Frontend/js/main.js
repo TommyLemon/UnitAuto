@@ -485,6 +485,7 @@
       locals: [],
       testCases: [],
       randoms: [],
+      randomSubs: [],
       accounts: [
         {
           'isLoggedIn': false,
@@ -520,6 +521,7 @@
       isHeaderShow: false,
       isRandomShow: true,
       isRandomListShow: false,
+      isRandomSubListShow: false,
       isLoginShow: false,
       isConfigShow: false,
       isDeleteShow: false,
@@ -1128,6 +1130,7 @@
       restoreRandom: function (item) {
         this.currentRandomItem = item
         this.isRandomListShow = false
+        this.isRandomSubListShow = false
 
         var random = (item || {}).Random || {}
         this.randomTestTitle = random.name
@@ -1797,12 +1800,13 @@
         }
       },
 
-      //显示远程的测试用例文档
+      //显示远程的随机配置文档
       showRandomList: function (show, item) {
-        App.isRandomListShow = show
+        this.isRandomListShow = show
+        this.isRandomSubListShow = false
 
         vOutput.value = show ? '' : (output || '')
-        App.showDoc()
+        this.showDoc()
 
         App.randoms = App.randoms || []
 
@@ -2883,12 +2887,12 @@
        * @param show
        */
       testRandom: function (show) {
-        if (this.isRandomListShow != true) {
-          App.testRandomProcess = ''
-          this.testRandomWithText(show)
+        if (this.isRandomListShow != true && this.isRandomSubListShow != true) {
+          this.testRandomProcess = ''
+          this.testRandomWithText(show, null)
         }
         else {
-          var baseUrl = StringUtil.trim(App.getBaseUrl())
+          var baseUrl = StringUtil.trim(this.getBaseUrl())
           if (baseUrl == '') {
             alert('请先输入有效的URL！')
             return
@@ -2903,7 +2907,7 @@
             return
           }
 
-          const list = App.randoms || []
+          const list = (this.isRandomSubListShow ? this.randomSubs : this.randoms) || []
           var allCount = list.length
           doneCount = 0
 
@@ -2933,9 +2937,7 @@
             const itemAllCount = random.count || 1
             allCount += (itemAllCount - 1)
 
-            App.testRandomSingle(show, random, App.type, url
-              , App.getRandomJSON(JSON.parse(JSON.stringify(json)), random.config, random.id)
-              , header, function (url, res, err) {
+            App.testRandomSingle(show, random, App.type, url, json, header, function (url, res, err) {
 
               doneCount ++
               App.testRandomProcess = doneCount >= allCount ? '' : ('正在测试: ' + doneCount + '/' + allCount)
@@ -2956,15 +2958,47 @@
        * @param callback
        */
       testRandomSingle: function (show, random, type, url, json, header, callback) {
-        var count = (random || {}).count || 1
+        // random = random || {}
+        var count = random.count || 1
+
         for (var i = 0; i < count; i ++) {
-          if (show == true) {
-            vInput.value = JSON.stringify(json, null, '    ');
-            this.send(false, callback);
+          var constConfig = this.getRandomConstConfig(random.config, random.id) //第1遍，把 key : expression 改为 key : value
+
+          var constJson = this.getRandomJSON(JSON.parse(JSON.stringify(json)), constConfig, random.id) //第2遍，用新的 random config 来修改原 json
+
+          if (count > 1) {
+            var subs = this.randomSubs || []
+            subs.push({
+              Random: {
+                id: i,
+                documentId: random.documentId,
+                count: 1,
+                name: 'Temp ' + i,
+                config: constConfig
+              }
+            })
+            this.randomSubs = subs
           }
           else {
-            this.request(false, type, url, json, header, callback)
+            var cb = function (url, res, err) {
+              if (callback != null) {
+                callback(url, res, err, random)
+              }
+            };
+
+            if (show == true) {
+              vInput.value = JSON.stringify(constJson, null, '    ');
+              this.send(false, cb);
+            }
+            else {
+              this.request(false, type, url, constJson, header, cb);
+            }
           }
+        }
+
+        if (count > 1) {
+          this.isRandomSubListShow = true
+          this.testRandom(false)
         }
       },
       /**随机测试，动态替换键值对
@@ -2972,9 +3006,9 @@
        * @param callback
        */
       testRandomWithText: function (show, callback) {
-        var json;
         try {
-          json = this.getRandomJSON(this.getRequest(vInput.value), vRandom.value, 0)
+          this.testRandomSingle(show, { count: 10, name: this.randomTestTitle, config: vRandom.value }, this.type, this.getUrl()
+            , this.getRequest(vInput.value), this.getHeader(vHeader.value), callback)
         }
         catch (e) {
           log(e)
@@ -2987,14 +3021,105 @@
 
           this.isRandomShow = true
           vRandom.select()
+        }
+      },
 
-          return;
+      getRandomConstConfig: function (config, randomId) {
+        var lines = config == null ? null : config.trim().split('\n')
+        if (lines == null || lines.length <= 0) {
+          return null
         }
 
-        // alert('> json = ' + JSON.stringify(json, null, '    '))
+        var constConfig = '' //TODO 改为 [{ "rawPath": "User/id", "replacePath": "User/id@", "replaceValue": "RANDOM_INT(1, 10)", "isExpression": true }] ?
 
-        this.testRandomSingle(show, null, this.type, this.getUrl(), json, this.getHeader(vHeader.value), callback)
+        // alert('getRandomConstConfig randomId = ' + randomId + '; config = ' + config)
+
+        var line;
+        var value; // RANDOM_DATABASE
+        var index;
+
+        for (var i = 0; i < lines.length; i ++) {
+          line = lines[i] || '';
+
+          // remove comment
+          index = line.indexOf('//');
+          if (index >= 0) {
+            line = line.substring(0, index).trim();
+          }
+          if (line.length <= 0) {
+            continue;
+          }
+
+          // path User/id  key id@
+          index = line.lastIndexOf(' : '); // indexOf(' : '); 可能会有 Comment:to
+          var p_k = line.substring(0, index);
+
+          // value RANDOM_REAL
+          value = line.substring(index + ' : '.length);
+
+          if (value == RANDOM_REAL) {
+            value = 'randomReal(JSONResponse.getTableName(pathKeys[pathKeys.length - 2]), "' + key + '", 1)';
+          }
+          else if (value == RANDOM_REAL_IN) {
+            value = 'randomReal(JSONResponse.getTableName(pathKeys[pathKeys.length - 2]), "' + key + '", null)';
+          }
+          else if (value == ORDER_REAL) {
+            value = 'orderReal(' +
+              getOrderIndex(
+                randomId
+                , line.substring(0, line.lastIndexOf(' : '))
+                , 0
+              ) + ', JSONResponse.getTableName(pathKeys[pathKeys.length - 2]), "' + key + '")';
+          }
+          else {
+            var start = value.indexOf('(');
+            var end = value.lastIndexOf(')');
+
+            //支持 1, "a" 这种原始值
+            // if (start < 0 || end <= start) {  //(1) 表示原始值  start*end <= 0 || start >= end) {
+            //   throw new Error('随机测试 第 ' + i + ' 行格式错误！字符 ' + value + ' 不是合法的随机函数!');
+            // }
+
+            if (start > 0 && end > start) {
+              var fun = value.substring(0, start);
+              if (fun == RANDOM_INT) {
+                value = 'randomInt' + value.substring(start);
+              }
+              else if (fun == RANDOM_NUM) {
+                value = 'randomNum' + value.substring(start);
+              }
+              else if (fun == RANDOM_STR) {
+                value = 'randomStr' + value.substring(start);
+              }
+              else if (fun == RANDOM_IN) {
+                value = 'randomIn' + value.substring(start);
+              }
+              else if (fun == ORDER_INT || fun == ORDER_IN) {
+                value = (fun == ORDER_INT ? 'orderInt' : 'orderIn') + '(' + getOrderIndex(
+                    randomId
+                    , line.substring(0, line.lastIndexOf(' : '))
+                    , fun == ORDER_INT ? 0 : StringUtil.split(value.substring(start + 1, end)).length
+                  ) + ',' + value.substring(start + 1);
+              }
+            }
+
+          }
+
+          value = eval(value);
+          if (value instanceof Object) {
+            value = JSON.stringify(value)
+          }
+          else if (typeof value == 'string') {
+            value = '"' + value + '"';
+          }
+          constConfig += ((i <= 0 ? '' : ' \n') + p_k + ' : ' + value);
+        }
+
+        // alert('getRandomConstConfig  return constConfig = ' + constConfig)
+
+        return constConfig
       },
+
       /**随机测试，动态替换键值对
        * @param show
        * @param callback
@@ -3002,8 +3127,10 @@
       getRandomJSON: function (json, config, randomId) {
           var lines = config == null ? null : config.trim().split('\n')
           if (lines == null || lines.length <= 0) {
-           return null
+           return null;
           }
+
+          randomId = randomId || 0;
 
           var json = json || {};
 
@@ -3080,30 +3207,35 @@
             else {
               var start = value.indexOf('(');
               var end = value.lastIndexOf(')');
-              if (start*end <= 0 || start >= end) {
-                throw new Error('随机测试 第 ' + i + ' 行格式错误！字符 ' + value + ' 不是合法的随机函数!');
+
+              //支持 1, "a" 这种原始值
+              // if (start < 0 || end <= start) {  //(1) 表示原始值  start*end <= 0 || start >= end) {
+              //   throw new Error('随机测试 第 ' + i + ' 行格式错误！字符 ' + value + ' 不是合法的随机函数!');
+              // }
+
+              if (start > 0 && end > start) {
+                var fun = value.substring(0, start);
+                if (fun == RANDOM_INT) {
+                  value = 'randomInt' + value.substring(start);
+                }
+                else if (fun == RANDOM_NUM) {
+                  value = 'randomNum' + value.substring(start);
+                }
+                else if (fun == RANDOM_STR) {
+                  value = 'randomStr' + value.substring(start);
+                }
+                else if (fun == RANDOM_IN) {
+                  value = 'randomIn' + value.substring(start);
+                }
+                else if (fun == ORDER_INT || fun == ORDER_IN) {
+                  value = (fun == ORDER_INT ? 'orderInt' : 'orderIn') + '(' + getOrderIndex(
+                      randomId
+                      , line.substring(0, line.lastIndexOf(' : '))
+                      , fun == ORDER_INT ? 0 : StringUtil.split(value.substring(start + 1, end)).length
+                    ) + ',' + value.substring(start + 1);
+                }
               }
 
-              var fun = value.substring(0, start);
-              if (fun == RANDOM_INT) {
-                value = 'randomInt' + value.substring(start);
-              }
-              else if (fun == RANDOM_NUM) {
-                value = 'randomNum' + value.substring(start);
-              }
-              else if (fun == RANDOM_STR) {
-                value = 'randomStr' + value.substring(start);
-              }
-              else if (fun == RANDOM_IN) {
-                value = 'randomIn' + value.substring(start);
-              }
-              else if (fun == ORDER_INT || fun == ORDER_IN) {
-                value = (fun == ORDER_INT ? 'orderInt' : 'orderIn') + '(' + getOrderIndex(
-                    randomId
-                    , line.substring(0, line.lastIndexOf(' : '))
-                    , fun == ORDER_INT ? 0 : StringUtil.split(value.substring(start + 1, end)).length
-                ) + ',' + value.substring(start + 1);
-              }
             }
 
             //先按照单行简单实现
@@ -3293,7 +3425,7 @@
         var standard = StringUtil.isEmpty(tr[standardKey], true) ? null : JSON.parse(tr[standardKey])
           tr.compare = JSONResponse.compareResponse(standard, App.removeDebugInfo(response), '', App.isMLEnabled) || {}
         }
-	
+
 	App.onTestResponse(allCount, index, it, d, r, tr, response, tr.compare || {}, isRandom, accountIndex, justRecoverTest);
       },
 
@@ -3320,7 +3452,7 @@
             it.compareMessage = '值改变'
             break;
           case JSONResponse.COMPARE_KEY_LESS:
-            it.compareColor = 'yellow'
+            it.compareColor = 'orange'
             it.compareMessage = '缺少字段/整数变小数'
             break;
           case JSONResponse.COMPARE_TYPE_CHANGE:
@@ -3449,14 +3581,21 @@
        */
       handleTest: function (right, index, item, isRandom) {
         item = item || {}
+        var random = item.Random = item.Random || {}
         var document;
         if (isRandom) {
+          if ((random.count || 1) > 1) {
+            this.randomSubs = random.subs || []
+            this.isRandomListShow = false
+            this.isRandomSubListShow = true
+            return
+          }
+
           document = App.currentRemoteItem || {}
         }
         else {
           document = item.Method = item.Method || {}
         }
-        var random = item.Random = item.Random || {}
         var testRecord = item.TestRecord = item.TestRecord || {}
 
         var tests = App.tests[String(App.currentAccountIndex)] || {}
