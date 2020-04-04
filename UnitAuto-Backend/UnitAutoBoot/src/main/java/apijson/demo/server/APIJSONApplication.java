@@ -14,10 +14,13 @@ limitations under the License.*/
 
 package apijson.demo.server;
 
+import org.springframework.beans.BeansException;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.embedded.ConfigurableEmbeddedServletContainer;
 import org.springframework.boot.context.embedded.EmbeddedServletContainerCustomizer;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -33,7 +36,7 @@ import zuo.biao.apijson.Log;
  */
 @Configuration
 @SpringBootApplication
-public class APIJSONApplication {
+public class APIJSONApplication implements ApplicationContextAware {
 
 	public static void main(String[] args) throws Exception {
 		SpringApplication.run(APIJSONApplication.class, args);
@@ -136,5 +139,12 @@ public class APIJSONApplication {
 		return corsConfiguration;  
 	}  
 	//支持JavaScript跨域请求 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+	public static ApplicationContext APPLICATION_CONTEXT;
+	
+	@Override
+	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+		APPLICATION_CONTEXT = applicationContext;		
+	}
 
 }

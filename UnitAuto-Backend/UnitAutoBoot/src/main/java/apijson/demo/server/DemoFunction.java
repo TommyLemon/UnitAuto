@@ -28,6 +28,7 @@ import javax.servlet.http.HttpSession;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 
+import apijson.demo.server.MethodUtil.Argument;
 import apijson.demo.server.model.BaseModel;
 import zuo.biao.apijson.JSON;
 import zuo.biao.apijson.JSONResponse;
@@ -615,7 +616,7 @@ public class DemoFunction extends RemoteFunction {
 			JSONObject obj = request.getJSONObject("request");
 			argsStr = obj == null ? null : obj.getString(methodArgsKey);
 		}
-		JSONArray methodArgs = JSON.parseArray(removeComment(argsStr));
+		List<Argument> methodArgs = JSON.parseArray(removeComment(argsStr), Argument.class);
 		if (methodArgs == null || methodArgs.isEmpty()) {
 			return "";
 		}

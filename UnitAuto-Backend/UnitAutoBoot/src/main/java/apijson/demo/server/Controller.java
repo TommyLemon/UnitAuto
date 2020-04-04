@@ -1029,6 +1029,22 @@ public class Controller {
 
 	@PostMapping("method/invoke")
 	public JSONObject invokeMethod(@RequestBody String request) {
+		try {
+			JSONObject req = JSON.parseObject(request);
+			if (req != null) {
+				String pkgName = req.getString("package");
+				String clsName = req.getString("class");
+				return MethodUtil.invokeMethod(
+						req,
+						APIJSONApplication.APPLICATION_CONTEXT.getBean(
+								Class.forName(pkgName.replaceAll("/", ".") + "." + clsName)
+						)
+				);
+			}
+		} catch (Exception e) {
+			Log.e(TAG, "listMethod  try { JSONObject req = JSON.parseObject(request); ... } catch (Exception e) { \n" + e.getMessage());
+		}
+		
 		return MethodUtil.invokeMethod(request);
 	}
 
