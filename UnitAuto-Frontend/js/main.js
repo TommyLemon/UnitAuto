@@ -2965,6 +2965,10 @@
           }
           this.testRandomProcess = '正在测试: ' + 0 + '/' + allCount
 
+          if (testSubList) {
+            this.resetCount(this.currentRandomItem)
+          }
+
           var json = this.getRequest(vInput.value) || {}
           var url = this.getUrl()
           var header = this.getHeader(vHeader.value)
@@ -3072,16 +3076,25 @@
         if (testSubList) {
           this.randomSubs = subs
           if (this.isRandomListShow == true) {
-            item.totalCount = 0
-            item.whiteCount = 0
-            item.blueCount = 0
-            item.orangeCount = 0
-            item.redCount = 0
+            this.resetCount(item)
             item.subs = subs
           }
           this.testRandom(false, false, true)
         }
       },
+
+      resetCount: function (randomItem) {
+        if (randomItem == null) {
+          App.log('resetCount  randomItem == null >> return')
+          return
+        }
+        randomItem.totalCount = 0
+        randomItem.whiteCount = 0
+        randomItem.blueCount = 0
+        randomItem.orangeCount = 0
+        randomItem.redCount = 0
+      },
+
       /**随机测试，动态替换键值对
        * @param show
        * @param callback
