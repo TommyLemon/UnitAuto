@@ -1067,12 +1067,12 @@
           var rpObj = res.data || {}
 
           if (isDeleteRandom) {
-            if (rpObj.Random != null && rpObj.Random.code == 200) {
+            if (rpObj.Random != null && rpObj.Random.code == CODE_SUCCESS) {
               App.randoms.splice(item.index, 1)
               App.showRandomList(true, App.currentRemoteItem)
             }
           } else {
-            if (rpObj.Method != null && rpObj.Method.code == 200) {
+            if (rpObj.Method != null && rpObj.Method.code == CODE_SUCCESS) {
               App.remotes.splice(item.index, 1)
               App.showTestCase(true, App.isLocalShow)
             }
@@ -1341,6 +1341,10 @@
               name: App.exTxt.name,
               config: vRandom.value
             },
+            'TestRecord': {
+              'userId': App.User.id,
+              'response': JSON.stringify(StringUtil.isEmpty(App.jsoncon, true) ? {} : App.removeDebugInfo(JSON.parse(App.jsoncon)))
+            },
             'tag': 'Random'
           } : {
             format: false,
@@ -1355,7 +1359,6 @@
               'request': App.toDoubleJSON(inputted)
             },
             'TestRecord': {
-              'documentId@': '/Method/id',
               'randomId': 0,
               'userId': App.User.id,
               'response': JSON.stringify(StringUtil.isEmpty(App.jsoncon, true) ? {} : App.removeDebugInfo(JSON.parse(App.jsoncon)))
@@ -1369,13 +1372,13 @@
             var rpObj = res.data || {}
 
             if (isExportRandom) {
-              if (rpObj.Random != null && rpObj.Random.code == 200) {
+              if (rpObj.Random != null && rpObj.Random.code == CODE_SUCCESS) {
                 App.randoms = []
                 App.showRandomList(true, (App.currentRemoteItem || {}).Method)
               }
             }
             else {
-              if (rpObj.Method != null && rpObj.Method.code == 200) {
+              if (rpObj.Method != null && rpObj.Method.code == CODE_SUCCESS) {
                 App.remotes = []
                 App.showTestCase(true, false)
               }
@@ -1641,7 +1644,7 @@
                 item.isLoggedIn = true
 
                 var data = res.data || {}
-                var user = data.code == 200 ? data.user : null
+                var user = data.code == CODE_SUCCESS ? data.user : null
                 if (user == null) {
                   if (callback != null) {
                     callback(false)
@@ -1794,7 +1797,7 @@
 
             var rpObj = res.data
 
-            if (rpObj != null && rpObj.code === 200) {
+            if (rpObj != null && rpObj.code === CODE_SUCCESS) {
               App.isTestCaseShow = true
               App.isLocalShow = false
               App.testCases = App.remotes = rpObj['[]']
@@ -1843,7 +1846,7 @@
 
             var rpObj = res.data
 
-            if (rpObj != null && rpObj.code === 200) {
+            if (rpObj != null && rpObj.code === CODE_SUCCESS) {
               App.isRandomListShow = true
               App.randoms = rpObj['[]']
               vOutput.value = show ? '' : (output || '')
@@ -1953,7 +1956,7 @@
 
             var rpObj = res.data || {}
 
-            if (rpObj.code != 200) {
+            if (rpObj.code != CODE_SUCCESS) {
               alert('登录失败，请检查网络后重试。\n' + rpObj.msg + '\n详细信息可在浏览器控制台查看。')
             }
             else {
@@ -2006,7 +2009,7 @@
 
             //由login按钮触发，不能通过callback回调来实现以下功能
             var data = res.data || {}
-            if (data.code == 200) {
+            if (data.code == CODE_SUCCESS) {
               var user = data.user || {}
               App.accounts.push( {
                 isLoggedIn: true,
@@ -2048,7 +2051,7 @@
 
           var rpObj = res.data
 
-          if (rpObj != null && rpObj.code === 200) {
+          if (rpObj != null && rpObj.code === CODE_SUCCESS) {
             alert('注册成功')
 
             var privacy = rpObj.Privacy || {}
@@ -2079,7 +2082,7 @@
 
           var rpObj = res.data
 
-          if (rpObj != null && rpObj.code === 200) {
+          if (rpObj != null && rpObj.code === CODE_SUCCESS) {
             alert('重置密码成功')
 
             var privacy = rpObj.Privacy || {}
@@ -2139,7 +2142,7 @@
           App.onResponse(url, res, err)
 
           var data = res.data || {}
-          var obj = data.code == 200 ? data.verify : null
+          var obj = data.code == CODE_SUCCESS ? data.verify : null
           var verify = obj == null ? null : obj.verify
           if (verify != null) { //FIXME isEmpty校验时居然在verify=null! StringUtil.isEmpty(verify, true) == false) {
             vVerify.value = verify
@@ -2170,7 +2173,7 @@
           App.onResponse(url, res, err)
           if (isAdminOperation) {
             var data = res.data || {}
-            if (data.code == 200 && data.Privacy != null) {
+            if (data.code == CODE_SUCCESS && data.Privacy != null) {
               App.Privacy = data.Privacy
             }
           }
@@ -2508,7 +2511,7 @@
         }
         else {
           var data = res.data || {}
-          if (isSingle && data.code == 200) { //不格式化错误的结果
+          if (isSingle && data.code == CODE_SUCCESS) { //不格式化错误的结果
             data = JSONResponse.formatObject(data);
           }
           App.jsoncon = JSON.stringify(data, null, '    ');
@@ -2534,7 +2537,8 @@
           this.request(true, REQUEST_TYPE_JSON, this.server + '/put', {
             Random: {
               id: r.id,
-              count: r.count
+              count: r.count,
+              name: r.name
             },
             tag: 'Random'
           }, vHeader.value, function (url, res, err) {
@@ -2978,7 +2982,7 @@
 
             const index = i
 
-            const itemAllCount = random.count || 1
+            const itemAllCount = random.count || 0
             allCount += (itemAllCount - 1)
 
             this.testRandomSingle(show, false, itemAllCount > 1 && ! testSubList, random, this.type, url, json, header, function (url, res, err) {
@@ -3003,7 +3007,7 @@
        */
       testRandomSingle: function (show, testList, testSubList, random, type, url, json, header, callback) {
         // random = random || {}
-        var count = random.count || 1
+        var count = random.count || 0
 
         var subs = []
 
@@ -3016,10 +3020,11 @@
             subs.push({
               Random: {
                 id: - i - 1, //表示未上传
+                toId: random.id,
                 userId: random.userId,
                 documentId: random.documentId,
                 count: 1,
-                name: 'Temp ' + i,
+                name: random.name + ' - Temp ' + i,
                 config: constConfig
               }
             })
@@ -3066,9 +3071,10 @@
        */
       testRandomWithText: function (show, callback) {
         try {
-          var count = this.testRandomCount || 1;
+          var count = this.testRandomCount || 0;
           this.isRandomSubListShow = count > 1;
           this.testRandomSingle(show, false, this.isRandomSubListShow, {
+              toId: ((this.currentRandomItem || {}).Random || {}).id || 0,
               userId: (this.User || {}).id,
               count: count,
               name: this.randomTestTitle,
@@ -3566,7 +3572,7 @@
         if (t == null) {
           t = tests[documentId] = {}
         }
-        t[isRandom ? r.id : 0] = response
+        t[isRandom ? (r.id > 0 ? r.id : (r.toId + '' + r.id)) : 0] = response
 
         this.tests[String(accountIndex)] = tests
         this.log('tests = ' + JSON.stringify(tests, null, '    '))
@@ -3654,7 +3660,7 @@
         var random = item.Random = item.Random || {}
         var document;
         if (isRandom) {
-          if ((random.count || 1) > 1) {
+          if ((random.count || 0) > 1) {
             this.restoreRandom(item)
             this.randomSubs = random.subs || []
             this.isRandomSubListShow = true
@@ -3669,7 +3675,9 @@
         var testRecord = item.TestRecord = item.TestRecord || {}
 
         var tests = App.tests[String(App.currentAccountIndex)] || {}
-        var currentResponse = (tests[isRandom ? random.documentId : document.id] || {})[isRandom ? random.id : 0] || {}
+        var currentResponse = (tests[isRandom ? random.documentId : document.id] || {})[
+          isRandom ? (random.id > 0 ? random.id : (random.toId + '' + random.id)) : 0
+        ] || {}
 
         var isBefore = item.showType == 'before'
         if (right != true) {
@@ -3684,11 +3692,10 @@
         else {
           const isML = App.isMLEnabled
           var url
-          var req
 
           if (isBefore) { //撤回原来错误提交的校验标准
             url = App.server + '/delete'
-            req = {
+            const req = {
               TestRecord: {
                 id: testRecord.id, //TODO 权限问题？ item.userId,
               },
@@ -3699,7 +3706,7 @@
               App.onResponse(url, res, err)
 
               var data = res.data || {}
-              if (data.code != 200) {
+              if (data.code != CODE_SUCCESS) {
                 alert('撤回最新的校验标准 异常：\n' + data.msg)
                 return
               }
@@ -3723,11 +3730,11 @@
             stddObj.code = code;
             currentResponse.code = code;
 
-            var isNewRandom = isRandom && random.id <= 0
+            const isNewRandom = isRandom && random.id <= 0
 
             // if (isML != true) {
             url = App.server + '/post'
-            req = {
+            const req = {
               Random: isNewRandom != true ? null : {
                 userId: App.User.id,
                 documentId: random.documentId,
@@ -3758,7 +3765,7 @@
               App.onResponse(url, res, err)
 
               var data = res.data || {}
-              if (data.code != 200) {
+              if (data.code != CODE_SUCCESS) {
                 if (isML) {
                   alert('机器学习更新标准 异常：\n' + data.msg)
                 }
@@ -3773,13 +3780,33 @@
                   msg: '结果正确'
                 }
                 testRecord.response = JSON.stringify(currentResponse)
-
                 // testRecord.standard = stdd
-                if (isRandom) {
-                  App.showRandomList(true, App.currentRemoteItem)
+
+                var r = req.Random
+                if (r != null && (data.Random || {}).id != null) {
+                  r.id = data.Random.id
+                  item.Random = r
+                }
+
+                if (isNewRandom == true) {
+                  alert('这个配置已持久化存储，可刷新随机配置列表来查看')
+                  //如果要改，测试结果也得跟着改
+                  // Cannot read property 'Random' of undefined
+                  // if (r != null) {
+                  // App.randoms = App.randoms || []
+                  // App.randoms.unshift(r)
+                  // if (App.randomSubs != null) {
+                  //   delete App.randomSubs[index]
+                  // }
+                  // }
                 }
                 else {
-                  App.showTestCase(true, false)
+                  if (isRandom) {
+                    App.showRandomList(true, App.currentRemoteItem)
+                  }
+                  else {
+                    App.showTestCase(true, false)
+                  }
                 }
 
                 App.updateTestRecord(0, index, item, currentResponse, isRandom)
@@ -3807,7 +3834,7 @@
           App.onResponse(url, res, err)
 
           var data = (res || {}).data || {}
-          if (data.code != 200) {
+          if (data.code != CODE_SUCCESS) {
             alert('获取最新的校验标准 异常：\n' + data.msg)
             return
           }
@@ -3826,7 +3853,8 @@
         //   .setAttribute('data-hint', r == null ? '' : (isRandom ? r : JSON.stringify(this.getRequest(isClass ? r.classArgs : r.methodArgs), null, ' ')));
 
         if (isRandom) {
-          this.$refs['randomTexts'][index].setAttribute('data-hint', (d || {}).config == null ? '' : d.config);
+          var id = (d == null ? null : d.id) || 0
+          this.$refs[id > 0 ? 'randomTexts' : 'randomSubTexts'][index].setAttribute('data-hint', (d || {}).config == null ? '' : d.config);
         }
         else {
           var args = (this.getRequest(d.request) || [])[isClass ? 'classArgs' : 'methodArgs']
@@ -3845,8 +3873,10 @@
 
       //显示详细信息, :data-hint :data, :hint 都报错，只能这样
       setTestHint(index, item, isRandom) {
-        var h = item == null ? null : item.hintMessage;
-        this.$refs[isRandom ? 'testRandomResultButtons' : 'testResultButtons'][index].setAttribute('data-hint', h || '');
+        item = item || {};
+        var id = isRandom ? ((item.Random || {}).id || 0) : 0;
+        var h = item.hintMessage;
+        this.$refs[isRandom ? (id > 0 ? 'testRandomResultButtons' : 'testRandomSubResultButtons') : 'testResultButtons'][index].setAttribute('data-hint', h || '');
       },
 
 // APIJSON >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>

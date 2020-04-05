@@ -230,9 +230,9 @@
             <!-- 临时生成的配置子项 -->
             <ul v-show="isRandomSubListShow" class="historys" style="width: 100%;height: 100%;overflow: hidden;overflow-y: scroll;padding-bottom: 50px">
                 <li style="width: 100%" v-for="(item, index) in randomSubs" >
-                    <a class="hint--rounded hint--no-animate" ref="randomTexts" @mouseover="setRequestHint(index, item, true)" href="javascript:void(0)" @click="restoreRandom(item)" >{{ (item.Random || {}).name }}</a>
+                    <a class="hint--rounded hint--no-animate" ref="randomSubTexts" @mouseover="setRequestHint(index, item, true)" href="javascript:void(0)" @click="restoreRandom(item)" >{{ (item.Random || {}).name }}</a>
                     <div :style="{ background: item.compareColor }" v-show="item.compareType != null" style="position: absolute;top: 8px;right: 36px;display: inline-block;">
-                        <button class="hint--left" ref="testRandomResultButtons" @mouseover="setTestHint(index, item, true)" v-show="item.compareType != null" @click="handleTest(false, index, item, true)" style="position: relative;">{{ item.compareMessage + (item.showType == 'before' ? '-前' : '-后') }}</button>
+                        <button class="hint--left" ref="testRandomSubResultButtons" @mouseover="setTestHint(index, item, true)" v-show="item.compareType != null" @click="handleTest(false, index, item, true)" style="position: relative;">{{ item.compareMessage + (item.showType == 'before' ? '-前' : '-后') }}</button>
                         <svg class="icon" style="position: relative;margin-left: 10px" @click="downloadTest(index, item, true)">
                             <use xlink:href="svg/icon.svg#export-txt"></use>
                         </svg>
