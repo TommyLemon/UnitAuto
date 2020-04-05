@@ -2985,7 +2985,7 @@
             const itemAllCount = random.count || 0
             allCount += (itemAllCount - 1)
 
-            this.testRandomSingle(show, false, itemAllCount > 1 && ! testSubList, random, this.type, url, json, header, function (url, res, err) {
+            this.testRandomSingle(show, false, itemAllCount > 1 && ! testSubList, item, this.type, url, json, header, function (url, res, err) {
 
               doneCount ++
               App.testRandomProcess = doneCount >= allCount ? '' : ('正在测试: ' + doneCount + '/' + allCount)
@@ -3005,10 +3005,12 @@
        * @param show
        * @param callback
        */
-      testRandomSingle: function (show, testList, testSubList, random, type, url, json, header, callback) {
-        // random = random || {}
+      testRandomSingle: function (show, testList, testSubList, item, type, url, json, header, callback) {
+        item = item || {}
+        var random = item.Random = item.Random || {}
         var count = random.count || 0
 
+        var tr = item.TestRecord || {}
         var subs = []
 
         for (var i = 0; i < count; i ++) {
@@ -3018,14 +3020,24 @@
 
           if (testSubList) {
             subs.push({
+              toId: random.id,
               Random: {
                 id: - i - 1, //表示未上传
-                toId: random.id,
                 userId: random.userId,
                 documentId: random.documentId,
                 count: 1,
                 name: random.name + ' - Temp ' + i,
                 config: constConfig
+              },
+              TestRecord: {  //解决子项始终没有对比标准
+                id: tr.id, //表示未上传
+                userId: random.userId,
+                documentId: random.documentId,
+                testAccountId: tr.testAccountId,
+                randomId: - i - 1,
+                response: tr.response,
+                date: tr.date,
+                compare: tr.compare
               }
             })
           }
@@ -3060,7 +3072,12 @@
         if (testSubList) {
           this.randomSubs = subs
           if (this.isRandomListShow == true) {
-            random.subs = subs
+            item.totalCount = 0
+            item.whiteCount = 0
+            item.blueCount = 0
+            item.orangeCount = 0
+            item.redCount = 0
+            item.subs = subs
           }
           this.testRandom(false, false, true)
         }
@@ -3075,10 +3092,12 @@
           this.isRandomSubListShow = count > 1;
           this.testRandomSingle(show, false, this.isRandomSubListShow, {
               toId: ((this.currentRandomItem || {}).Random || {}).id || 0,
-              userId: (this.User || {}).id,
-              count: count,
-              name: this.randomTestTitle,
-              config: vRandom.value
+              Random: {
+                userId: (this.User || {}).id,
+                count: count,
+                name: this.randomTestTitle,
+                config: vRandom.value
+              }
             },
             this.type, this.getUrl(), this.getRequest(vInput.value), this.getHeader(vHeader.value), callback
           )
@@ -3539,9 +3558,48 @@
             it.compareMessage = '查看结果'
             break;
         }
+
         if (isRandom) {
           r = r || {}
           it.Random = r
+
+          //更新父级总览数据
+          var toId = it.toId
+          if (toId != null && toId > 0) {
+
+            for (var i in App.randoms) {
+
+              var toIt = App.randoms[i]
+              if (toIt != null && toIt.Random != null && toIt.Random.id == toId) {
+
+                var toRandom = toIt.Random
+                var id = toRandom == null ? 0 : toRandom.id
+                var count = id == null || id <= 0 ? 0 : toRandom.count
+                if (count != null && count > 1) {
+                  var key = it.compareColor + 'Count'
+                  if (toIt[key] == null) {
+                    toIt[key] = 1
+                  }
+                  else {
+                    toIt[key]++
+                  }
+
+                  if (toIt.totalCount == null) {
+                    toIt.totalCount = 1
+                  }
+                  else {
+                    toIt.totalCount ++
+                  }
+                }
+
+                Vue.set(App.randoms, i, toIt)
+
+                break;
+              }
+
+            }
+
+          }
         }
         else {
           it.Method = d
@@ -3572,7 +3630,7 @@
         if (t == null) {
           t = tests[documentId] = {}
         }
-        t[isRandom ? (r.id > 0 ? r.id : (r.toId + '' + r.id)) : 0] = response
+        t[isRandom ? (r.id > 0 ? r.id : (it.toId + '' + r.id)) : 0] = response
 
         this.tests[String(accountIndex)] = tests
         this.log('tests = ' + JSON.stringify(tests, null, '    '))
@@ -3589,6 +3647,7 @@
        */
       removeDebugInfo: function (obj) {
         if (obj != null) {
+          delete obj["trace"]
           delete obj["sql:generate|cache|execute|maxExecute"]
           delete obj["depth:count|max"]
           delete obj["time:start|duration|end"]
@@ -3662,7 +3721,7 @@
         if (isRandom) {
           if ((random.count || 0) > 1) {
             this.restoreRandom(item)
-            this.randomSubs = random.subs || []
+            this.randomSubs = item.subs || []
             this.isRandomSubListShow = true
             return
           }
@@ -3676,7 +3735,7 @@
 
         var tests = App.tests[String(App.currentAccountIndex)] || {}
         var currentResponse = (tests[isRandom ? random.documentId : document.id] || {})[
-          isRandom ? (random.id > 0 ? random.id : (random.toId + '' + random.id)) : 0
+          isRandom ? (random.id > 0 ? random.id : (item.toId + '' + random.id)) : 0
         ] || {}
 
         var isBefore = item.showType == 'before'
