@@ -163,8 +163,9 @@
                           <svg class="icon" style="position: relative;margin-left: 10px" @click="downloadTest(index, item)">
                               <use xlink:href="svg/icon.svg#export-txt"></use>
                           </svg>
-                          <button v-show="item.compareType != 0 || (item.showType == 'before' && item.TestRecord != null)" @click="handleTest(true, index, item)">{{ item.showType == 'before' ? '错的，撤回' : '对的，纠正' }}</button>
-                          <button v-show="item.compareType == 0 && item.showType != 'before'" style="color: white;background: white;border-color: white;" disabled>对的，纠正</button>
+                          <button v-show="(item.showType != 'before' && item.compareType != 0) || (item.showType == 'before' && (item.TestRecord || {}).id != null)" @click="handleTest(true, index, item)">{{ item.showType == 'before' ? '错的，撤回' : '对的，纠正' }}</button>
+                          <!-- 仅用来占位，解决上面按钮隐藏后，下载图标纵向没对齐 -->
+                          <button v-show="! ((item.showType != 'before' && item.compareType != 0) || (item.showType == 'before' && (item.TestRecord || {}).id != null))" style="color: white;background: white;border-color: white;" disabled>对的，纠正</button>
                       </div>
                       <svg v-show="isLocalShow || (item.Method != null && item.Method.userId == User.id)" class="icon" style="margin-right: 8px" @click="remove(item, index, true)">
                           <use xlink:href="svg/icon.svg#trash"></use>
@@ -236,8 +237,9 @@
                         <svg class="icon" style="position: relative;margin-left: 10px" @click="downloadTest(index, item, true)">
                             <use xlink:href="svg/icon.svg#export-txt"></use>
                         </svg>
-                        <button v-show="item.compareType != 0 || (item.showType == 'before' && item.TestRecord != null)" @click="handleTest(true, index, item, true)">{{ item.showType == 'before' ? '错的，撤回' : '对的，纠正' }}</button>
-                        <button v-show="item.compareType == 0 && item.showType != 'before'" style="color: white;background: white;border-color: white;" disabled>对的，纠正</button>
+                        <button v-show="(item.showType != 'before' && item.compareType != 0) || (item.showType == 'before'&& (item.TestRecord || {}).id != null)" @click="handleTest(true, index, item, true)">{{ item.showType == 'before' ? '错的，撤回' : '对的，纠正' }}</button>
+                        <!-- 仅用来占位，解决上面按钮隐藏后，下载图标纵向没对齐 -->
+                        <button v-show="! ((item.showType != 'before' && item.compareType != 0) || (item.showType == 'before' && (item.TestRecord || {}).id != null))" style="color: white;background: white;border-color: white;" disabled>对的，纠正</button>
                     </div>
                     <svg v-show="item.Random != null && item.Random.userId == User.id" class="icon" style="margin-right: 8px; top: 12px;" @click="remove(item, index, true, true)">
                         <use xlink:href="svg/icon.svg#trash"></use>
@@ -265,8 +267,9 @@
                             <svg class="icon" style="position: relative;margin-left: 10px" @click="downloadTest(index, item, true)">
                                 <use xlink:href="svg/icon.svg#export-txt"></use>
                             </svg>
-                            <button v-show="item.compareType != 0 || (item.showType == 'before' && item.TestRecord != null)" @click="handleTest(true, index, item, true)">{{ item.showType == 'before' ? '错的，撤回' : '对的，纠正' }}</button>
-                            <button v-show="item.compareType == 0 && item.showType != 'before'" style="color: white;background: white;border-color: white;" disabled>对的，纠正</button>
+                            <button v-show="(item.showType != 'before' && item.compareType != 0) || (item.showType == 'before' && (item.TestRecord || {}).id != null)" @click="handleTest(true, index, item, true)">{{ item.showType == 'before' ? '错的，撤回' : '对的，纠正' }}</button>
+                            <!-- 仅用来占位，解决上面按钮隐藏后，下载图标纵向没对齐 -->
+                            <button v-show="! ((item.showType != 'before' && item.compareType != 0) || (item.showType == 'before' && (item.TestRecord || {}).id != null))" style="color: white;background: white;border-color: white;" disabled>对的，纠正</button>
                         </div>
                     </div>
 

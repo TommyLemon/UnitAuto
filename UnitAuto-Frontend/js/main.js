@@ -3075,7 +3075,7 @@
                   userId: random.userId,
                   documentId: random.documentId,
                   count: 1,
-                  name: random.name + ' - Temp ' + i,
+                  name: 'Temp ' + i,
                   config: constConfig
                 },
                 //不再需要，因为子项里前面一部分就是已上传的，而且这样更准确，交互更直观
@@ -3138,6 +3138,7 @@
         }
         randomItem.totalCount = 0
         randomItem.whiteCount = 0
+        randomItem.greenCount = 0
         randomItem.blueCount = 0
         randomItem.orangeCount = 0
         randomItem.redCount = 0
@@ -3645,7 +3646,7 @@
         doneCount ++
         this.testProcess = doneCount >= allCount ? (this.isMLEnabled ? '机器学习:已开启' : '机器学习:已关闭') : '正在测试: ' + doneCount + '/' + allCount
 
-        this.log('doneCount = ' + doneCount + '; d.name = ' + (isRandom ? r.name : d.name) + '; tr.compareType = ' + tr.compareType)
+        this.log('doneCount = ' + doneCount + '; d.name = ' + (isRandom ? r.name : d.name) + '; it.compareType = ' + it.compareType)
 
         var documentId = isRandom ? r.documentId : d.id
         if (this.tests == null) {
@@ -3838,7 +3839,7 @@
               App.onResponse(url, res, err)
 
               var data = res.data || {}
-              if (data.code != CODE_SUCCESS) {
+              if (data.code != CODE_SUCCESS && testRecord!= null && testRecord.id != null) {
                 alert('撤回最新的校验标准 异常：\n' + data.msg)
                 return
               }
@@ -3939,7 +3940,7 @@
                   var r = req.Random
                   if (r != null && (data.Random || {}).id != null) {
                     r.id = data.Random.id
-                    item.Random.id = r
+                    item.Random = r
                   }
                   if ((data.TestRecord || {}).id != null) {
                     testRecord.id = data.TestRecord.id
@@ -3991,6 +3992,7 @@
             return
           }
 
+          item.TestRecord = data.TestRecord
           App.compareResponse(allCount, list, index, item, response, isRandom, App.currentAccountIndex, true, err);
         })
       },
@@ -4004,8 +4006,8 @@
         //   .setAttribute('data-hint', r == null ? '' : (isRandom ? r : JSON.stringify(this.getRequest(isClass ? r.classArgs : r.methodArgs), null, ' ')));
 
         if (isRandom) {
-          var id = (d == null ? null : d.id) || 0
-          this.$refs[id > 0 ? 'randomTexts' : 'randomSubTexts'][index].setAttribute('data-hint', (d || {}).config == null ? '' : d.config);
+          var toId = (d == null ? null : d.toId) || 0
+          this.$refs[toId <= 0 ? 'randomTexts' : 'randomSubTexts'][index].setAttribute('data-hint', (d || {}).config == null ? '' : d.config);
         }
         else {
           var args = (this.getRequest(d.request) || [])[isClass ? 'classArgs' : 'methodArgs']
@@ -4025,9 +4027,9 @@
       //显示详细信息, :data-hint :data, :hint 都报错，只能这样
       setTestHint(index, item, isRandom) {
         item = item || {};
-        var id = isRandom ? ((item.Random || {}).id || 0) : 0;
+        var toId = isRandom ? ((item.Random || {}).toId || 0) : 0;
         var h = item.hintMessage;
-        this.$refs[isRandom ? (id > 0 ? 'testRandomResultButtons' : 'testRandomSubResultButtons') : 'testResultButtons'][index].setAttribute('data-hint', h || '');
+        this.$refs[isRandom ? (toId <= 0 ? 'testRandomResultButtons' : 'testRandomSubResultButtons') : 'testResultButtons'][index].setAttribute('data-hint', h || '');
       },
 
 // APIJSON >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
