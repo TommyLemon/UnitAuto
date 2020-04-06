@@ -1346,6 +1346,7 @@
           var req = isExportRandom ? {
             format: false,
             'Random': {
+              toId: 0,
               documentId: did,
               count: App.requestCount,
               name: App.exTxt.name,
@@ -1823,11 +1824,13 @@
       },
 
       //显示远程的随机配置文档
-      showRandomList: function (show, item) {
-        this.isRandomListShow = show
-        this.randomSubs = []
-        this.isRandomSubListShow = false
+      showRandomList: function (show, item, isSub) {
         this.isRandomEditable = false
+        this.isRandomListShow = show && ! isSub
+        this.isRandomSubListShow = show && isSub
+        if (! isSub) {
+          this.randomSubs = []
+        }
 
         vOutput.value = show ? '' : (output || '')
         this.showDoc()
@@ -1842,12 +1845,25 @@
             '[]': {
               'count': 0,
               'Random': {
+                'toId': 0,
                 'documentId': item.id,
                 '@order': "date-"
               },
               'TestRecord': {
                 'randomId@': '/Random/id',
                 '@order': 'date-'
+              },
+              '[]': {
+                'count': 0,
+                'Random': {
+                  'toId@': '[]/Random/id',
+                  'documentId': item.id,
+                  '@order': "date-"
+                },
+                'TestRecord': {
+                  'randomId@': '/Random/id',
+                  '@order': 'date-'
+                }
               }
             }
           }
@@ -1859,8 +1875,18 @@
             var rpObj = res.data
 
             if (rpObj != null && rpObj.code === CODE_SUCCESS) {
-              App.isRandomListShow = true
-              App.randoms = rpObj['[]']
+              App.isRandomListShow = ! isSub
+              App.isRandomSubListShow = isSub
+              if (isSub) {
+                if (App.currentRandomItem == null) {
+                  App.currentRandomItem = {}
+                }
+                App.randomSubs = App.currentRandomItem.subs = App.currentRandomItem['[]'] = rpObj['[]']
+              }
+              else {
+                App.randoms = rpObj['[]']
+              }
+
               vOutput.value = show ? '' : (output || '')
               App.showDoc()
 
@@ -3025,39 +3051,43 @@
       testRandomSingle: function (show, testList, testSubList, item, type, url, json, header, callback) {
         item = item || {}
         var random = item.Random = item.Random || {}
+        var subs = item['[]'] || []
+        var existCount = subs.length
+        subs = existCount <= 0 ? subs : JSON.parse(JSON.stringify(subs))
+
         var count = random.count || 0
 
-        var tr = item.TestRecord || {}
-        var subs = []
-
         for (var i = 0; i < count; i ++) {
-          var constConfig = this.getRandomConstConfig(random.config, random.id) //第1遍，把 key : expression 改为 key : value
+          var constConfig = i < existCount ? (subs[i].Random || {}).config : this.getRandomConstConfig(random.config, random.id) //第1遍，把 key : expression 改为 key : value
 
           var constJson = this.getRandomJSON(JSON.parse(JSON.stringify(json)), constConfig, random.id) //第2遍，用新的 random config 来修改原 json
 
-          if (testSubList) {
-            subs.push({
-              toId: random.id,
-              Random: {
-                id: - i - 1, //表示未上传
-                userId: random.userId,
-                documentId: random.documentId,
-                count: 1,
-                name: random.name + ' - Temp ' + i,
-                config: constConfig
-              },
-              TestRecord: {  //解决子项始终没有对比标准
-                id: 0, //不允许子项撤回 tr.id, //表示未上传
-                userId: random.userId,
-                documentId: random.documentId,
-                testAccountId: tr.testAccountId,
-                randomId: - i - 1,
-                response: tr.response,
-                standard: tr.standard,
-                date: tr.date,
-                compare: tr.compare
-              }
-            })
+          if (testSubList) {  //在原来已上传的基础上，生成新的
+            if (i >= existCount) {
+              subs.push({
+                Random: {
+                  id: -i - 1, //表示未上传
+                  toId: random.id,
+                  userId: random.userId,
+                  documentId: random.documentId,
+                  count: 1,
+                  name: random.name + ' - Temp ' + i,
+                  config: constConfig
+                },
+                //不再需要，因为子项里前面一部分就是已上传的，而且这样更准确，交互更直观
+                // TestRecord: {  //解决子项始终没有对比标准
+                //   id: 0, //不允许子项撤回 tr.id, //表示未上传
+                //   userId: random.userId,
+                //   documentId: random.documentId,
+                //   testAccountId: tr.testAccountId,
+                //   randomId: -i - 1,
+                //   response: tr.response,
+                //   standard: tr.standard,
+                //   date: tr.date,
+                //   compare: tr.compare
+                // }
+              })
+            }
           }
           else {
             var cb = function (url, res, err) {
@@ -3118,8 +3148,8 @@
           var count = this.testRandomCount || 0;
           this.isRandomSubListShow = count > 1;
           this.testRandomSingle(show, false, this.isRandomSubListShow, {
-              toId: ((this.currentRandomItem || {}).Random || {}).id || 0,
               Random: {
+                toId: ((this.currentRandomItem || {}).Random || {}).id || 0,
                 userId: (this.User || {}).id,
                 count: count,
                 name: this.randomTestTitle,
@@ -3596,7 +3626,7 @@
           it.Random = r
 
           //更新父级总览数据
-          var toId = it.toId
+          var toId = r.toId
           if (toId != null && toId > 0) {
 
             for (var i in App.randoms) {
@@ -3662,7 +3692,7 @@
         if (t == null) {
           t = tests[documentId] = {}
         }
-        t[isRandom ? (r.id > 0 ? r.id : (it.toId + '' + r.id)) : 0] = response
+        t[isRandom ? (r.id > 0 ? r.id : (r.toId + '' + r.id)) : 0] = response
 
         this.tests[String(accountIndex)] = tests
         this.log('tests = ' + JSON.stringify(tests, null, '    '))
@@ -3753,7 +3783,7 @@
         if (isRandom) {
           if ((random.count || 0) > 1) {
             this.restoreRandom(item)
-            this.randomSubs = item.subs || []
+            this.randomSubs = (item.subs || item['[]']) || []
             this.isRandomSubListShow = true
             return
           }
@@ -3767,7 +3797,7 @@
 
         var tests = App.tests[String(App.currentAccountIndex)] || {}
         var currentResponse = (tests[isRandom ? random.documentId : document.id] || {})[
-          isRandom ? (random.id > 0 ? random.id : (item.toId + '' + random.id)) : 0
+          isRandom ? (random.id > 0 ? random.id : (random.toId + '' + random.id)) : 0
         ] || {}
 
         var isBefore = item.showType == 'before'
@@ -3827,6 +3857,7 @@
             url = App.server + '/post'
             const req = {
               Random: isNewRandom != true ? null : {
+                toId: random.toId,
                 userId: App.User.id,
                 documentId: random.documentId,
                 name: random.name,
@@ -3879,19 +3910,7 @@
                   item.Random = r
                 }
 
-                if (isNewRandom == true) {
-                  alert('这个配置已持久化存储，可刷新随机配置列表来查看')
-                  //如果要改，测试结果也得跟着改
-                  // Cannot read property 'Random' of undefined
-                  // if (r != null) {
-                  // App.randoms = App.randoms || []
-                  // App.randoms.unshift(r)
-                  // if (App.randomSubs != null) {
-                  //   delete App.randomSubs[index]
-                  // }
-                  // }
-                }
-                else {
+                if (! isNewRandom) {
                   if (isRandom) {
                     App.showRandomList(true, App.currentRemoteItem)
                   }
