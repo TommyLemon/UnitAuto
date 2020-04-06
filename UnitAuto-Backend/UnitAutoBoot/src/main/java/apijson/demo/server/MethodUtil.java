@@ -21,6 +21,8 @@ import java.util.Set;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.parser.ParserConfig;
+import com.alibaba.fastjson.util.TypeUtils;
 
 public class MethodUtil {
 
@@ -57,35 +59,45 @@ public class MethodUtil {
 
 	//  Map<package,   <class,     <constructorArgs, instance>>>
 	public static final Map<String, Map<String, Map<Object, Object>>> INSTANCE_MAP;
+	public static final Map<String, Class<?>> PRIMITIVE_CLASS_MAP;
+	public static final Map<String, Class<?>> BASE_CLASS_MAP;
 	public static final Map<String, Class<?>> CLASS_MAP;
 	static {
 		INSTANCE_MAP = new HashMap<>();
 
+		PRIMITIVE_CLASS_MAP = new HashMap<String, Class<?>>();
+		BASE_CLASS_MAP = new HashMap<String, Class<?>>();
 		CLASS_MAP = new HashMap<String, Class<?>>();
-		CLASS_MAP.put(boolean.class.getSimpleName(), boolean.class);
-		CLASS_MAP.put(int.class.getSimpleName(), int.class);
-		CLASS_MAP.put(long.class.getSimpleName(), long.class);
-		CLASS_MAP.put(float.class.getSimpleName(), float.class);
-		CLASS_MAP.put(double.class.getSimpleName(), double.class);
-		CLASS_MAP.put(Boolean.class.getSimpleName(), Boolean.class);
-		CLASS_MAP.put(Integer.class.getSimpleName(), Integer.class);
-		CLASS_MAP.put(Long.class.getSimpleName(), Long.class);
-		CLASS_MAP.put(Float.class.getSimpleName(), Float.class);
-		CLASS_MAP.put(Double.class.getSimpleName(), Double.class);
-		CLASS_MAP.put(String.class.getSimpleName(), String.class);
-		CLASS_MAP.put(Object.class.getSimpleName(), Object.class);
-		CLASS_MAP.put(Array.class.getSimpleName(), Array.class);
-
+		
+		PRIMITIVE_CLASS_MAP.put(boolean.class.getSimpleName(), boolean.class);
+		PRIMITIVE_CLASS_MAP.put(int.class.getSimpleName(), int.class);
+		PRIMITIVE_CLASS_MAP.put(long.class.getSimpleName(), long.class);
+		PRIMITIVE_CLASS_MAP.put(float.class.getSimpleName(), float.class);
+		PRIMITIVE_CLASS_MAP.put(double.class.getSimpleName(), double.class);
+		BASE_CLASS_MAP.putAll(PRIMITIVE_CLASS_MAP);
+		
+		BASE_CLASS_MAP.put(Boolean.class.getSimpleName(), Boolean.class);
+		BASE_CLASS_MAP.put(Integer.class.getSimpleName(), Integer.class);
+		BASE_CLASS_MAP.put(Long.class.getSimpleName(), Long.class);
+		BASE_CLASS_MAP.put(Float.class.getSimpleName(), Float.class);
+		BASE_CLASS_MAP.put(Double.class.getSimpleName(), Double.class);
+		BASE_CLASS_MAP.put(Number.class.getSimpleName(), Number.class);
+		BASE_CLASS_MAP.put(String.class.getSimpleName(), String.class);
+		BASE_CLASS_MAP.put(Object.class.getSimpleName(), Object.class);
+		CLASS_MAP.putAll(BASE_CLASS_MAP);
+		
 		CLASS_MAP.put(boolean[].class.getSimpleName(), boolean[].class);
 		CLASS_MAP.put(int[].class.getSimpleName(), int[].class);
 		CLASS_MAP.put(long[].class.getSimpleName(), long[].class);
 		CLASS_MAP.put(float[].class.getSimpleName(), float[].class);
 		CLASS_MAP.put(double[].class.getSimpleName(), double[].class);
+		CLASS_MAP.put(Array.class.getSimpleName(), Array.class);
 		CLASS_MAP.put(Boolean[].class.getSimpleName(), Boolean[].class);
 		CLASS_MAP.put(Integer[].class.getSimpleName(), Integer[].class);
 		CLASS_MAP.put(Long[].class.getSimpleName(), Long[].class);
 		CLASS_MAP.put(Float[].class.getSimpleName(), Float[].class);
 		CLASS_MAP.put(Double[].class.getSimpleName(), Double[].class);
+		CLASS_MAP.put(Number[].class.getSimpleName(), Number[].class);
 		CLASS_MAP.put(String[].class.getSimpleName(), String[].class);
 		CLASS_MAP.put(Object[].class.getSimpleName(), Object[].class);
 		CLASS_MAP.put(Array[].class.getSimpleName(), Array[].class);
@@ -432,7 +444,7 @@ public class MethodUtil {
 					}
 				}
 				else {
-					Method[] methods = cls.getMethods();
+					Method[] methods = cls.getDeclaredMethods(); //父类的就用父类去获取 cls.getMethods();
 					if (methods != null && methods.length > 0) {
 						methodList = new JSONArray(methods.length);
 
@@ -489,11 +501,23 @@ public class MethodUtil {
 			typeName = argObj == null ? null : argObj.getType();
 			value = argObj == null ? null : argObj.getValue();
 
-			if (typeName != null && typeName.equals(value.getClass().getSimpleName()) == false) {
-				value = JSON.parseObject(JSON.toJSONString(value), Class.forName(typeName));
-			}
+//			if (typeName != null && value != null && value.getClass().equals(CLASS_MAP.get(typeName)) == false) {
+////				if ("double".equals(typeName)) {
+//				value = TypeUtils.cast(value, CLASS_MAP.get(typeName), new ParserConfig());
+////				}
+////				else if (PRIMITIVE_CLASS_MAP.containsKey(typeName)) {
+////					value = JSON.parse(JSON.toJSONString(value));
+////				} else {
+////					value = JSON.parseObject(JSON.toJSONString(value), Class.forName(typeName));
+////				}
+//			}
 
 			types[i] = getType(typeName, value, defaultType);
+			
+			if (value != null && value.getClass().equals(types[i]) == false) {
+				value = TypeUtils.cast(value, types[i], new ParserConfig());
+			}
+			
 			args[i] = value;
 		}
 	}
@@ -519,10 +543,13 @@ public class MethodUtil {
 
 		JSONObject obj = new JSONObject(true);
 		obj.put("name", m.getName());
-		obj.put("parameterTypeList", trimTypes(m.getGenericParameterTypes()));
-		obj.put("returnType", trimType(m.getGenericReturnType()));
+		obj.put("parameterTypeList", trimTypes(m.getParameterTypes()));  //不能用泛型，会导致解析崩溃 m.getGenericParameterTypes()));
+		obj.put("genericParameterTypeList", trimTypes(m.getGenericParameterTypes()));  //不能用泛型，会导致解析崩溃 m.getGenericParameterTypes()));
+		obj.put("returnType", trimType(m.getReturnType()));  //不能用泛型，会导致解析崩溃m.getGenericReturnType()));
+		obj.put("genericReturnType", trimType(m.getGenericReturnType()));  //不能用泛型，会导致解析崩溃m.getGenericReturnType()));
 		obj.put("static", Modifier.isStatic(m.getModifiers()));
-		obj.put("exceptionTypeList", trimTypes(m.getGenericExceptionTypes()));
+		obj.put("exceptionTypeList", trimTypes(m.getExceptionTypes()));  //不能用泛型，会导致解析崩溃m.getGenericExceptionTypes()));
+		obj.put("genericExceptionTypeList", trimTypes(m.getGenericExceptionTypes()));  //不能用泛型，会导致解析崩溃m.getGenericExceptionTypes()));
 		return obj;
 	}
 
@@ -594,10 +621,15 @@ public class MethodUtil {
 			}
 		} 
 		else {
+			int index = name.indexOf("<");
+			if (index >= 0) {
+				name = name.substring(0, index);
+			}
+			
 			type = CLASS_MAP.get(name);
 			if (type == null) {
 				name = dot2Separator(name);
-				int index = name.lastIndexOf(File.separator);
+				index = name.lastIndexOf(File.separator);
 				type = findClass(index < 0 ? "" : name.substring(0, index), index < 0 ? name : name.substring(index + 1), defaultType);
 
 				if (type != null) {
