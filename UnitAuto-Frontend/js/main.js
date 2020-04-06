@@ -2574,7 +2574,12 @@
             return
           }
 
-          var r = item.Random || {}
+          var r = item == null ? null : item.Random
+          if (r == null || r.id == null) {
+            alert('请选择有效的选项！item.Random.id == null !')
+            return
+          }
+
           //修改 Random 的 count
           this.request(true, REQUEST_TYPE_JSON, this.server + '/put', {
             Random: {
@@ -3062,7 +3067,7 @@
         var count = random.count || 0
 
         for (var i = 0; i < count; i ++) {
-          var constConfig = i < existCount ? (subs[i].Random || {}).config : this.getRandomConstConfig(random.config, random.id) //第1遍，把 key : expression 改为 key : value
+          var constConfig = i < existCount ? ((subs[i] || {}).Random || {}).config : this.getRandomConstConfig(random.config, random.id) //第1遍，把 key : expression 改为 key : value
 
           var constJson = this.getRandomJSON(JSON.parse(JSON.stringify(json)), constConfig, random.id) //第2遍，用新的 random config 来修改原 json
 
@@ -3154,7 +3159,7 @@
           this.isRandomSubListShow = count > 1;
           this.testRandomSingle(show, false, this.isRandomSubListShow, {
               Random: {
-                toId: ((this.currentRandomItem || {}).Random || {}).id || 0,
+                toId: 0, // ((this.currentRandomItem || {}).Random || {}).id || 0,
                 userId: (this.User || {}).id,
                 count: count,
                 name: this.randomTestTitle,
@@ -3811,7 +3816,7 @@
           isRandom ? (random.id > 0 ? random.id : (random.toId + '' + random.id)) : 0
         ] || {}
 
-        const list = isRandom ? (random.toId == null || random.toId <= 0 ? this.randomSubs : this.randoms) : this.testCases
+        const list = isRandom ? (random.toId == null || random.toId <= 0 ? this.randoms : this.randomSubs) : this.testCases
 
         var isBefore = item.showType == 'before'
         if (right != true) {
@@ -3937,7 +3942,7 @@
                 // testRecord.standard = stdd
 
                 if (isRandom) {
-                  var r = req.Random
+                  var r = req == null ? null : req.Random
                   if (r != null && (data.Random || {}).id != null) {
                     r.id = data.Random.id
                     item.Random = r
@@ -4001,7 +4006,6 @@
       setRequestHint(index, item, isRandom, isClass) {
         item = item || {}
         var d = item == null ? null : (isRandom ? item.Random : item.Method);
-        var r = d == null ? null : (isRandom ? d.config : d);
         // this.$refs[isRandom ? 'randomTexts' : (isClass ? 'testCaseClassTexts' : 'testCaseMethodTexts')][index]
         //   .setAttribute('data-hint', r == null ? '' : (isRandom ? r : JSON.stringify(this.getRequest(isClass ? r.classArgs : r.methodArgs), null, ' ')));
 
