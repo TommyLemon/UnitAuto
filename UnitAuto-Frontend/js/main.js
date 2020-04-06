@@ -1069,8 +1069,13 @@
 
           if (isDeleteRandom) {
             if (rpObj.Random != null && rpObj.Random.code == CODE_SUCCESS) {
-              App.randoms.splice(item.index, 1)
-              App.showRandomList(true, App.currentRemoteItem)
+              if (((item.Random || {}).toId || 0) <= 0) {
+                App.randoms.splice(item.index, 1)
+              }
+              else {
+                App.randomSubs.splice(item.index, 1)
+              }
+              // App.showRandomList(true, App.currentRemoteItem)
             }
           } else {
             if (rpObj.Method != null && rpObj.Method.code == CODE_SUCCESS) {
@@ -1125,7 +1130,7 @@
             return
           }
 
-          if (this.isRandomSubListShow) {
+          if (isRandom && (((item || {}).Random || {}).id || 0) <= 0) {
             this.randomSubs.splice(index, 1)
             return
           }
@@ -3067,9 +3072,14 @@
         var count = random.count || 0
 
         for (var i = 0; i < count; i ++) {
-          var constConfig = i < existCount ? ((subs[i] || {}).Random || {}).config : this.getRandomConstConfig(random.config, random.id) //第1遍，把 key : expression 改为 key : value
+          // var constConfig = i < existCount ? ((subs[i] || {}).Random || {}).config : this.getRandomConstConfig(random.config, random.id) //第1遍，把 key : expression 改为 key : value
+          // var constJson = this.getRandomJSON(JSON.parse(JSON.stringify(json)), constConfig, random.id) //第2遍，用新的 random config 来修改原 json
 
-          var constJson = this.getRandomJSON(JSON.parse(JSON.stringify(json)), constConfig, random.id) //第2遍，用新的 random config 来修改原 json
+          var rawConfig = testSubList && i < existCount ? ((subs[i] || {}).Random || {}).config : random.config
+          var result = this.parseRandom(
+            JSON.parse(JSON.stringify(json)), rawConfig, random.id
+            , ! testSubList, testSubList && i >= existCount, testSubList && i >= existCount
+          )
 
           if (testSubList) {  //在原来已上传的基础上，生成新的
             if (i >= existCount) {
@@ -3080,8 +3090,8 @@
                   userId: random.userId,
                   documentId: random.documentId,
                   count: 1,
-                  name: 'Temp ' + i,
-                  config: constConfig
+                  name: result.name || 'Temp ' + i,
+                  config: result.config
                 },
                 //不再需要，因为子项里前面一部分就是已上传的，而且这样更准确，交互更直观
                 // TestRecord: {  //解决子项始终没有对比标准
@@ -3108,6 +3118,7 @@
               }
             };
 
+            var constJson = result.json
             if (show == true) {
               vInput.value = JSON.stringify(constJson, null, '    ');
               this.send(false, cb);
@@ -3183,113 +3194,27 @@
         }
       },
 
-      getRandomConstConfig: function (config, randomId) {
-        var lines = config == null ? null : config.trim().split('\n')
-        if (lines == null || lines.length <= 0) {
-          return null
-        }
-
-        var constConfig = '' //TODO 改为 [{ "rawPath": "User/id", "replacePath": "User/id@", "replaceValue": "RANDOM_INT(1, 10)", "isExpression": true }] ?
-
-        // alert('getRandomConstConfig randomId = ' + randomId + '; config = ' + config)
-
-        var line;
-        var value; // RANDOM_DATABASE
-        var index;
-
-        for (var i = 0; i < lines.length; i ++) {
-          line = lines[i] || '';
-
-          // remove comment
-          index = line.indexOf('//');
-          if (index >= 0) {
-            line = line.substring(0, index).trim();
-          }
-          if (line.length <= 0) {
-            continue;
-          }
-
-          // path User/id  key id@
-          index = line.indexOf(' : '); //APIJSON Table:alias 前面不会有空格 //致后面就接 { 'a': 1} 报错 Unexpected token ':'   lastIndexOf(' : '); // indexOf(' : '); 可能会有 Comment:to
-          var p_k = line.substring(0, index);
-
-          // value RANDOM_REAL
-          value = line.substring(index + ' : '.length);
-
-          if (value == RANDOM_REAL) {
-            value = 'randomReal(JSONResponse.getTableName(pathKeys[pathKeys.length - 2]), "' + key + '", 1)';
-          }
-          else if (value == RANDOM_REAL_IN) {
-            value = 'randomReal(JSONResponse.getTableName(pathKeys[pathKeys.length - 2]), "' + key + '", null)';
-          }
-          else if (value == ORDER_REAL) {
-            value = 'orderReal(' +
-              getOrderIndex(
-                randomId
-                , line.substring(0, line.indexOf(' : '))
-                , 0
-              ) + ', JSONResponse.getTableName(pathKeys[pathKeys.length - 2]), "' + key + '")';
-          }
-          else {
-            var start = value.indexOf('(');
-            var end = value.lastIndexOf(')');
-
-            //支持 1, "a" 这种原始值
-            // if (start < 0 || end <= start) {  //(1) 表示原始值  start*end <= 0 || start >= end) {
-            //   throw new Error('随机测试 第 ' + i + ' 行格式错误！字符 ' + value + ' 不是合法的随机函数!');
-            // }
-
-            if (start > 0 && end > start) {
-              var fun = value.substring(0, start);
-              if (fun == RANDOM_INT) {
-                value = 'randomInt' + value.substring(start);
-              }
-              else if (fun == RANDOM_NUM) {
-                value = 'randomNum' + value.substring(start);
-              }
-              else if (fun == RANDOM_STR) {
-                value = 'randomStr' + value.substring(start);
-              }
-              else if (fun == RANDOM_IN) {
-                value = 'randomIn' + value.substring(start);
-              }
-              else if (fun == ORDER_INT || fun == ORDER_IN) {
-                value = (fun == ORDER_INT ? 'orderInt' : 'orderIn') + '(' + getOrderIndex(
-                    randomId
-                    , line.substring(0, line.indexOf(' : '))
-                    , fun == ORDER_INT ? 0 : StringUtil.split(value.substring(start + 1, end)).length
-                  ) + ',' + value.substring(start + 1);
-              }
-            }
-
-          }
-
-          value = eval(value);
-          if (value instanceof Object) {
-            value = JSON.stringify(value)
-          }
-          else if (typeof value == 'string') {
-            value = '"' + value + '"';
-          }
-          constConfig += ((i <= 0 ? '' : ' \n') + p_k + ' : ' + value);
-        }
-
-        // alert('getRandomConstConfig  return constConfig = ' + constConfig)
-
-        return constConfig
-      },
-
+      /**
+       *  与 getRandomJSON 合并，返回一个
+       *  {
+       *    name: 'long 1, long 2', // 自动按 type0 value0, type1, value1 格式
+       *    config: {}, //const config
+       *    json: {} //const json
+       *  }
+       */
       /**随机测试，动态替换键值对
        * @param show
        * @param callback
        */
-      getRandomJSON: function (json, config, randomId) {
+      parseRandom: function (json, config, randomId, generateJSON, generateConfig, generateName) {
         var lines = config == null ? null : config.trim().split('\n')
         if (lines == null || lines.length <= 0) {
           return null;
         }
 
         randomId = randomId || 0;
+        var randomName = ''
+        var constConfig = '' //TODO 改为 [{ "rawPath": "User/id", "replacePath": "User/id@", "replaceValue": "RANDOM_INT(1, 10)", "isExpression": true }] ?
 
         var json = json || {};
 
@@ -3397,33 +3322,72 @@
 
           }
 
-          //先按照单行简单实现
-          //替换 JSON 里的键值对 key: value
-
-          var parent = json;
-          var current = null;
-          for (var j = 0; j < pathKeys.length - 1; j ++) {
-            current = parent[pathKeys[j]]
-            if (current == null) {
-              current = parent[pathKeys[j]] = {}
-            }
-            if (parent instanceof Object == false) {
-              throw new Error('随机测试 第 ' + i + ' 行格式错误！路径 ' + path + ' 中' +
-                ' pathKeys[' + j + '] = ' + pathKeys[j] + ' 在实际请求 JSON 内对应的值不是对象 {} !');
-            }
-            parent = current;
-          }
-
-          if (current == null) {
-            current = json;
-          }
-          // alert('< current = ' + JSON.stringify(current, null, '    '))
-
-          if (current.hasOwnProperty(key) == false) {
-            delete current[lastKeyInPath];
-          }
           try {
-            current[key] = eval(value);
+            var val = eval(value)
+
+            if (generateConfig) {
+              var configVal;
+              if (val instanceof Object) {
+                configVal = JSON.stringify(val);
+              }
+              else if (typeof val == 'string') {
+                configVal = '"' + val + '"';
+              }
+              else {
+                configVal = val
+              }
+              constConfig += ((i <= 0 ? '' : ' \n') + p_k + ' : ' + configVal);
+            }
+
+            if (generateName) {
+              var valStr;
+              if (val instanceof Array) {
+                valStr = '[' + val.length + ']';
+              }
+              else if (val instanceof Object) {
+                valStr = '{...}';
+              }
+              else if (typeof val == 'boolean') {
+                valStr = '' + val;
+              }
+              else {
+                valStr = new String(val);
+                if (valStr.length > 13) {
+                  valStr = valStr.substring(0, 5) + '...';
+                }
+              }
+              randomName += ((i <= 0 ? '' : ', ') + valStr);
+            }
+
+            if (generateJSON) {
+              //先按照单行简单实现
+              //替换 JSON 里的键值对 key: value
+              var parent = json;
+              var current = null;
+              for (var j = 0; j < pathKeys.length - 1; j ++) {
+                current = parent[pathKeys[j]]
+                if (current == null) {
+                  current = parent[pathKeys[j]] = {}
+                }
+                if (parent instanceof Object == false) {
+                  throw new Error('随机测试 第 ' + i + ' 行格式错误！路径 ' + path + ' 中' +
+                    ' pathKeys[' + j + '] = ' + pathKeys[j] + ' 在实际请求 JSON 内对应的值不是对象 {} !');
+                }
+                parent = current;
+              }
+
+              if (current == null) {
+                current = json;
+              }
+              // alert('< current = ' + JSON.stringify(current, null, '    '))
+
+              if (current.hasOwnProperty(key) == false) {
+                delete current[lastKeyInPath];
+              }
+
+              current[key] = val;
+            }
+
           }
           catch (e) {
             throw new Error('第 ' + i + ' 行随机配置 key : value 后的 value 不合法！ \nerr: ' + e.message)
@@ -3432,7 +3396,11 @@
           // alert('> current = ' + JSON.stringify(current, null, '    '))
         }
 
-        return json
+        return {
+          name: randomName,
+          config: constConfig,
+          json: json
+        }
       },
 
 
