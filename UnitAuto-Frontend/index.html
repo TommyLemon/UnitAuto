@@ -179,17 +179,15 @@
           </textarea>
           <textarea id="vInput" @keyup="onChange(true)" style="width: 100%;height: 100%; position: absolute; z-index: 100; background: #0000;" wrap="off" >
 {
+    "static": true,
     "methodArgs": [
-        {   //JSONObject request，自动根据 value 判断类型，省略了 "type": "JSONObject",
-            "value": {
-                "arr": [
-                    0,
-                    1
-                ]
-            }
+        {   //可省略来自动判断的 type : Boolean,Integer,BigDecimal,String,JSONObject,JSONArray
+            "type": "long",
+            "value": 1
         },
-        {   //String arr，自动根据 value 判断类型，省略了 "type": "String",
-            "value": "arr"
+        {
+            "type": "long",
+            "value": 2
         }
     ]
 }
@@ -294,8 +292,11 @@ User/id : RANDOM_REAL  //从数据库随机取值
 User/id id> : RANDOM_INT(0,100000)  //用 id> 替换 id
 User/id : Math.round(100000*Math.random())  //完全自定义
 ">
-methodArgs/1/type : RANDOM_IN('String', 'JSONArray', null, undefined, 'apijson/demo/server/model/User')  //随机取值
-methodArgs/1/value : ORDER_IN('arr', 'list', 0, false, null, undefined)  //顺序取值
+methodArgs/0/type : ORDER_IN('long', 'double', 'Number', 'int', 'Float')  //顺序取值
+methodArgs/0/value : RANDOM_IN(1, 0.1, -10, 9.99, null)  //随机取值
+
+methodArgs/1/type : ORDER_IN('long', 'double', 'Number', 'int', 'Float')  //顺序取值
+methodArgs/1/value : ORDER_INT(-10, 100)  //顺序整数
 
 //清空文本内容可查看规则</textarea>
         </div>
@@ -699,7 +700,7 @@ methodArgs/1/value : ORDER_IN('arr', 'list', 0, false, null, undefined)  //顺�
   var vVerify = document.getElementById("vVerify");
   var vRemember = document.getElementById("vRemember");
 
-  vUrl.value = new String('countArray'); //main.js里访问不到，可能是script引用顺序问题
+  vUrl.value = new String('divide'); // 'countArray'); //main.js里访问不到，可能是script引用顺序问题
 
   var vMarkdown = document.getElementById('vMarkdown');
 

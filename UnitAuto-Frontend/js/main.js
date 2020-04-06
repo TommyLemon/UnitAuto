@@ -557,7 +557,7 @@
       },
       type: REQUEST_TYPE_JSON,
       types: [ REQUEST_TYPE_JSON ],
-      host: 'apijson/demo/server/DemoFunction/',
+      host: 'apijson/demo/server/MathUtil/', // 'apijson/demo/server/DemoFunction/',
       branch: 'countArray',
       database: 'MYSQL',// 'POSTGRESQL',
       schema: 'sys',
@@ -1329,18 +1329,22 @@
             return
           }
 
-          App.isTestCaseShow = false
+          App.isTestCaseShow = false;
 
           var currentAccount = App.accounts[App.currentAccountIndex];
           var currentResponse = StringUtil.isEmpty(App.jsoncon, true) ? {} : App.removeDebugInfo(JSON.parse(App.jsoncon));
 
           var code = currentResponse.code;
+          var thrw = currentResponse.throw;
           delete currentResponse.code; //code必须一致
+          delete currentResponse.throw; //throw必须一致
 
           var isML = App.isMLEnabled;
           var stddObj = isML ? JSONResponse.updateStandard({}, currentResponse) : {};
           stddObj.code = code;
+          stddObj.throw = thrw;
           currentResponse.code = code;
+          currentResponse.throw = thrw;
 
           var url = App.server + '/post'
           var req = isExportRandom ? {
@@ -2972,7 +2976,7 @@
       onClickTestRandom: function () {
         this.testRandom(! this.isRandomListShow && ! this.isRandomSubListShow, this.isRandomListShow, this.isRandomSubListShow)
       },
-      testRandom: function (show, testList, testSubList) {
+      testRandom: function (show, testList, testSubList, limit) {
         this.isRandomEditable = false
         if (testList != true && testSubList != true) {
           this.testRandomProcess = ''
@@ -3014,7 +3018,7 @@
 
           ORDER_MAP = {}  //重置
 
-          for (var i = 0; i < list.length; i ++) {
+          for (var i = 0; i < (limit != null ? limit : list.length); i ++) {  //limit限制子项测试个数
             const item = list[i]
             const random = item == null ? null : item.Random
             if (random == null || random.name == null) {
@@ -3123,7 +3127,7 @@
             this.resetCount(item)
             item.subs = subs
           }
-          this.testRandom(false, false, true)
+          this.testRandom(false, false, true, count)
         }
       },
 
@@ -3788,34 +3792,35 @@
             return
           }
 
-          document = App.currentRemoteItem || {}
+          document = this.currentRemoteItem || {}
         }
         else {
           document = item.Method = item.Method || {}
         }
         var testRecord = item.TestRecord = item.TestRecord || {}
 
-        var tests = App.tests[String(App.currentAccountIndex)] || {}
+        var tests = this.tests[String(this.currentAccountIndex)] || {}
         var currentResponse = (tests[isRandom ? random.documentId : document.id] || {})[
           isRandom ? (random.id > 0 ? random.id : (random.toId + '' + random.id)) : 0
         ] || {}
 
+        const list = isRandom ? (random.toId == null || random.toId <= 0 ? this.randomSubs : this.randoms) : this.testCases
+
         var isBefore = item.showType == 'before'
         if (right != true) {
           item.showType = isBefore ? 'after' : 'before'
-          Vue.set(isRandom ? (random.id != null && random.id > 0 ? App.randoms : App.randomSubs) : App.remotes, index, item);
+          Vue.set(list, index, item);
 
           var res = isBefore ? JSON.stringify(currentResponse) : testRecord.response
 
-          App.view = 'code'
-          App.jsoncon = res || ''
+          this.view = 'code'
+          this.jsoncon = res || ''
         }
         else {
-          const isML = App.isMLEnabled
           var url
 
           if (isBefore) { //撤回原来错误提交的校验标准
-            url = App.server + '/delete'
+            url = this.server + '/delete'
             const req = {
               TestRecord: {
                 id: testRecord.id, //TODO 权限问题？ item.userId,
@@ -3823,7 +3828,7 @@
               tag: 'TestRecord'
             }
 
-            App.request(true, REQUEST_TYPE_JSON, url, req, {}, function (url, res, err) {
+            this.request(true, REQUEST_TYPE_JSON, url, req, {}, function (url, res, err) {
               App.onResponse(url, res, err)
 
               var data = res.data || {}
@@ -3832,7 +3837,7 @@
                 return
               }
 
-              App.updateTestRecord(0, index, item, currentResponse, isRandom)
+              App.updateTestRecord(0, list, index, item, currentResponse, isRandom)
             })
           }
           else { //上传新的校验标准
@@ -3843,18 +3848,24 @@
             //   return
             // }
 
+
             var standard = StringUtil.isEmpty(testRecord.standard, true) ? null : JSON.parse(testRecord.standard);
             var code = currentResponse.code;
-            delete currentResponse.code; //code必须一致，下面没用到，所以不用还原
+            var thrw = currentResponse.throw;
+            delete currentResponse.code; //code必须一致
+            delete currentResponse.throw; //throw必须一致
 
-            var stddObj = App.isMLEnabled ? JSONResponse.updateStandard(standard || {}, currentResponse) : {};
+            var isML = this.isMLEnabled;
+            var stddObj = isML ? JSONResponse.updateStandard(standard || {}, currentResponse) : {};
             stddObj.code = code;
             currentResponse.code = code;
+            stddObj.throw = thrw;
+            currentResponse.throw = thrw;
 
             const isNewRandom = isRandom && random.id <= 0
 
             // if (isML != true) {
-            url = App.server + '/post'
+            url = this.server + '/post'
             const req = {
               Random: isNewRandom != true ? null : {
                 toId: random.toId,
@@ -3883,7 +3894,7 @@
             //   }
             // }
 
-            App.request(true, REQUEST_TYPE_JSON, url, req, {}, function (url, res, err) {
+            this.request(true, REQUEST_TYPE_JSON, url, req, {}, function (url, res, err) {
               App.onResponse(url, res, err)
 
               var data = res.data || {}
@@ -3903,23 +3914,24 @@
                 }
                 testRecord.response = JSON.stringify(currentResponse)
                 // testRecord.standard = stdd
+                item.TestRecord = testRecord
 
                 var r = req.Random
                 if (r != null && (data.Random || {}).id != null) {
                   r.id = data.Random.id
                   item.Random = r
                 }
+                //
+                // if (! isNewRandom) {
+                //   if (isRandom) {
+                //     App.showRandomList(true, App.currentRemoteItem)
+                //   }
+                //   else {
+                //     App.showTestCase(true, false)
+                //   }
+                // }
 
-                if (! isNewRandom) {
-                  if (isRandom) {
-                    App.showRandomList(true, App.currentRemoteItem)
-                  }
-                  else {
-                    App.showTestCase(true, false)
-                  }
-                }
-
-                App.updateTestRecord(0, index, item, currentResponse, isRandom)
+                App.updateTestRecord(0, list, index, item, currentResponse, isRandom)
               }
 
             })
@@ -3932,7 +3944,7 @@
         item = item || {}
         var doc = (isRandom ? item.Random : item.Method) || {}
 
-        App.request(true, REQUEST_TYPE_JSON, App.server + '/get', {
+        this.request(true, REQUEST_TYPE_JSON, this.server + '/get', {
           TestRecord: {
             documentId: isRandom ? doc.documentId : doc.id,
             randomId: isRandom ? doc.id : null,
@@ -3950,7 +3962,7 @@
           }
 
           item.TestRecord = data.TestRecord
-          App.compareResponse(allCount, list, index, item, response, isRandom);
+          App.compareResponse(allCount, list, index, item, response, isRandom, App.currentAccountIndex, true, err);
         })
       },
 
