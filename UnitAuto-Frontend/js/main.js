@@ -1037,7 +1037,8 @@
           alert('未选择' + type + '或' + type + '不存在！')
           return
         }
-        if (doc.method != this.exTxt.name) {
+        var nameKey = isDeleteRandom ? 'name' : 'method'
+        if (doc[nameKey] != this.exTxt.name) {
           alert('输入的' + type + '名和要删除的' + type + '名不匹配！')
           return
         }
@@ -1331,6 +1332,15 @@
           App.isTestCaseShow = false
 
           var currentAccount = App.accounts[App.currentAccountIndex];
+          var currentResponse = StringUtil.isEmpty(App.jsoncon, true) ? {} : App.removeDebugInfo(JSON.parse(App.jsoncon));
+
+          var code = currentResponse.code;
+          delete currentResponse.code; //code必须一致
+
+          var isML = App.isMLEnabled;
+          var stddObj = isML ? JSONResponse.updateStandard({}, currentResponse) : {};
+          stddObj.code = code;
+          currentResponse.code = code;
 
           var url = App.server + '/post'
           var req = isExportRandom ? {
@@ -1343,7 +1353,8 @@
             },
             'TestRecord': {
               'userId': App.User.id,
-              'response': JSON.stringify(StringUtil.isEmpty(App.jsoncon, true) ? {} : App.removeDebugInfo(JSON.parse(App.jsoncon)))
+              'response': JSON.stringify(currentResponse),
+              'standard': isML ? JSON.stringify(stddObj) : null
             },
             'tag': 'Random'
           } : {
@@ -1361,7 +1372,8 @@
             'TestRecord': {
               'randomId': 0,
               'userId': App.User.id,
-              'response': JSON.stringify(StringUtil.isEmpty(App.jsoncon, true) ? {} : App.removeDebugInfo(JSON.parse(App.jsoncon)))
+              'response': JSON.stringify(currentResponse),
+              'standard': isML ? JSON.stringify(stddObj) : null
             },
             'tag': 'Method'
           }
@@ -1773,7 +1785,7 @@
               'Method': {
                 '@order': 'date-',
                 'userId{}': [0, App.User.id],
-                'arguments()': 'getMethodArguments()',
+                'arguments()': 'getMethodArguments(methodArgs)',
                 'defination()': 'getMethodDefination(method,arguments,type,exceptions,null)',
                 'request()': 'getMethodRequest()',
                 'package$': StringUtil.isEmpty(packagePrefix) ? null : packagePrefix + '%',
@@ -2935,6 +2947,7 @@
         this.testRandom(! this.isRandomListShow && ! this.isRandomSubListShow, this.isRandomListShow, this.isRandomSubListShow)
       },
       testRandom: function (show, testList, testSubList) {
+        this.isRandomEditable = false
         if (testList != true && testSubList != true) {
           this.testRandomProcess = ''
           this.testRandomWithText(show, null)
@@ -3034,12 +3047,13 @@
                 config: constConfig
               },
               TestRecord: {  //解决子项始终没有对比标准
-                id: tr.id, //表示未上传
+                id: 0, //不允许子项撤回 tr.id, //表示未上传
                 userId: random.userId,
                 documentId: random.documentId,
                 testAccountId: tr.testAccountId,
                 randomId: - i - 1,
                 response: tr.response,
+                standard: tr.standard,
                 date: tr.date,
                 compare: tr.compare
               }
@@ -3156,7 +3170,7 @@
           }
 
           // path User/id  key id@
-          index = line.lastIndexOf(' : '); // indexOf(' : '); 可能会有 Comment:to
+          index = line.indexOf(' : '); //APIJSON Table:alias 前面不会有空格 //致后面就接 { 'a': 1} 报错 Unexpected token ':'   lastIndexOf(' : '); // indexOf(' : '); 可能会有 Comment:to
           var p_k = line.substring(0, index);
 
           // value RANDOM_REAL
@@ -3172,7 +3186,7 @@
             value = 'orderReal(' +
               getOrderIndex(
                 randomId
-                , line.substring(0, line.lastIndexOf(' : '))
+                , line.substring(0, line.indexOf(' : '))
                 , 0
               ) + ', JSONResponse.getTableName(pathKeys[pathKeys.length - 2]), "' + key + '")';
           }
@@ -3202,7 +3216,7 @@
               else if (fun == ORDER_INT || fun == ORDER_IN) {
                 value = (fun == ORDER_INT ? 'orderInt' : 'orderIn') + '(' + getOrderIndex(
                     randomId
-                    , line.substring(0, line.lastIndexOf(' : '))
+                    , line.substring(0, line.indexOf(' : '))
                     , fun == ORDER_INT ? 0 : StringUtil.split(value.substring(start + 1, end)).length
                   ) + ',' + value.substring(start + 1);
               }
@@ -3264,7 +3278,7 @@
           }
 
           // path User/id  key id@
-          index = line.lastIndexOf(' : '); // indexOf(' : '); 可能会有 Comment:to
+          index = line.indexOf(' : '); //APIJSON Table:alias 前面不会有空格 //致后面就接 { 'a': 1} 报错 Unexpected token ':'   lastIndexOf(' : '); // indexOf(' : '); 可能会有 Comment:to
           var p_k = line.substring(0, index);
           var bi = p_k.indexOf(' ');
           path = bi < 0 ? p_k : p_k.substring(0, bi);
@@ -3302,7 +3316,7 @@
             value = 'orderReal(' +
               getOrderIndex(
                 randomId
-                , line.substring(0, line.lastIndexOf(' : '))
+                , line.substring(0, line.indexOf(' : '))
                 , 0
               ) + ', JSONResponse.getTableName(pathKeys[pathKeys.length - 2]), "' + key + '")';
             if (customizeKey != true) {
@@ -3335,7 +3349,7 @@
               else if (fun == ORDER_INT || fun == ORDER_IN) {
                 value = (fun == ORDER_INT ? 'orderInt' : 'orderIn') + '(' + getOrderIndex(
                     randomId
-                    , line.substring(0, line.lastIndexOf(' : '))
+                    , line.substring(0, line.indexOf(' : '))
                     , fun == ORDER_INT ? 0 : StringUtil.split(value.substring(start + 1, end)).length
                   ) + ',' + value.substring(start + 1);
               }
@@ -3368,7 +3382,12 @@
           if (current.hasOwnProperty(key) == false) {
             delete current[lastKeyInPath];
           }
-          current[key] = eval(value);
+          try {
+            current[key] = eval(value);
+          }
+          catch (e) {
+            throw new Error('第 ' + i + ' 行随机配置 key : value 后的 value 不合法！ \nerr: ' + e.message)
+          }
 
           // alert('> current = ' + JSON.stringify(current, null, '    '))
         }
