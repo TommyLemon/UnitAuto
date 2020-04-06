@@ -3629,43 +3629,7 @@
           r = r || {}
           it.Random = r
 
-          //更新父级总览数据
-          var toId = r.toId
-          if (toId != null && toId > 0) {
-
-            for (var i in App.randoms) {
-
-              var toIt = App.randoms[i]
-              if (toIt != null && toIt.Random != null && toIt.Random.id == toId) {
-
-                var toRandom = toIt.Random
-                var id = toRandom == null ? 0 : toRandom.id
-                var count = id == null || id <= 0 ? 0 : toRandom.count
-                if (count != null && count > 1) {
-                  var key = it.compareColor + 'Count'
-                  if (toIt[key] == null) {
-                    toIt[key] = 1
-                  }
-                  else {
-                    toIt[key]++
-                  }
-
-                  if (toIt.totalCount == null) {
-                    toIt.totalCount = 1
-                  }
-                  else {
-                    toIt.totalCount ++
-                  }
-                }
-
-                Vue.set(App.randoms, i, toIt)
-
-                break;
-              }
-
-            }
-
-          }
+          this.updateToRandomSummary(it, 1)
         }
         else {
           it.Method = d
@@ -3705,6 +3669,48 @@
         if (doneCount >= allCount && this.isCrossEnabled && isRandom != true) {
           // alert('onTestResponse  accountIndex = ' + accountIndex)
           this.test(false, accountIndex + 1)
+        }
+      },
+
+      //更新父级总览数据
+      updateToRandomSummary: function (item, change) {
+        var random = item == null || change == null ? null : item.Random
+        var toId = random == null ? null : random.toId
+        if (toId != null && toId > 0) {
+
+          for (var i in App.randoms) {
+
+            var toIt = App.randoms[i]
+            if (toIt != null && toIt.Random != null && toIt.Random.id == toId) {
+
+              var toRandom = toIt.Random
+              var id = toRandom == null ? 0 : toRandom.id
+              var count = id == null || id <= 0 ? 0 : toRandom.count
+              if (count != null && count > 1) {
+                var key = item.compareColor + 'Count'
+                if (toIt[key] == null) {
+                  toIt[key] = 0
+                }
+                toIt[key] += change
+                if (toIt[key] < 0) {
+                  toIt[key] = 0
+                }
+
+                if (toIt.totalCount == null) {
+                  toIt.totalCount = 0
+                }
+                toIt.totalCount += change
+                if (toIt.totalCount < 0) {
+                  toIt.totalCount = 0
+                }
+              }
+
+              Vue.set(App.randoms, i, toIt)
+
+              break;
+            }
+
+          }
         }
       },
 
@@ -3837,6 +3843,15 @@
                 return
               }
 
+              if (isRandom) {
+                App.updateToRandomSummary(item, -1)
+              }
+              item.compareType = JSONResponse.COMPARE_NO_STANDARD
+              item.compareMessage = '查看结果'
+              item.compareColor = 'white'
+              item.hintMessage = '没有校验标准！'
+              item.TestRecord = null
+
               App.updateTestRecord(0, list, index, item, currentResponse, isRandom)
             })
           }
@@ -3904,23 +3919,38 @@
                 }
               }
               else {
+                if (isRandom) {
+                  App.updateToRandomSummary(item, -1)
+                }
+
                 item.compareType = 0
                 item.compareMessage = '查看结果'
                 item.compareColor = 'white'
                 item.hintMessage = '结果正确'
+                var testRecord = item.TestRecord || {}
                 testRecord.compare = {
                   code: 0,
                   msg: '结果正确'
                 }
                 testRecord.response = JSON.stringify(currentResponse)
                 // testRecord.standard = stdd
+
+                if (isRandom) {
+                  var r = req.Random
+                  if (r != null && (data.Random || {}).id != null) {
+                    r.id = data.Random.id
+                    item.Random.id = r
+                  }
+                  if ((data.TestRecord || {}).id != null) {
+                    testRecord.id = data.TestRecord.id
+                    if (r != null) {
+                      testRecord.randomId = r.id
+                    }
+                  }
+                }
                 item.TestRecord = testRecord
 
-                var r = req.Random
-                if (r != null && (data.Random || {}).id != null) {
-                  r.id = data.Random.id
-                  item.Random = r
-                }
+
                 //
                 // if (! isNewRandom) {
                 //   if (isRandom) {
@@ -3961,7 +3991,6 @@
             return
           }
 
-          item.TestRecord = data.TestRecord
           App.compareResponse(allCount, list, index, item, response, isRandom, App.currentAccountIndex, true, err);
         })
       },

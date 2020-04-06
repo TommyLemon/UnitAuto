@@ -321,8 +321,8 @@ var JSONResponse = {
     delete target.code;
     delete real.code;
 
-    var thrw = target.throw;
-    var thrw = real.throw;
+    var tThrw = target.throw;
+    var rThrw = real.throw;
 
     delete target.throw;
     delete real.throw;
@@ -338,8 +338,8 @@ var JSONResponse = {
     target.code = tCode;
     real.code = rCode;
 
-    target.throw = thrw;
-    real.throw = thrw;
+    target.throw = tThrw;
+    real.throw = rThrw;
 
     return result;
   },
