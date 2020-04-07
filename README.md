@@ -32,10 +32,10 @@ UnitAuto 不需要写任何代码，直接读取方法的属性，自动注入�
 2.UnitAuto 这种 Runtime testing 工具无需 Mock 环境(Application, Context 等)，<br />
 更不用为 Mock 出来的环境满足不了需求导致测试用例无法通过而头疼。<br />
 
-#### QQ技术交流群：1050166440（新） 421793905（满） 595514898（满）
+#### QQ技术交流群：734652054（免费）607020115（付费）
 
-如果有什么问题或建议可以 [提 ISSUE ](https://github.com/TommyLemon/Android-ZBLibrary/issues) 或 加群，交流技术，分享经验。<br >
-如果你解决了某些 Bug，或者新增了一些功能，欢迎 [贡献代码](https://github.com/TommyLemon/Android-ZBLibrary/pulls)，感激不尽^_^
+如果有什么问题或建议可以 [提 ISSUE ](https://github.com/TommyLemon/UnitAuto/issues) 或 加群，交流技术，分享经验。<br >
+如果你解决了某些 Bug，或者新增了一些功能，欢迎 [贡献代码](https://github.com/TommyLemon/UnitAuto/pulls)，感激不尽^_^
 
 
 ### 其它项目
