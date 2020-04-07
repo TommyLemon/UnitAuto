@@ -31,3 +31,26 @@ UnitAuto 不需要写任何代码，直接读取方法的属性，自动注入�
 <br />
 2.UnitAuto 这种 Runtime testing 工具无需 Mock 环境(Application, Context 等)，<br />
 更不用为 Mock 出来的环境满足不了需求导致测试用例无法通过而头疼。<br />
+
+#### QQ技术交流群：1050166440（新） 421793905（满） 595514898（满）
+
+如果有什么问题或建议可以 [提 ISSUE ](https://github.com/TommyLemon/Android-ZBLibrary/issues) 或 加群，交流技术，分享经验。<br >
+如果你解决了某些 Bug，或者新增了一些功能，欢迎 [贡献代码](https://github.com/TommyLemon/Android-ZBLibrary/pulls)，感激不尽^_^
+
+
+### 其它项目
+[APIJSON](https://github.com/TommyLemon/APIJSON) 后端接口和文档自动化，前端(客户端) 定制返回 JSON 的数据和结构
+
+[APIAuto](https://github.com/TommyLemon/APIAuto) 机器学习测试、自动生成代码、自动静态检查、自动生成文档与注释等，做最先进的接口管理工具
+
+[APIJSON-Android-RxJava](https://github.com/TommyLemon/APIJSON-Android-RxJava) ZBLibrary(UI) + APIJSON(HTTP) + RxJava(Data)
+
+
+### 持续更新
+[https://github.com/TommyLemon/Android-ZBLibrary/commits/master](https://github.com/TommyLemon/Android-ZBLibrary/commits/master)
+
+
+### 我要赞赏
+创作不易，右上角点 ⭐Star 支持下吧，谢谢 ^_^ <br />
+[https://github.com/TommyLemon/Android-ZBLibrary](https://github.com/TommyLemon/Android-ZBLibrary)
+
