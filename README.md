@@ -43,8 +43,6 @@ UnitAuto 不需要写任何代码，直接读取方法的属性，自动注入�
 
 [APIAuto](https://github.com/TommyLemon/APIAuto) 机器学习测试、自动生成代码、自动静态检查、自动生成文档与注释等，做最先进的接口管理工具
 
-[APIJSON-Android-RxJava](https://github.com/TommyLemon/APIJSON-Android-RxJava) ZBLibrary(UI) + APIJSON(HTTP) + RxJava(Data)
-
 
 ### 持续更新
 [https://github.com/TommyLemon/UnitAuto/commits/master](https://github.com/TommyLemon/UnitAuto/commits/master)
