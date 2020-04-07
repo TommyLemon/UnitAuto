@@ -3,6 +3,20 @@
 #### 介绍
 机器学习自动化单元测试平台
 
+<p align="center" >
+  <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-Method-List-small.jpg"></a>
+</p>
+<p align="center" >
+  <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-RandomTest-Parent-small.jpg"></a>
+</p>
+<p align="center" >
+  <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-RandomTest-Child-small.jpg"></a>
+</p>
+<p align="center" >
+  <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-Compare-Code-small.jpg"></a>
+</p>
+
+
 #### 原理
 后端不需要写任何单元测试代码（逻辑代码、注解代码等全都不要），<br />
 这个工具会自动生成测试参数，并执行方法，拿到返回值进行校验。<br />
