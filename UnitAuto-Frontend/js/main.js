@@ -557,7 +557,7 @@
       },
       type: REQUEST_TYPE_JSON,
       types: [ REQUEST_TYPE_JSON ],
-      host: 'apijson/demo/server/DemoFunction/',
+      host: 'apijson/demo/server/MathUtil/', // 'apijson/demo/server/DemoFunction/',
       branch: 'countArray',
       database: 'MYSQL',// 'POSTGRESQL',
       schema: 'sys',
@@ -1037,7 +1037,8 @@
           alert('未选择' + type + '或' + type + '不存在！')
           return
         }
-        if (doc.method != this.exTxt.name) {
+        var nameKey = isDeleteRandom ? 'name' : 'method'
+        if (doc[nameKey] != this.exTxt.name) {
           alert('输入的' + type + '名和要删除的' + type + '名不匹配！')
           return
         }
@@ -1068,8 +1069,13 @@
 
           if (isDeleteRandom) {
             if (rpObj.Random != null && rpObj.Random.code == CODE_SUCCESS) {
-              App.randoms.splice(item.index, 1)
-              App.showRandomList(true, App.currentRemoteItem)
+              if (((item.Random || {}).toId || 0) <= 0) {
+                App.randoms.splice(item.index, 1)
+              }
+              else {
+                App.randomSubs.splice(item.index, 1)
+              }
+              // App.showRandomList(true, App.currentRemoteItem)
             }
           } else {
             if (rpObj.Method != null && rpObj.Method.code == CODE_SUCCESS) {
@@ -1124,7 +1130,7 @@
             return
           }
 
-          if (this.isRandomSubListShow) {
+          if (isRandom && (((item || {}).Random || {}).id || 0) <= 0) {
             this.randomSubs.splice(index, 1)
             return
           }
@@ -1328,14 +1334,28 @@
             return
           }
 
-          App.isTestCaseShow = false
+          App.isTestCaseShow = false;
 
           var currentAccount = App.accounts[App.currentAccountIndex];
+          var currentResponse = StringUtil.isEmpty(App.jsoncon, true) ? {} : App.removeDebugInfo(JSON.parse(App.jsoncon));
+
+          var code = currentResponse.code;
+          var thrw = currentResponse.throw;
+          delete currentResponse.code; //code必须一致
+          delete currentResponse.throw; //throw必须一致
+
+          var isML = App.isMLEnabled;
+          var stddObj = isML ? JSONResponse.updateStandard({}, currentResponse) : {};
+          stddObj.code = code;
+          stddObj.throw = thrw;
+          currentResponse.code = code;
+          currentResponse.throw = thrw;
 
           var url = App.server + '/post'
           var req = isExportRandom ? {
             format: false,
             'Random': {
+              toId: 0,
               documentId: did,
               count: App.requestCount,
               name: App.exTxt.name,
@@ -1343,7 +1363,8 @@
             },
             'TestRecord': {
               'userId': App.User.id,
-              'response': JSON.stringify(StringUtil.isEmpty(App.jsoncon, true) ? {} : App.removeDebugInfo(JSON.parse(App.jsoncon)))
+              'response': JSON.stringify(currentResponse),
+              'standard': isML ? JSON.stringify(stddObj) : null
             },
             'tag': 'Random'
           } : {
@@ -1361,7 +1382,8 @@
             'TestRecord': {
               'randomId': 0,
               'userId': App.User.id,
-              'response': JSON.stringify(StringUtil.isEmpty(App.jsoncon, true) ? {} : App.removeDebugInfo(JSON.parse(App.jsoncon)))
+              'response': JSON.stringify(currentResponse),
+              'standard': isML ? JSON.stringify(stddObj) : null
             },
             'tag': 'Method'
           }
@@ -1738,7 +1760,7 @@
                 if (item == null) {
                   continue
                 }
-                var d = item.Document || {}
+                var d = item.Method || {}
                 App.compareResponse(allCount, testCases, i, item, (tests[d.id] || {})[0], false, accountIndex, true)
               }
             }
@@ -1773,7 +1795,7 @@
               'Method': {
                 '@order': 'date-',
                 'userId{}': [0, App.User.id],
-                'arguments()': 'getMethodArguments()',
+                'arguments()': 'getMethodArguments(methodArgs)',
                 'defination()': 'getMethodDefination(method,arguments,type,exceptions,null)',
                 'request()': 'getMethodRequest()',
                 'package$': StringUtil.isEmpty(packagePrefix) ? null : packagePrefix + '%',
@@ -1811,11 +1833,13 @@
       },
 
       //显示远程的随机配置文档
-      showRandomList: function (show, item) {
-        this.isRandomListShow = show
-        this.randomSubs = []
-        this.isRandomSubListShow = false
+      showRandomList: function (show, item, isSub) {
         this.isRandomEditable = false
+        this.isRandomListShow = show && ! isSub
+        this.isRandomSubListShow = show && isSub
+        if (! isSub) {
+          this.randomSubs = []
+        }
 
         vOutput.value = show ? '' : (output || '')
         this.showDoc()
@@ -1830,12 +1854,25 @@
             '[]': {
               'count': 0,
               'Random': {
+                'toId': 0,
                 'documentId': item.id,
                 '@order': "date-"
               },
               'TestRecord': {
                 'randomId@': '/Random/id',
                 '@order': 'date-'
+              },
+              '[]': {
+                'count': 0,
+                'Random': {
+                  'toId@': '[]/Random/id',
+                  'documentId': item.id,
+                  '@order': "date-"
+                },
+                'TestRecord': {
+                  'randomId@': '/Random/id',
+                  '@order': 'date-'
+                }
               }
             }
           }
@@ -1847,8 +1884,18 @@
             var rpObj = res.data
 
             if (rpObj != null && rpObj.code === CODE_SUCCESS) {
-              App.isRandomListShow = true
-              App.randoms = rpObj['[]']
+              App.isRandomListShow = ! isSub
+              App.isRandomSubListShow = isSub
+              if (isSub) {
+                if (App.currentRandomItem == null) {
+                  App.currentRandomItem = {}
+                }
+                App.randomSubs = App.currentRandomItem.subs = App.currentRandomItem['[]'] = rpObj['[]']
+              }
+              else {
+                App.randoms = rpObj['[]']
+              }
+
               vOutput.value = show ? '' : (output || '')
               App.showDoc()
 
@@ -2532,7 +2579,12 @@
             return
           }
 
-          var r = item.Random || {}
+          var r = item == null ? null : item.Random
+          if (r == null || r.id == null) {
+            alert('请选择有效的选项！item.Random.id == null !')
+            return
+          }
+
           //修改 Random 的 count
           this.request(true, REQUEST_TYPE_JSON, this.server + '/put', {
             Random: {
@@ -2934,7 +2986,8 @@
       onClickTestRandom: function () {
         this.testRandom(! this.isRandomListShow && ! this.isRandomSubListShow, this.isRandomListShow, this.isRandomSubListShow)
       },
-      testRandom: function (show, testList, testSubList) {
+      testRandom: function (show, testList, testSubList, limit) {
+        this.isRandomEditable = false
         if (testList != true && testSubList != true) {
           this.testRandomProcess = ''
           this.testRandomWithText(show, null)
@@ -2965,13 +3018,17 @@
           }
           this.testRandomProcess = '正在测试: ' + 0 + '/' + allCount
 
+          if (testSubList) {
+            this.resetCount(this.currentRandomItem)
+          }
+
           var json = this.getRequest(vInput.value) || {}
           var url = this.getUrl()
           var header = this.getHeader(vHeader.value)
 
           ORDER_MAP = {}  //重置
 
-          for (var i = 0; i < list.length; i ++) {
+          for (var i = 0; i < (limit != null ? limit : list.length); i ++) {  //limit限制子项测试个数
             const item = list[i]
             const random = item == null ? null : item.Random
             if (random == null || random.name == null) {
@@ -3008,38 +3065,48 @@
       testRandomSingle: function (show, testList, testSubList, item, type, url, json, header, callback) {
         item = item || {}
         var random = item.Random = item.Random || {}
+        var subs = item['[]'] || []
+        var existCount = subs.length
+        subs = existCount <= 0 ? subs : JSON.parse(JSON.stringify(subs))
+
         var count = random.count || 0
 
-        var tr = item.TestRecord || {}
-        var subs = []
-
         for (var i = 0; i < count; i ++) {
-          var constConfig = this.getRandomConstConfig(random.config, random.id) //第1遍，把 key : expression 改为 key : value
+          // var constConfig = i < existCount ? ((subs[i] || {}).Random || {}).config : this.getRandomConstConfig(random.config, random.id) //第1遍，把 key : expression 改为 key : value
+          // var constJson = this.getRandomJSON(JSON.parse(JSON.stringify(json)), constConfig, random.id) //第2遍，用新的 random config 来修改原 json
 
-          var constJson = this.getRandomJSON(JSON.parse(JSON.stringify(json)), constConfig, random.id) //第2遍，用新的 random config 来修改原 json
+          var rawConfig = testSubList && i < existCount ? ((subs[i] || {}).Random || {}).config : random.config
+          var result = this.parseRandom(
+            JSON.parse(JSON.stringify(json)), rawConfig, random.id
+            , ! testSubList, testSubList && i >= existCount, testSubList && i >= existCount
+          )
 
-          if (testSubList) {
-            subs.push({
-              toId: random.id,
-              Random: {
-                id: - i - 1, //表示未上传
-                userId: random.userId,
-                documentId: random.documentId,
-                count: 1,
-                name: random.name + ' - Temp ' + i,
-                config: constConfig
-              },
-              TestRecord: {  //解决子项始终没有对比标准
-                id: tr.id, //表示未上传
-                userId: random.userId,
-                documentId: random.documentId,
-                testAccountId: tr.testAccountId,
-                randomId: - i - 1,
-                response: tr.response,
-                date: tr.date,
-                compare: tr.compare
-              }
-            })
+          if (testSubList) {  //在原来已上传的基础上，生成新的
+            if (i >= existCount) {
+              subs.push({
+                Random: {
+                  id: -i - 1, //表示未上传
+                  toId: random.id,
+                  userId: random.userId,
+                  documentId: random.documentId,
+                  count: 1,
+                  name: result.name || 'Temp ' + i,
+                  config: result.config
+                },
+                //不再需要，因为子项里前面一部分就是已上传的，而且这样更准确，交互更直观
+                // TestRecord: {  //解决子项始终没有对比标准
+                //   id: 0, //不允许子项撤回 tr.id, //表示未上传
+                //   userId: random.userId,
+                //   documentId: random.documentId,
+                //   testAccountId: tr.testAccountId,
+                //   randomId: -i - 1,
+                //   response: tr.response,
+                //   standard: tr.standard,
+                //   date: tr.date,
+                //   compare: tr.compare
+                // }
+              })
+            }
           }
           else {
             var cb = function (url, res, err) {
@@ -3051,6 +3118,7 @@
               }
             };
 
+            var constJson = result.json
             if (show == true) {
               vInput.value = JSON.stringify(constJson, null, '    ');
               this.send(false, cb);
@@ -3072,16 +3140,26 @@
         if (testSubList) {
           this.randomSubs = subs
           if (this.isRandomListShow == true) {
-            item.totalCount = 0
-            item.whiteCount = 0
-            item.blueCount = 0
-            item.orangeCount = 0
-            item.redCount = 0
+            this.resetCount(item)
             item.subs = subs
           }
-          this.testRandom(false, false, true)
+          this.testRandom(false, false, true, count)
         }
       },
+
+      resetCount: function (randomItem) {
+        if (randomItem == null) {
+          App.log('resetCount  randomItem == null >> return')
+          return
+        }
+        randomItem.totalCount = 0
+        randomItem.whiteCount = 0
+        randomItem.greenCount = 0
+        randomItem.blueCount = 0
+        randomItem.orangeCount = 0
+        randomItem.redCount = 0
+      },
+
       /**随机测试，动态替换键值对
        * @param show
        * @param callback
@@ -3091,8 +3169,8 @@
           var count = this.testRandomCount || 0;
           this.isRandomSubListShow = count > 1;
           this.testRandomSingle(show, false, this.isRandomSubListShow, {
-              toId: ((this.currentRandomItem || {}).Random || {}).id || 0,
               Random: {
+                toId: 0, // ((this.currentRandomItem || {}).Random || {}).id || 0,
                 userId: (this.User || {}).id,
                 count: count,
                 name: this.randomTestTitle,
@@ -3116,113 +3194,27 @@
         }
       },
 
-      getRandomConstConfig: function (config, randomId) {
-        var lines = config == null ? null : config.trim().split('\n')
-        if (lines == null || lines.length <= 0) {
-          return null
-        }
-
-        var constConfig = '' //TODO 改为 [{ "rawPath": "User/id", "replacePath": "User/id@", "replaceValue": "RANDOM_INT(1, 10)", "isExpression": true }] ?
-
-        // alert('getRandomConstConfig randomId = ' + randomId + '; config = ' + config)
-
-        var line;
-        var value; // RANDOM_DATABASE
-        var index;
-
-        for (var i = 0; i < lines.length; i ++) {
-          line = lines[i] || '';
-
-          // remove comment
-          index = line.indexOf('//');
-          if (index >= 0) {
-            line = line.substring(0, index).trim();
-          }
-          if (line.length <= 0) {
-            continue;
-          }
-
-          // path User/id  key id@
-          index = line.lastIndexOf(' : '); // indexOf(' : '); 可能会有 Comment:to
-          var p_k = line.substring(0, index);
-
-          // value RANDOM_REAL
-          value = line.substring(index + ' : '.length);
-
-          if (value == RANDOM_REAL) {
-            value = 'randomReal(JSONResponse.getTableName(pathKeys[pathKeys.length - 2]), "' + key + '", 1)';
-          }
-          else if (value == RANDOM_REAL_IN) {
-            value = 'randomReal(JSONResponse.getTableName(pathKeys[pathKeys.length - 2]), "' + key + '", null)';
-          }
-          else if (value == ORDER_REAL) {
-            value = 'orderReal(' +
-              getOrderIndex(
-                randomId
-                , line.substring(0, line.lastIndexOf(' : '))
-                , 0
-              ) + ', JSONResponse.getTableName(pathKeys[pathKeys.length - 2]), "' + key + '")';
-          }
-          else {
-            var start = value.indexOf('(');
-            var end = value.lastIndexOf(')');
-
-            //支持 1, "a" 这种原始值
-            // if (start < 0 || end <= start) {  //(1) 表示原始值  start*end <= 0 || start >= end) {
-            //   throw new Error('随机测试 第 ' + i + ' 行格式错误！字符 ' + value + ' 不是合法的随机函数!');
-            // }
-
-            if (start > 0 && end > start) {
-              var fun = value.substring(0, start);
-              if (fun == RANDOM_INT) {
-                value = 'randomInt' + value.substring(start);
-              }
-              else if (fun == RANDOM_NUM) {
-                value = 'randomNum' + value.substring(start);
-              }
-              else if (fun == RANDOM_STR) {
-                value = 'randomStr' + value.substring(start);
-              }
-              else if (fun == RANDOM_IN) {
-                value = 'randomIn' + value.substring(start);
-              }
-              else if (fun == ORDER_INT || fun == ORDER_IN) {
-                value = (fun == ORDER_INT ? 'orderInt' : 'orderIn') + '(' + getOrderIndex(
-                    randomId
-                    , line.substring(0, line.lastIndexOf(' : '))
-                    , fun == ORDER_INT ? 0 : StringUtil.split(value.substring(start + 1, end)).length
-                  ) + ',' + value.substring(start + 1);
-              }
-            }
-
-          }
-
-          value = eval(value);
-          if (value instanceof Object) {
-            value = JSON.stringify(value)
-          }
-          else if (typeof value == 'string') {
-            value = '"' + value + '"';
-          }
-          constConfig += ((i <= 0 ? '' : ' \n') + p_k + ' : ' + value);
-        }
-
-        // alert('getRandomConstConfig  return constConfig = ' + constConfig)
-
-        return constConfig
-      },
-
+      /**
+       *  与 getRandomJSON 合并，返回一个
+       *  {
+       *    name: 'long 1, long 2', // 自动按 type0 value0, type1, value1 格式
+       *    config: {}, //const config
+       *    json: {} //const json
+       *  }
+       */
       /**随机测试，动态替换键值对
        * @param show
        * @param callback
        */
-      getRandomJSON: function (json, config, randomId) {
+      parseRandom: function (json, config, randomId, generateJSON, generateConfig, generateName) {
         var lines = config == null ? null : config.trim().split('\n')
         if (lines == null || lines.length <= 0) {
           return null;
         }
 
         randomId = randomId || 0;
+        var randomName = ''
+        var constConfig = '' //TODO 改为 [{ "rawPath": "User/id", "replacePath": "User/id@", "replaceValue": "RANDOM_INT(1, 10)", "isExpression": true }] ?
 
         var json = json || {};
 
@@ -3251,7 +3243,7 @@
           }
 
           // path User/id  key id@
-          index = line.lastIndexOf(' : '); // indexOf(' : '); 可能会有 Comment:to
+          index = line.indexOf(' : '); //APIJSON Table:alias 前面不会有空格 //致后面就接 { 'a': 1} 报错 Unexpected token ':'   lastIndexOf(' : '); // indexOf(' : '); 可能会有 Comment:to
           var p_k = line.substring(0, index);
           var bi = p_k.indexOf(' ');
           path = bi < 0 ? p_k : p_k.substring(0, bi);
@@ -3289,7 +3281,7 @@
             value = 'orderReal(' +
               getOrderIndex(
                 randomId
-                , line.substring(0, line.lastIndexOf(' : '))
+                , line.substring(0, line.indexOf(' : '))
                 , 0
               ) + ', JSONResponse.getTableName(pathKeys[pathKeys.length - 2]), "' + key + '")';
             if (customizeKey != true) {
@@ -3322,7 +3314,7 @@
               else if (fun == ORDER_INT || fun == ORDER_IN) {
                 value = (fun == ORDER_INT ? 'orderInt' : 'orderIn') + '(' + getOrderIndex(
                     randomId
-                    , line.substring(0, line.lastIndexOf(' : '))
+                    , line.substring(0, line.indexOf(' : '))
                     , fun == ORDER_INT ? 0 : StringUtil.split(value.substring(start + 1, end)).length
                   ) + ',' + value.substring(start + 1);
               }
@@ -3330,37 +3322,85 @@
 
           }
 
-          //先按照单行简单实现
-          //替换 JSON 里的键值对 key: value
+          try {
+            var val = eval(value)
 
-          var parent = json;
-          var current = null;
-          for (var j = 0; j < pathKeys.length - 1; j ++) {
-            current = parent[pathKeys[j]]
-            if (current == null) {
-              current = parent[pathKeys[j]] = {}
+            if (generateConfig) {
+              var configVal;
+              if (val instanceof Object) {
+                configVal = JSON.stringify(val);
+              }
+              else if (typeof val == 'string') {
+                configVal = '"' + val + '"';
+              }
+              else {
+                configVal = val
+              }
+              constConfig += ((i <= 0 ? '' : ' \n') + p_k + ' : ' + configVal);
             }
-            if (parent instanceof Object == false) {
-              throw new Error('随机测试 第 ' + i + ' 行格式错误！路径 ' + path + ' 中' +
-                ' pathKeys[' + j + '] = ' + pathKeys[j] + ' 在实际请求 JSON 内对应的值不是对象 {} !');
+
+            if (generateName) {
+              var valStr;
+              if (val instanceof Array) {
+                valStr = '[' + val.length + ']';
+              }
+              else if (val instanceof Object) {
+                valStr = '{...}';
+              }
+              else if (typeof val == 'boolean') {
+                valStr = '' + val;
+              }
+              else {
+                valStr = new String(val);
+                if (valStr.length > 13) {
+                  valStr = valStr.substring(0, 5) + '...';
+                }
+              }
+              randomName += ((i <= 0 ? '' : ', ') + valStr);
             }
-            parent = current;
-          }
 
-          if (current == null) {
-            current = json;
-          }
-          // alert('< current = ' + JSON.stringify(current, null, '    '))
+            if (generateJSON) {
+              //先按照单行简单实现
+              //替换 JSON 里的键值对 key: value
+              var parent = json;
+              var current = null;
+              for (var j = 0; j < pathKeys.length - 1; j ++) {
+                current = parent[pathKeys[j]]
+                if (current == null) {
+                  current = parent[pathKeys[j]] = {}
+                }
+                if (parent instanceof Object == false) {
+                  throw new Error('随机测试 第 ' + i + ' 行格式错误！路径 ' + path + ' 中' +
+                    ' pathKeys[' + j + '] = ' + pathKeys[j] + ' 在实际请求 JSON 内对应的值不是对象 {} !');
+                }
+                parent = current;
+              }
 
-          if (current.hasOwnProperty(key) == false) {
-            delete current[lastKeyInPath];
+              if (current == null) {
+                current = json;
+              }
+              // alert('< current = ' + JSON.stringify(current, null, '    '))
+
+              if (current.hasOwnProperty(key) == false) {
+                delete current[lastKeyInPath];
+              }
+
+              current[key] = val;
+            }
+
           }
-          current[key] = eval(value);
+          catch (e) {
+            throw new Error('第 ' + i + ' 行随机配置 key : value 后的 value 不合法！ \nerr: ' + e.message)
+          }
 
           // alert('> current = ' + JSON.stringify(current, null, '    '))
         }
 
-        return json
+        return {
+          name: randomName,
+          config: constConfig,
+          json: json
+        }
       },
 
 
@@ -3534,7 +3574,7 @@
             it.compareMessage = '请求出错！'
             break;
           case JSONResponse.COMPARE_NO_STANDARD:
-            it.compareColor = 'white'
+            it.compareColor = 'green'
             it.compareMessage = '确认正确后点击[对的，纠正]'
             break;
           case JSONResponse.COMPARE_KEY_MORE:
@@ -3563,43 +3603,7 @@
           r = r || {}
           it.Random = r
 
-          //更新父级总览数据
-          var toId = it.toId
-          if (toId != null && toId > 0) {
-
-            for (var i in App.randoms) {
-
-              var toIt = App.randoms[i]
-              if (toIt != null && toIt.Random != null && toIt.Random.id == toId) {
-
-                var toRandom = toIt.Random
-                var id = toRandom == null ? 0 : toRandom.id
-                var count = id == null || id <= 0 ? 0 : toRandom.count
-                if (count != null && count > 1) {
-                  var key = it.compareColor + 'Count'
-                  if (toIt[key] == null) {
-                    toIt[key] = 1
-                  }
-                  else {
-                    toIt[key]++
-                  }
-
-                  if (toIt.totalCount == null) {
-                    toIt.totalCount = 1
-                  }
-                  else {
-                    toIt.totalCount ++
-                  }
-                }
-
-                Vue.set(App.randoms, i, toIt)
-
-                break;
-              }
-
-            }
-
-          }
+          this.updateToRandomSummary(it, 1)
         }
         else {
           it.Method = d
@@ -3615,7 +3619,7 @@
         doneCount ++
         this.testProcess = doneCount >= allCount ? (this.isMLEnabled ? '机器学习:已开启' : '机器学习:已关闭') : '正在测试: ' + doneCount + '/' + allCount
 
-        this.log('doneCount = ' + doneCount + '; d.name = ' + (isRandom ? r.name : d.name) + '; tr.compareType = ' + tr.compareType)
+        this.log('doneCount = ' + doneCount + '; d.name = ' + (isRandom ? r.name : d.name) + '; it.compareType = ' + it.compareType)
 
         var documentId = isRandom ? r.documentId : d.id
         if (this.tests == null) {
@@ -3630,7 +3634,7 @@
         if (t == null) {
           t = tests[documentId] = {}
         }
-        t[isRandom ? (r.id > 0 ? r.id : (it.toId + '' + r.id)) : 0] = response
+        t[isRandom ? (r.id > 0 ? r.id : (r.toId + '' + r.id)) : 0] = response
 
         this.tests[String(accountIndex)] = tests
         this.log('tests = ' + JSON.stringify(tests, null, '    '))
@@ -3639,6 +3643,48 @@
         if (doneCount >= allCount && this.isCrossEnabled && isRandom != true) {
           // alert('onTestResponse  accountIndex = ' + accountIndex)
           this.test(false, accountIndex + 1)
+        }
+      },
+
+      //更新父级总览数据
+      updateToRandomSummary: function (item, change) {
+        var random = item == null || change == null ? null : item.Random
+        var toId = random == null ? null : random.toId
+        if (toId != null && toId > 0) {
+
+          for (var i in App.randoms) {
+
+            var toIt = App.randoms[i]
+            if (toIt != null && toIt.Random != null && toIt.Random.id == toId) {
+
+              var toRandom = toIt.Random
+              var id = toRandom == null ? 0 : toRandom.id
+              var count = id == null || id <= 0 ? 0 : toRandom.count
+              if (count != null && count > 1) {
+                var key = item.compareColor + 'Count'
+                if (toIt[key] == null) {
+                  toIt[key] = 0
+                }
+                toIt[key] += change
+                if (toIt[key] < 0) {
+                  toIt[key] = 0
+                }
+
+                if (toIt.totalCount == null) {
+                  toIt.totalCount = 0
+                }
+                toIt.totalCount += change
+                if (toIt.totalCount < 0) {
+                  toIt.totalCount = 0
+                }
+              }
+
+              Vue.set(App.randoms, i, toIt)
+
+              break;
+            }
+
+          }
         }
       },
 
@@ -3721,39 +3767,40 @@
         if (isRandom) {
           if ((random.count || 0) > 1) {
             this.restoreRandom(item)
-            this.randomSubs = item.subs || []
+            this.randomSubs = (item.subs || item['[]']) || []
             this.isRandomSubListShow = true
             return
           }
 
-          document = App.currentRemoteItem || {}
+          document = this.currentRemoteItem || {}
         }
         else {
           document = item.Method = item.Method || {}
         }
         var testRecord = item.TestRecord = item.TestRecord || {}
 
-        var tests = App.tests[String(App.currentAccountIndex)] || {}
+        var tests = this.tests[String(this.currentAccountIndex)] || {}
         var currentResponse = (tests[isRandom ? random.documentId : document.id] || {})[
-          isRandom ? (random.id > 0 ? random.id : (item.toId + '' + random.id)) : 0
+          isRandom ? (random.id > 0 ? random.id : (random.toId + '' + random.id)) : 0
         ] || {}
+
+        const list = isRandom ? (random.toId == null || random.toId <= 0 ? this.randoms : this.randomSubs) : this.testCases
 
         var isBefore = item.showType == 'before'
         if (right != true) {
           item.showType = isBefore ? 'after' : 'before'
-          Vue.set(isRandom ? (random.id != null && random.id > 0 ? App.randoms : App.randomSubs) : App.remotes, index, item);
+          Vue.set(list, index, item);
 
           var res = isBefore ? JSON.stringify(currentResponse) : testRecord.response
 
-          App.view = 'code'
-          App.jsoncon = res || ''
+          this.view = 'code'
+          this.jsoncon = res || ''
         }
         else {
-          const isML = App.isMLEnabled
           var url
 
           if (isBefore) { //撤回原来错误提交的校验标准
-            url = App.server + '/delete'
+            url = this.server + '/delete'
             const req = {
               TestRecord: {
                 id: testRecord.id, //TODO 权限问题？ item.userId,
@@ -3761,16 +3808,25 @@
               tag: 'TestRecord'
             }
 
-            App.request(true, REQUEST_TYPE_JSON, url, req, {}, function (url, res, err) {
+            this.request(true, REQUEST_TYPE_JSON, url, req, {}, function (url, res, err) {
               App.onResponse(url, res, err)
 
               var data = res.data || {}
-              if (data.code != CODE_SUCCESS) {
+              if (data.code != CODE_SUCCESS && testRecord!= null && testRecord.id != null) {
                 alert('撤回最新的校验标准 异常：\n' + data.msg)
                 return
               }
 
-              App.updateTestRecord(0, index, item, currentResponse, isRandom)
+              if (isRandom) {
+                App.updateToRandomSummary(item, -1)
+              }
+              item.compareType = JSONResponse.COMPARE_NO_STANDARD
+              item.compareMessage = '查看结果'
+              item.compareColor = 'white'
+              item.hintMessage = '没有校验标准！'
+              item.TestRecord = null
+
+              App.updateTestRecord(0, list, index, item, currentResponse, isRandom)
             })
           }
           else { //上传新的校验标准
@@ -3781,20 +3837,28 @@
             //   return
             // }
 
+
             var standard = StringUtil.isEmpty(testRecord.standard, true) ? null : JSON.parse(testRecord.standard);
             var code = currentResponse.code;
-            delete currentResponse.code; //code必须一致，下面没用到，所以不用还原
+            var thrw = currentResponse.throw;
+            delete currentResponse.code; //code必须一致
+            delete currentResponse.throw; //throw必须一致
 
-            var stddObj = App.isMLEnabled ? JSONResponse.updateStandard(standard || {}, currentResponse) : {};
+            var isML = this.isMLEnabled;
+            var stddObj = isML ? JSONResponse.updateStandard(standard || {}, currentResponse) : {};
             stddObj.code = code;
             currentResponse.code = code;
+            stddObj.throw = thrw;
+            currentResponse.throw = thrw;
 
             const isNewRandom = isRandom && random.id <= 0
 
+            //TODO 先检查是否有重复名称的！让用户确认！
             // if (isML != true) {
-            url = App.server + '/post'
+            url = this.server + '/post'
             const req = {
               Random: isNewRandom != true ? null : {
+                toId: random.toId,
                 userId: App.User.id,
                 documentId: random.documentId,
                 name: random.name,
@@ -3820,7 +3884,7 @@
             //   }
             // }
 
-            App.request(true, REQUEST_TYPE_JSON, url, req, {}, function (url, res, err) {
+            this.request(true, REQUEST_TYPE_JSON, url, req, {}, function (url, res, err) {
               App.onResponse(url, res, err)
 
               var data = res.data || {}
@@ -3830,10 +3894,15 @@
                 }
               }
               else {
-                item.compareType = 0
+                if (isRandom) {
+                  App.updateToRandomSummary(item, -1)
+                }
+
+                item.compareType = JSONResponse.COMPARE_EQUAL
                 item.compareMessage = '查看结果'
                 item.compareColor = 'white'
                 item.hintMessage = '结果正确'
+                var testRecord = item.TestRecord || {}
                 testRecord.compare = {
                   code: 0,
                   msg: '结果正确'
@@ -3841,34 +3910,33 @@
                 testRecord.response = JSON.stringify(currentResponse)
                 // testRecord.standard = stdd
 
-                var r = req.Random
-                if (r != null && (data.Random || {}).id != null) {
-                  r.id = data.Random.id
-                  item.Random = r
-                }
-
-                if (isNewRandom == true) {
-                  alert('这个配置已持久化存储，可刷新随机配置列表来查看')
-                  //如果要改，测试结果也得跟着改
-                  // Cannot read property 'Random' of undefined
-                  // if (r != null) {
-                  // App.randoms = App.randoms || []
-                  // App.randoms.unshift(r)
-                  // if (App.randomSubs != null) {
-                  //   delete App.randomSubs[index]
-                  // }
-                  // }
-                }
-                else {
-                  if (isRandom) {
-                    App.showRandomList(true, App.currentRemoteItem)
+                if (isRandom) {
+                  var r = req == null ? null : req.Random
+                  if (r != null && (data.Random || {}).id != null) {
+                    r.id = data.Random.id
+                    item.Random = r
                   }
-                  else {
-                    App.showTestCase(true, false)
+                  if ((data.TestRecord || {}).id != null) {
+                    testRecord.id = data.TestRecord.id
+                    if (r != null) {
+                      testRecord.randomId = r.id
+                    }
                   }
                 }
+                item.TestRecord = testRecord
 
-                App.updateTestRecord(0, index, item, currentResponse, isRandom)
+
+                //
+                // if (! isNewRandom) {
+                //   if (isRandom) {
+                //     App.showRandomList(true, App.currentRemoteItem)
+                //   }
+                //   else {
+                //     App.showTestCase(true, false)
+                //   }
+                // }
+
+                App.updateTestRecord(0, list, index, item, currentResponse, isRandom)
               }
 
             })
@@ -3881,7 +3949,7 @@
         item = item || {}
         var doc = (isRandom ? item.Random : item.Method) || {}
 
-        App.request(true, REQUEST_TYPE_JSON, App.server + '/get', {
+        this.request(true, REQUEST_TYPE_JSON, this.server + '/get', {
           TestRecord: {
             documentId: isRandom ? doc.documentId : doc.id,
             randomId: isRandom ? doc.id : null,
@@ -3899,7 +3967,7 @@
           }
 
           item.TestRecord = data.TestRecord
-          App.compareResponse(allCount, list, index, item, response, isRandom);
+          App.compareResponse(allCount, list, index, item, response, isRandom, App.currentAccountIndex, true, err);
         })
       },
 
@@ -3907,13 +3975,12 @@
       setRequestHint(index, item, isRandom, isClass) {
         item = item || {}
         var d = item == null ? null : (isRandom ? item.Random : item.Method);
-        var r = d == null ? null : (isRandom ? d.config : d);
         // this.$refs[isRandom ? 'randomTexts' : (isClass ? 'testCaseClassTexts' : 'testCaseMethodTexts')][index]
         //   .setAttribute('data-hint', r == null ? '' : (isRandom ? r : JSON.stringify(this.getRequest(isClass ? r.classArgs : r.methodArgs), null, ' ')));
 
         if (isRandom) {
-          var id = (d == null ? null : d.id) || 0
-          this.$refs[id > 0 ? 'randomTexts' : 'randomSubTexts'][index].setAttribute('data-hint', (d || {}).config == null ? '' : d.config);
+          var toId = (d == null ? null : d.toId) || 0
+          this.$refs[toId <= 0 ? 'randomTexts' : 'randomSubTexts'][index].setAttribute('data-hint', (d || {}).config == null ? '' : d.config);
         }
         else {
           var args = (this.getRequest(d.request) || [])[isClass ? 'classArgs' : 'methodArgs']
@@ -3933,9 +4000,9 @@
       //显示详细信息, :data-hint :data, :hint 都报错，只能这样
       setTestHint(index, item, isRandom) {
         item = item || {};
-        var id = isRandom ? ((item.Random || {}).id || 0) : 0;
+        var toId = isRandom ? ((item.Random || {}).toId || 0) : 0;
         var h = item.hintMessage;
-        this.$refs[isRandom ? (id > 0 ? 'testRandomResultButtons' : 'testRandomSubResultButtons') : 'testResultButtons'][index].setAttribute('data-hint', h || '');
+        this.$refs[isRandom ? (toId <= 0 ? 'testRandomResultButtons' : 'testRandomSubResultButtons') : 'testResultButtons'][index].setAttribute('data-hint', h || '');
       },
 
 // APIJSON >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>

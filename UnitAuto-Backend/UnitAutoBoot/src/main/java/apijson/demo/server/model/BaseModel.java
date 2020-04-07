@@ -15,6 +15,7 @@ limitations under the License.*/
 package apijson.demo.server.model;
 
 import java.io.Serializable;
+import java.lang.reflect.Array;
 import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.Collection;
@@ -154,6 +155,14 @@ public abstract class BaseModel implements Serializable {
 	
 	
 	//获取集合长度 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+	/**获取数量
+	 * @param <T>
+	 * @param array
+	 * @return
+	 */
+	public static int count(Array array) {
+		return array == null ? 0 : Array.getLength(array);
+	}
 	/**获取数量
 	 * @param <T>
 	 * @param array

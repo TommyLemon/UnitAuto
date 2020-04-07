@@ -163,8 +163,9 @@
                           <svg class="icon" style="position: relative;margin-left: 10px" @click="downloadTest(index, item)">
                               <use xlink:href="svg/icon.svg#export-txt"></use>
                           </svg>
-                          <button v-show="item.compareType != 0 || (item.showType == 'before' && item.TestRecord != null)" @click="handleTest(true, index, item)">{{ item.showType == 'before' ? '错的，撤回' : '对的，纠正' }}</button>
-                          <button v-show="item.compareType == 0 && item.showType != 'before'" style="color: white;background: white;border-color: white;" disabled>对的，纠正</button>
+                          <button v-show="(item.showType != 'before' && item.compareType != 0) || (item.showType == 'before' && (item.TestRecord || {}).id != null)" @click="handleTest(true, index, item)">{{ item.showType == 'before' ? '错的，撤回' : '对的，纠正' }}</button>
+                          <!-- 仅用来占位，解决上面按钮隐藏后，下载图标纵向没对齐 -->
+                          <button v-show="! ((item.showType != 'before' && item.compareType != 0) || (item.showType == 'before' && (item.TestRecord || {}).id != null))" style="color: white;background: white;border-color: white;" disabled>对的，纠正</button>
                       </div>
                       <svg v-show="isLocalShow || (item.Method != null && item.Method.userId == User.id)" class="icon" style="margin-right: 8px" @click="remove(item, index, true)">
                           <use xlink:href="svg/icon.svg#trash"></use>
@@ -179,17 +180,15 @@
           </textarea>
           <textarea id="vInput" @keyup="onChange(true)" style="width: 100%;height: 100%; position: absolute; z-index: 100; background: #0000;" wrap="off" >
 {
+    "static": true,
     "methodArgs": [
-        {   //JSONObject request，自动根据 value 判断类型，省略了 "type": "JSONObject",
-            "value": {
-                "arr": [
-                    0,
-                    1
-                ]
-            }
+        {   //可省略来自动判断的 type : Boolean,Integer,BigDecimal,String,JSONObject,JSONArray
+            "type": "long",
+            "value": 1
         },
-        {   //String arr，自动根据 value 判断类型，省略了 "type": "String",
-            "value": "arr"
+        {
+            "type": "long",
+            "value": 2
         }
     ]
 }
@@ -207,7 +206,7 @@
                     {{ testRandomProcess }}
                 </a>
                 <a v-show="isRandomListShow != true && (currentRemoteItem || {}).Method != null" style="padding-right: 10px;padding-top: 2px" href="javascript:void(0)" @click="showRandomList(true, (currentRemoteItem || {}).Method)">
-                    查看列表
+                    查看父项列表
                 </a>
             </a>
                 <a v-show="(currentRemoteItem || {}).Method != null" class="hint--top @cli-tool" data-hint="添加" style="font-size:xx-large; margin-bottom: 2px; color: black;"
@@ -230,16 +229,19 @@
             <!-- 临时生成的配置子项 -->
             <ul v-show="isRandomSubListShow" class="historys" style="width: 100%;height: 100%;overflow: hidden;overflow-y: scroll;padding-bottom: 50px">
                 <li style="width: 100%" v-for="(item, index) in randomSubs" >
-                    <a class="hint--rounded hint--no-animate" ref="randomSubTexts" @mouseover="setRequestHint(index, item, true)" href="javascript:void(0)" @click="restoreRandom(item)" >{{ (item.Random || {}).name }}</a>
-                    <div :style="{ background: item.compareColor }" v-show="item.compareType != null" style="position: absolute;top: 8px;right: 36px;display: inline-block;">
+                    <a v-show="! isRandomEditable" class="hint--rounded hint--no-animate" ref="randomSubTexts" @mouseover="setRequestHint(index, item, true)" href="javascript:void(0)" @click="restoreRandom(item)" >{{ (item.Random || {}).name }}</a>
+                    <input v-show="isRandomEditable" style="width: 96%" v-model="(item.Random || {}).name" @keyup="doOnKeyUp(event, item, true)" />
+
+                    <div :style="{ background: item.compareColor }" v-show="! isRandomEditable && item.compareType != null" style="position: absolute;top: 8px;right: 36px;display: inline-block;">
                         <button class="hint--left" ref="testRandomSubResultButtons" @mouseover="setTestHint(index, item, true)" v-show="item.compareType != null" @click="handleTest(false, index, item, true)" style="position: relative;">{{ item.compareMessage + (item.showType == 'before' ? '-前' : '-后') }}</button>
                         <svg class="icon" style="position: relative;margin-left: 10px" @click="downloadTest(index, item, true)">
                             <use xlink:href="svg/icon.svg#export-txt"></use>
                         </svg>
-                        <button v-show="item.compareType != 0 || (item.showType == 'before' && item.TestRecord != null)" @click="handleTest(true, index, item, true)">{{ item.showType == 'before' ? '错的，撤回' : '对的，纠正' }}</button>
-                        <button v-show="item.compareType == 0 && item.showType != 'before'" style="color: white;background: white;border-color: white;" disabled>对的，纠正</button>
+                        <button v-show="(item.showType != 'before' && item.compareType != 0) || (item.showType == 'before'&& (item.TestRecord || {}).id != null)" @click="handleTest(true, index, item, true)">{{ item.showType == 'before' ? '错的，撤回' : '对的，纠正' }}</button>
+                        <!-- 仅用来占位，解决上面按钮隐藏后，下载图标纵向没对齐 -->
+                        <button v-show="! ((item.showType != 'before' && item.compareType != 0) || (item.showType == 'before' && (item.TestRecord || {}).id != null))" style="color: white;background: white;border-color: white;" disabled>对的，纠正</button>
                     </div>
-                    <svg v-show="item.Random != null && item.Random.userId == User.id" class="icon" style="margin-right: 8px" @click="remove(item, index, true, true)">
+                    <svg v-show="item.Random != null && item.Random.userId == User.id" class="icon" style="margin-right: 8px; top: 12px;" @click="remove(item, index, true, true)">
                         <use xlink:href="svg/icon.svg#trash"></use>
                     </svg>
                 </li>
@@ -251,9 +253,10 @@
                     <input v-model="(item.Random || {}).count" style="min-width: 12px; max-width: 30px; width: auto; text-align: center" type="number" @keyup="doOnKeyUp(event, item, true)" />
                     <a style="margin-left: 4px; ">次</a>
                     <a v-show="! isRandomEditable" style="top: 13px; left: 68px; position: absolute" class="hint--rounded hint--no-animate" ref="randomTexts" @mouseover="setRequestHint(index, item, true)" href="javascript:void(0)" @click="restoreRandom(item)" >{{ (item.Random || {}).name }}</a>
-                    <input v-show="isRandomEditable" style="top: 10px; left: 68px; position: absolute; display: inline-flex; width: 80%" v-model="(item.Random || {}).name" @keyup="doOnKeyUp(event, item, true)" />
+                    <input v-show="isRandomEditable" style="top: 10px; left: 68px; position: absolute; display: inline-flex; width: 64%" v-model="(item.Random || {}).name" @keyup="doOnKeyUp(event, item, true)" />
 
-                    <div v-show="! isRandomEditable && ((item.Random || {}).count || 1) > 1 && (item.totalCount || 0) > 0" style="background: lightgray; position: absolute; padding: 1px; top: 10px;right: 36px;display: inline-block" @click="handleTest(true, index, item, true)">
+                    <button v-show="((item.Random || {}).count || 0) > 1 && (item.totalCount || 0) <= 0" style="position: absolute;top: 10px;right: 36px;display: inline-block;" @click="handleTest(true, index, item, true)">{{ '查看 ' + ((item.subs || item['[]']) || []).length + ' 个子项' }}</button>
+                    <div v-show="((item.Random || {}).count || 0) > 1 && (item.totalCount || 0) > 0" style="background: lightgray; position: absolute; padding: 1px; top: 10px;right: 36px;display: inline-block" @click="handleTest(true, index, item, true)">
                         <!-- 只能写成一行来消除间隙，不能换行、空格 -->
                         <a style="background: transparent; color: black; position: relative; min-width: 6px; width: auto; height: 100%; margin: 0; padding: 2px">{{ (item.totalCount || 0) + ':' }}</a><a style="background: white; color: black; position: relative; min-width: 6px; width: auto; height: 100%; margin: 0; padding: 2px">{{ item.whiteCount || 0 }}</a><a style="background: green; color: white; position: relative; min-width: 6px; width: auto; height: 100%; margin: 0; padding: 2px">{{ (item || {}).greenCount || 0 }}</a><a style="background: blue; color: white; position: relative; min-width: 6px; width: auto; height: 100%; margin: 0; padding: 2px">{{ (item || {}).blueCount || 0 }}</a><a style="background: orange; color: white; position: relative; min-width: 6px; width: auto; height: 100%; margin: 0; padding: 2px">{{ (item || {}).orangeCount || 0 }}</a><a style="background: red; color: white; position: relative; min-width: 6px; width: auto; height: 100%; margin: 0; padding: 2px">{{ (item || {}).redCount || 0 }}</a>
                     </div>
@@ -264,8 +267,9 @@
                             <svg class="icon" style="position: relative;margin-left: 10px" @click="downloadTest(index, item, true)">
                                 <use xlink:href="svg/icon.svg#export-txt"></use>
                             </svg>
-                            <button v-show="item.compareType != 0 || (item.showType == 'before' && item.TestRecord != null)" @click="handleTest(true, index, item, true)">{{ item.showType == 'before' ? '错的，撤回' : '对的，纠正' }}</button>
-                            <button v-show="item.compareType == 0 && item.showType != 'before'" style="color: white;background: white;border-color: white;" disabled>对的，纠正</button>
+                            <button v-show="(item.showType != 'before' && item.compareType != 0) || (item.showType == 'before' && (item.TestRecord || {}).id != null)" @click="handleTest(true, index, item, true)">{{ item.showType == 'before' ? '错的，撤回' : '对的，纠正' }}</button>
+                            <!-- 仅用来占位，解决上面按钮隐藏后，下载图标纵向没对齐 -->
+                            <button v-show="! ((item.showType != 'before' && item.compareType != 0) || (item.showType == 'before' && (item.TestRecord || {}).id != null))" style="color: white;background: white;border-color: white;" disabled>对的，纠正</button>
                         </div>
                     </div>
 
@@ -291,8 +295,11 @@ User/id : RANDOM_REAL  //从数据库随机取值
 User/id id> : RANDOM_INT(0,100000)  //用 id> 替换 id
 User/id : Math.round(100000*Math.random())  //完全自定义
 ">
-methodArgs/1/type : RANDOM_IN('String', 'JSONArray', null, undefined, 'apijson/demo/server/model/User')  //随机取值
-methodArgs/1/value : ORDER_IN('arr', 'list', 0, false, null, undefined)  //顺序取值
+methodArgs/0/type : ORDER_IN('long', 'double', 'Number', 'int', 'Float')  //顺序取值
+methodArgs/0/value : RANDOM_IN(1, 0.1, -10, 9.99, null)  //随机取值
+
+methodArgs/1/type : ORDER_IN('long', 'double', 'Number', 'int', 'Float')  //顺序取值
+methodArgs/1/value : ORDER_INT(-10, 100)  //顺序整数
 
 //清空文本内容可查看规则</textarea>
         </div>
@@ -696,7 +703,7 @@ methodArgs/1/value : ORDER_IN('arr', 'list', 0, false, null, undefined)  //顺�
   var vVerify = document.getElementById("vVerify");
   var vRemember = document.getElementById("vRemember");
 
-  vUrl.value = new String('countArray'); //main.js里访问不到，可能是script引用顺序问题
+  vUrl.value = new String('divide'); // 'countArray'); //main.js里访问不到，可能是script引用顺序问题
 
   var vMarkdown = document.getElementById('vMarkdown');
 
