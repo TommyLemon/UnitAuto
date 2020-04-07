@@ -1760,7 +1760,7 @@
                 if (item == null) {
                   continue
                 }
-                var d = item.Document || {}
+                var d = item.Method || {}
                 App.compareResponse(allCount, testCases, i, item, (tests[d.id] || {})[0], false, accountIndex, true)
               }
             }
