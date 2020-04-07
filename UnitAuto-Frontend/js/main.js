@@ -3574,7 +3574,7 @@
             it.compareMessage = '请求出错！'
             break;
           case JSONResponse.COMPARE_NO_STANDARD:
-            it.compareColor = 'white'
+            it.compareColor = 'green'
             it.compareMessage = '确认正确后点击[对的，纠正]'
             break;
           case JSONResponse.COMPARE_KEY_MORE:
@@ -3853,6 +3853,7 @@
 
             const isNewRandom = isRandom && random.id <= 0
 
+            //TODO 先检查是否有重复名称的！让用户确认！
             // if (isML != true) {
             url = this.server + '/post'
             const req = {
@@ -3897,7 +3898,7 @@
                   App.updateToRandomSummary(item, -1)
                 }
 
-                item.compareType = 0
+                item.compareType = JSONResponse.COMPARE_EQUAL
                 item.compareMessage = '查看结果'
                 item.compareColor = 'white'
                 item.hintMessage = '结果正确'
