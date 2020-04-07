@@ -366,7 +366,7 @@ public class MethodUtil {
 					if (exactContructor) {  //指定某个构造方法
 						if (instance == null) {
 							Constructor<?> constructor = clazz.getConstructor(classArgTypes);
-							instance = constructor.newInstance(classArgs.toArray());
+							instance = constructor.newInstance(classArgValues);
 						}
 					}
 					else {  //尝试参数数量一致的构造方法
