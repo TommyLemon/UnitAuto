@@ -1,7 +1,6 @@
 package apijson.demo.server;
 
 import java.io.File;
-import java.io.IOException;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -40,7 +39,7 @@ public class MethodUtil {
 	public static String MSG_SUCCESS = "success";
 	public static Callback CALLBACK = new Callback() {
 
-		@Override 
+		@Override
 		public JSONObject newSuccessResult() {
 			JSONObject result = new JSONObject(true);
 			result.put(KEY_CODE, CODE_SUCCESS);
@@ -48,7 +47,7 @@ public class MethodUtil {
 			return result;
 		}
 
-		@Override 
+		@Override
 		public JSONObject newErrorResult(Exception e) {
 			JSONObject result = new JSONObject(true);
 			result.put(KEY_CODE, CODE_SERVER_ERROR);
@@ -57,8 +56,8 @@ public class MethodUtil {
 		}
 	};
 
-	//  Map<package,   <class,     <constructorArgs, instance>>>
-	public static final Map<String, Map<String, Map<Object, Object>>> INSTANCE_MAP;
+	//  Map<class, <constructorArgs, instance>>
+	public static final Map<Class<?>, Map<Object, Object>> INSTANCE_MAP;
 	public static final Map<String, Class<?>> PRIMITIVE_CLASS_MAP;
 	public static final Map<String, Class<?>> BASE_CLASS_MAP;
 	public static final Map<String, Class<?>> CLASS_MAP;
@@ -68,14 +67,14 @@ public class MethodUtil {
 		PRIMITIVE_CLASS_MAP = new HashMap<String, Class<?>>();
 		BASE_CLASS_MAP = new HashMap<String, Class<?>>();
 		CLASS_MAP = new HashMap<String, Class<?>>();
-		
+
 		PRIMITIVE_CLASS_MAP.put(boolean.class.getSimpleName(), boolean.class);
 		PRIMITIVE_CLASS_MAP.put(int.class.getSimpleName(), int.class);
 		PRIMITIVE_CLASS_MAP.put(long.class.getSimpleName(), long.class);
 		PRIMITIVE_CLASS_MAP.put(float.class.getSimpleName(), float.class);
 		PRIMITIVE_CLASS_MAP.put(double.class.getSimpleName(), double.class);
 		BASE_CLASS_MAP.putAll(PRIMITIVE_CLASS_MAP);
-		
+
 		BASE_CLASS_MAP.put(Boolean.class.getSimpleName(), Boolean.class);
 		BASE_CLASS_MAP.put(Integer.class.getSimpleName(), Integer.class);
 		BASE_CLASS_MAP.put(Long.class.getSimpleName(), Long.class);
@@ -85,7 +84,7 @@ public class MethodUtil {
 		BASE_CLASS_MAP.put(String.class.getSimpleName(), String.class);
 		BASE_CLASS_MAP.put(Object.class.getSimpleName(), Object.class);
 		CLASS_MAP.putAll(BASE_CLASS_MAP);
-		
+
 		CLASS_MAP.put(boolean[].class.getSimpleName(), boolean[].class);
 		CLASS_MAP.put(int[].class.getSimpleName(), int[].class);
 		CLASS_MAP.put(long[].class.getSimpleName(), long[].class);
@@ -117,15 +116,16 @@ public class MethodUtil {
 
 
 
-	/**查方法列表
-	 * @param request : {
-		    "sync": true,  //同步到数据库
-		    "package": "apijson.demo.server",
-		    "class": "DemoFunction",
-		    "method": "plus",
-		    "types": ["Integer", "String", "com.alibaba.fastjson.JSONObject"]
-		    //不返回的话，这个接口没意义		    "return": true,  //返回 class list，方便调试
-		}
+	/**获取方法列表
+	 * @param request : 
+	 {
+		"sync": true,  //同步到数据库
+		"package": "apijson.demo.server",
+		"class": "DemoFunction",
+		"method": "plus",
+		"types": ["Integer", "String", "com.alibaba.fastjson.JSONObject"]
+		//不返回的话，这个接口没意义		    "return": true,  //返回 class list，方便调试
+	 }
 	 * @return
 	 */
 	public static JSONObject listMethod(String request) {
@@ -156,7 +156,7 @@ public class MethodUtil {
 					}
 				}
 			}
-			
+
 			JSONArray list = getMethodListGroupByClass(pkgName, clsName, methodName, argTypes);
 			result = CALLBACK.newSuccessResult();
 			//			if (returnList) {
@@ -172,86 +172,65 @@ public class MethodUtil {
 
 
 
-	/**
-	 * @param request : {
-	    "package": "apijson.demo.server",
-	    "class": "DemoFunction",
-	    "classArgs": [
-	        null,
-	        null,
-	        0,
-	        null
-	    ],
-	    "method": "plus",
-	    "methodArgs": [
-	        {
-	            "type": "Integer",  //可缺省，自动根据 value 来判断
-	            "value": 1
-	        },
-	        {
-	            "type": "String",
-	            "value": "APIJSON"
-	        },
-	        {
-	            "type": "JSONObject",  //可缺省，JSONObject 已缓存到 CLASS_MAP
-	            "value": {}
-	        },
-	        {
-	            "type": "apijson.demo.server.model.User",  //不可缺省，且必须全称
-	            "value": {
-	                "id": 1,
-	                "name": "Tommy"
-	            }
-	        }
-	    ]
-	}
-	 * @return
+	/**执行方法
+	 * @param request
+	 * @return {@link #invokeMethod(String, Object)}
 	 */
 	public static JSONObject invokeMethod(String request) {
 		return invokeMethod(request, null);
 	}
+	/**执行方法
+	 * @param request
+	 * @return {@link #invokeMethod(JSONObject, Object)}
+	 */
 	public static JSONObject invokeMethod(JSONObject request) {
 		return invokeMethod(request, null);
 	}
-	/**
-	 * @param request : {
-	    "package": "apijson.demo.server",
-	    "class": "DemoFunction",
-	    "classArgs": [
-	        null,
-	        null,
-	        0,
-	        null
-	    ],
-	    "method": "plus",
-	    "methodArgs": [
-	        {
-	            "type": "Integer",  //可缺省，自动根据 value 来判断
-	            "value": 1
-	        },
-	        {
-	            "type": "String",
-	            "value": "APIJSON"
-	        },
-	        {
-	            "type": "JSONObject",  //可缺省，JSONObject 已缓存到 CLASS_MAP
-	            "value": {}
-	        },
-	        {
-	            "type": "apijson.demo.server.model.User",  //不可缺省，且必须全称
-	            "value": {
-	                "id": 1,
-	                "name": "Tommy"
-	            }
-	        }
-	    ]
-	}
-	 * @param instance Spring 自动注入的 Service, Component, Mapper 等不能自己 new
-	 * @return
+	/**执行方法
+	 * @param request
+	 * @param instance
+	 * @return {@link #invokeMethod(JSONObject, Object)}
 	 */
 	public static JSONObject invokeMethod(String request, Object instance) {
 		return invokeMethod(JSON.parseObject(request), instance);
 	}
+	/**执行方法
+	 * @param req : 
+	 {
+		"package": "apijson.demo.server",
+		"class": "DemoFunction",
+		"classArgs": [
+			null,
+			null,
+			0,
+			null
+		],
+		"method": "plus",
+		"methodArgs": [
+			{
+				"type": "Integer",  //可缺省，自动根据 value 来判断
+				"value": 1
+			},
+			{
+				"type": "String",
+				"value": "APIJSON"
+			},
+			{
+				"type": "JSONObject",  //可缺省，JSONObject 已缓存到 CLASS_MAP
+				"value": {}
+			},
+			{
+				"type": "apijson.demo.server.model.User",  //不可缺省，且必须全称
+				"value": {
+					"id": 1,
+					"name": "Tommy"
+				}
+			}
+		]
+	 }
+	 * @param instance 默认自动 new，传非 null 值一般是因为 Spring 自动注入的 Service, Component, Mapper 等不能自己 new
+	 * @return
+	 */
 	public static JSONObject invokeMethod(JSONObject req, Object instance) {
 		if (req == null) {
 			req = new JSONObject(true);
@@ -262,12 +241,16 @@ public class MethodUtil {
 
 		JSONObject result;
 		try {
-			boolean isStatic = req.getBooleanValue("static");
-			List<Argument> classArgs = JSON.parseArray(req.getString("classArgs"), Argument.class);
-			List<Argument> methodArgs = JSON.parseArray(req.getString("methodArgs"), Argument.class);
-			//TODO method 也缓存起来
+			Class<?> clazz = getInvokeClass(pkgName, clsName);
+			if (clazz == null) {
+				throw new ClassNotFoundException("找不到 " + dot2Separator(pkgName) + "/" + clsName + " 对应的类！");
+			}
+			if (instance == null && req.getBooleanValue("static") == false) {
+				instance = getInvokeInstance(clazz, JSON.parseArray(req.getString("classArgs"), Argument.class));
+			}
+
 			result = CALLBACK.newSuccessResult();
-			result.put("invoke", getInvokeResult(pkgName, clsName, methodName, isStatic, classArgs, methodArgs, instance));
+			result.put("invoke", getInvokeResult(clazz, instance, methodName, JSON.parseArray(req.getString("methodArgs"), Argument.class)));
 			result.put("instance", instance);
 		}
 		catch (Exception e) {
@@ -294,106 +277,94 @@ public class MethodUtil {
 	}
 
 
-	/**执行方法并返回结果
+	/**获取类
 	 * @param pkgName
 	 * @param clsName
-	 * @param methodName
-	 * @param isStatic
-	 * @param classArgs
-	 * @param methodArgs
 	 * @return
 	 * @throws Exception
 	 */
-	public static Object getInvokeResult(String pkgName, String clsName, String methodName
-			, boolean isStatic, List<Argument> classArgs, List<Argument> methodArgs) throws Exception {
-		return getInvokeResult(pkgName, clsName, methodName, isStatic, classArgs, methodArgs, null);
+	public static Class<?> getInvokeClass(String pkgName, String clsName) throws Exception {
+		return findClass(pkgName, clsName, false);
 	}
-	/**执行方法并返回结果
+
+	/**获取示例
+	 * @param clazz
 	 * @param pkgName
 	 * @param clsName
-	 * @param methodName
-	 * @param isStatic
 	 * @param classArgs
-	 * @param methodArgs
-	 * @param instance
 	 * @return
 	 * @throws Exception
 	 */
-	public static Object getInvokeResult(String pkgName, String clsName, String methodName
-			, boolean isStatic, List<Argument> classArgs, List<Argument> methodArgs, Object instance) throws Exception {
-		Objects.requireNonNull(pkgName);
-		Objects.requireNonNull(clsName);
-		Objects.requireNonNull(methodName);
-
-		Class<?> clazz = findClass(pkgName, clsName, false);
-		if (clazz == null) {
-			throw new ClassNotFoundException("找不到 " + dot2Separator(pkgName) + "/" + clsName + " 对应的类！");
+	public static Object getInvokeInstance(Class<?> clazz, List<Argument> classArgs) throws Exception {
+		//new 出实例
+		Map<Object, Object> clsMap = INSTANCE_MAP.get(clazz);
+		if (clsMap == null) {
+			clsMap = new HashMap<>();
+			INSTANCE_MAP.put(clazz, clsMap);
 		}
 
-		if (isStatic == false && instance == null) {  //new 出实例
-			Map<String, Map<Object, Object>> pkgMap = INSTANCE_MAP.get(pkgName);
-			if (pkgMap == null) {
-				pkgMap = new HashMap<>();
-				INSTANCE_MAP.put(pkgName, pkgMap);
-			}
-			Map<Object, Object> clsMap = pkgMap.get(clsName);
-			if (clsMap == null) {
-				clsMap = new HashMap<>();
-				pkgMap.put(clsName, clsMap);
-			}
+		String key = classArgs == null || classArgs.isEmpty() ? "" : JSON.toJSONString(classArgs);
+		Object instance = clsMap.get(key);  //必须精确对应值，否则去除缓存的和需要的很可能不符
 
-			String key = classArgs == null || classArgs.isEmpty() ? "" : JSON.toJSONString(classArgs);
-			instance = clsMap.get(key);  //必须精确对应值，否则去除缓存的和需要的很可能不符
-
-			if (instance == null) {
-				if (classArgs == null || classArgs.isEmpty()) {
-					instance = clazz.newInstance();
+		if (instance == null) {
+			if (classArgs == null || classArgs.isEmpty()) {
+				instance = clazz.newInstance();
+			}
+			else { //通过构造方法
+				boolean exactContructor = false;  //指定某个构造方法，只要某一项 type 不为空就是
+				for (int i = 0; i < classArgs.size(); i++) {
+					Argument obj = classArgs.get(i);
+					if (obj != null && isEmpty(obj.getType(), true) == false) {
+						exactContructor = true;
+						break;
+					}
 				}
-				else { //通过构造方法
-					boolean exactContructor = false;  //指定某个构造方法，只要某一项 type 不为空就是
-					for (int i = 0; i < classArgs.size(); i++) {
-						Argument obj = classArgs.get(i);
-						if (obj != null && isEmpty(obj.getType(), true) == false) {
-							exactContructor = true;
-							break;
-						}
-					}
 
-					Class<?>[] classArgTypes = new Class<?>[classArgs.size()];
-					Object[] classArgValues = new Object[classArgs.size()];
-					initTypesAndValues(classArgs, classArgTypes, classArgValues, exactContructor);
+				Class<?>[] classArgTypes = new Class<?>[classArgs.size()];
+				Object[] classArgValues = new Object[classArgs.size()];
+				initTypesAndValues(classArgs, classArgTypes, classArgValues, exactContructor);
 
-					if (exactContructor) {  //指定某个构造方法
-						if (instance == null) {
-							Constructor<?> constructor = clazz.getConstructor(classArgTypes);
-							instance = constructor.newInstance(classArgs.toArray());
-						}
-					}
-					else {  //尝试参数数量一致的构造方法
-						if (instance == null) {
-							Constructor<?>[] constructors = clazz.getConstructors();
-							if (constructors != null) {
-								for (int i = 0; i < constructors.length; i++) {
-									if (constructors[i] != null && constructors[i].getParameterCount() == classArgValues.length) {
-										try {
-											instance = constructors[i].newInstance(classArgValues);
-											break;
-										} catch (Exception e) {}
-									}
+				if (exactContructor) {  //指定某个构造方法
+					Constructor<?> constructor = clazz.getConstructor(classArgTypes);
+					instance = constructor.newInstance(classArgValues);
+				}
+				else {  //尝试参数数量一致的构造方法
+					Constructor<?>[] constructors = clazz.getConstructors();
+					if (constructors != null) {
+						for (int i = 0; i < constructors.length; i++) {
+							if (constructors[i] != null && constructors[i].getParameterCount() == classArgValues.length) {
+								try {
+									instance = constructors[i].newInstance(classArgValues);
+									break;
 								}
+								catch (Exception e) {}
 							}
 						}
 					}
-
 				}
+
 			}
 
 			if (instance == null) { //通过默认方法
-				throw new NullPointerException("找不到 " + dot2Separator(pkgName) + "/" + clsName + " 以及 classArgs 对应的构造方法！");
+				throw new NullPointerException("找不到 " + dot2Separator(clazz.getName()) + " 以及 classArgs 对应的构造方法！");
 			}
 
 			clsMap.put(key, instance);
 		}
+
+		return instance;
+	}
+
+	/**获取方法
+	 * @param clazz
+	 * @param methodName
+	 * @param methodArgs
+	 * @return
+	 * @throws Exception
+	 */
+	public static Method getInvokeMethod(Class<?> clazz, String methodName, List<Argument> methodArgs) throws Exception {
+		Objects.requireNonNull(clazz);
+		Objects.requireNonNull(methodName);
 
 		//method argument, types and values
 		Class<?>[] types = null;
@@ -405,18 +376,46 @@ public class MethodUtil {
 			initTypesAndValues(methodArgs, types, args, true);
 		}
 
+		return clazz.getMethod(methodName, types);
+	}
+
+	/**执行方法并返回结果
+	 * @param instance
+	 * @param methodName
+	 * @param methodArgs
+	 * @return
+	 * @throws Exception
+	 */
+	public static Object getInvokeResult(Class<?> clazz, Object instance, String methodName, List<Argument> methodArgs) throws Exception {
+		Objects.requireNonNull(clazz);
+		Objects.requireNonNull(methodName);
+
+		//method argument, types and values
+		Class<?>[] types = null;
+		Object[] args = null;
+
+		if (methodArgs != null && methodArgs.isEmpty() == false) {
+			types = new Class<?>[methodArgs.size()];
+			args = new Object[methodArgs.size()];
+			initTypesAndValues(methodArgs, types, args, true);
+		}
+
+		//TODO method 也缓存起来
 		return clazz.getMethod(methodName, types).invoke(instance, args);
 	}
 
 
 	/**获取用 Class 分组的 Method 二级嵌套列表
-	 * @param request
+	 * @param pkgName
+	 * @param clsName
+	 * @param methodName
+	 * @param argTypes
 	 * @return
 	 * @throws Exception
 	 */
 	public static JSONArray getMethodListGroupByClass(String pkgName, String clsName
 			, String methodName, Class<?>[] argTypes) throws Exception {
-		
+
 		boolean allMethod = isEmpty(methodName, true);
 
 		List<Class<?>> classlist = findClassList(pkgName, clsName, true);
@@ -513,11 +512,11 @@ public class MethodUtil {
 //			}
 
 			types[i] = getType(typeName, value, defaultType);
-			
-			if (value != null && value.getClass().equals(types[i]) == false) {
+
+			if (value != null && types[i] != null && value.getClass().equals(types[i]) == false) {
 				value = TypeUtils.cast(value, types[i], new ParserConfig());
 			}
-			
+
 			args[i] = value;
 		}
 	}
@@ -619,13 +618,13 @@ public class MethodUtil {
 			else {
 				type = value.getClass();
 			}
-		} 
+		}
 		else {
 			int index = name.indexOf("<");
 			if (index >= 0) {
 				name = name.substring(0, index);
 			}
-			
+
 			type = CLASS_MAP.get(name);
 			if (type == null) {
 				name = dot2Separator(name);
@@ -647,9 +646,10 @@ public class MethodUtil {
 
 	/**
 	 * 提供直接调用的方法
-	 * @param packageName
+	 * @param packageOrFileName
+	 * @param className
+	 * @param ignoreError
 	 * @return
-	 * @throws IOException
 	 * @throws ClassNotFoundException
 	 */
 	public static Class<?> findClass(String packageOrFileName, String className, boolean ignoreError) throws ClassNotFoundException {
@@ -674,12 +674,11 @@ public class MethodUtil {
 	}
 
 	/**
-	 *
-	 * @param packageName
+	 * @param packageOrFileName
 	 * @param className
+	 * @param ignoreError
 	 * @return
 	 * @throws ClassNotFoundException
-	 * @throws IOException
 	 */
 	public static List<Class<?>> findClassList(String packageOrFileName, String className, boolean ignoreError) throws ClassNotFoundException {
 		List<Class<?>> list = new ArrayList<>();
@@ -687,7 +686,7 @@ public class MethodUtil {
 		int index = className.indexOf("<");
 		if (index >= 0) {
 			className = className.substring(0, index);
-		}		
+		}
 
 		boolean allPackage = isEmpty(packageOrFileName, true);
 		boolean allName = isEmpty(className, true);
