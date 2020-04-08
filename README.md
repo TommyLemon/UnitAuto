@@ -32,6 +32,8 @@ UnitAuto 不需要写任何代码，直接读取方法的属性，自动注入�
 2.UnitAuto 这种 Runtime testing 工具无需 Mock 环境(Application, Context 等)，<br />
 更不用为 Mock 出来的环境满足不了需求导致测试用例无法通过而头疼。<br />
 
+#### 演讲
+https://www.bilibili.com/video/BV1Tk4y1R7Yo
 
 #### QQ技术交流群：734652054（免费）607020115（付费）
 
