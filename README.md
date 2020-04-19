@@ -57,5 +57,5 @@ QQ技术交流群：734652054（免费）607020115（付费）
 
 ### 我要赞赏
 创作不易，右上角点 ⭐Star 支持下吧，谢谢 ^_^ <br />
-[https://github.com/TommyLemon/UnitAuto](https://github.com/TommyLemon/UnitAuto)
+[https://gitee.com/TommyLemon/UnitAuto](https://gitee.com/TommyLemon/UnitAuto)
 
