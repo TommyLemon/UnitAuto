@@ -245,12 +245,17 @@ public class MethodUtil {
 			if (clazz == null) {
 				throw new ClassNotFoundException("找不到 " + dot2Separator(pkgName) + "/" + clsName + " 对应的类！");
 			}
+			
 			if (instance == null && req.getBooleanValue("static") == false) {
 				instance = getInvokeInstance(clazz, getArgList(req, "classArgs"));
 			}
 
+			JSONObject ir = getInvokeResult(clazz, instance, methodName, getArgList(req, "methodArgs"));
+
 			result = CALLBACK.newSuccessResult();
-			result.put("invoke", getInvokeResult(clazz, instance, methodName, getArgList(req, "methodArgs")));
+			result.put("invoke", ir == null ? null : ir.get("invoke"));
+			result.put("types", ir == null ? null : ir.get("types"));
+			result.put("args", ir == null ? null : ir.get("args"));
 			result.put("instance", instance);
 		}
 		catch (Exception e) {
@@ -413,7 +418,7 @@ public class MethodUtil {
 	 * @return
 	 * @throws Exception
 	 */
-	public static Object getInvokeResult(Class<?> clazz, Object instance, String methodName, List<Argument> methodArgs) throws Exception {
+	public static JSONObject getInvokeResult(Class<?> clazz, Object instance, String methodName, List<Argument> methodArgs) throws Exception {
 		Objects.requireNonNull(clazz);
 		Objects.requireNonNull(methodName);
 
@@ -427,8 +432,11 @@ public class MethodUtil {
 			initTypesAndValues(methodArgs, types, args, true);
 		}
 
-		//TODO method 也缓存起来
-		return clazz.getMethod(methodName, types).invoke(instance, args);
+		JSONObject result = new JSONObject();
+		result.put("invoke", clazz.getMethod(methodName, types).invoke(instance, args));
+		result.put("types", types);
+		result.put("args", args);
+		return result;
 	}
 
 
