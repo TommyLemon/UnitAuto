@@ -245,12 +245,17 @@ public class MethodUtil {
 			if (clazz == null) {
 				throw new ClassNotFoundException("找不到 " + dot2Separator(pkgName) + "/" + clsName + " 对应的类！");
 			}
+			
 			if (instance == null && req.getBooleanValue("static") == false) {
-				instance = getInvokeInstance(clazz, JSON.parseArray(req.getString("classArgs"), Argument.class));
+				instance = getInvokeInstance(clazz, getArgList(req, "classArgs"));
 			}
 
+			JSONObject ir = getInvokeResult(clazz, instance, methodName, getArgList(req, "methodArgs"));
+
 			result = CALLBACK.newSuccessResult();
-			result.put("invoke", getInvokeResult(clazz, instance, methodName, JSON.parseArray(req.getString("methodArgs"), Argument.class)));
+			result.put("invoke", ir == null ? null : ir.get("invoke"));
+			result.put("types", ir == null ? null : ir.get("types"));
+			result.put("args", ir == null ? null : ir.get("args"));
 			result.put("instance", instance);
 		}
 		catch (Exception e) {
@@ -275,6 +280,33 @@ public class MethodUtil {
 
 		return result;
 	}
+
+
+	public static List<Argument> getArgList(JSONObject req, String arrKey) {
+		JSONArray arr = req == null ? null : JSON.parseArray(req.getString(arrKey));
+		
+		List<Argument> list = null;
+		if (arr != null && arr.isEmpty() == false) {
+			list = new ArrayList<>();
+			for (Object item : arr) {
+				if (item instanceof Boolean || item instanceof Number || item instanceof Collection) {
+					list.add(new Argument(null, item));
+				}
+				else if (item instanceof String) {
+					String str = (String) item;
+					int index = str.indexOf(":");
+					String type = index < 0 ? null : str.substring(0, index);
+					String value = index < 0 ? str : str.substring(index + 1);
+					list.add(new Argument(type, value));
+				}
+				else { //null 合法，也要加，按顺序调用的
+					list.add(item == null ? null : JSON.parseObject(JSON.toJSONString(item), Argument.class));
+				}
+			}
+		}
+		return list;
+	}
+
 
 
 	/**获取类
@@ -386,7 +418,7 @@ public class MethodUtil {
 	 * @return
 	 * @throws Exception
 	 */
-	public static Object getInvokeResult(Class<?> clazz, Object instance, String methodName, List<Argument> methodArgs) throws Exception {
+	public static JSONObject getInvokeResult(Class<?> clazz, Object instance, String methodName, List<Argument> methodArgs) throws Exception {
 		Objects.requireNonNull(clazz);
 		Objects.requireNonNull(methodName);
 
@@ -400,8 +432,11 @@ public class MethodUtil {
 			initTypesAndValues(methodArgs, types, args, true);
 		}
 
-		//TODO method 也缓存起来
-		return clazz.getMethod(methodName, types).invoke(instance, args);
+		JSONObject result = new JSONObject();
+		result.put("invoke", clazz.getMethod(methodName, types).invoke(instance, args));
+		result.put("types", types);
+		result.put("args", args);
+		return result;
 	}
 
 
@@ -500,16 +535,16 @@ public class MethodUtil {
 			typeName = argObj == null ? null : argObj.getType();
 			value = argObj == null ? null : argObj.getValue();
 
-//			if (typeName != null && value != null && value.getClass().equals(CLASS_MAP.get(typeName)) == false) {
-////				if ("double".equals(typeName)) {
-//				value = TypeUtils.cast(value, CLASS_MAP.get(typeName), new ParserConfig());
-////				}
-////				else if (PRIMITIVE_CLASS_MAP.containsKey(typeName)) {
-////					value = JSON.parse(JSON.toJSONString(value));
-////				} else {
-////					value = JSON.parseObject(JSON.toJSONString(value), Class.forName(typeName));
-////				}
-//			}
+			//			if (typeName != null && value != null && value.getClass().equals(CLASS_MAP.get(typeName)) == false) {
+			////				if ("double".equals(typeName)) {
+			//				value = TypeUtils.cast(value, CLASS_MAP.get(typeName), new ParserConfig());
+			////				}
+			////				else if (PRIMITIVE_CLASS_MAP.containsKey(typeName)) {
+			////					value = JSON.parse(JSON.toJSONString(value));
+			////				} else {
+			////					value = JSON.parseObject(JSON.toJSONString(value), Class.forName(typeName));
+			////				}
+			//			}
 
 			types[i] = getType(typeName, value, defaultType);
 
