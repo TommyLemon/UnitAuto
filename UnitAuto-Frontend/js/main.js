@@ -3086,7 +3086,7 @@
               subs.push({
                 Random: {
                   id: -i - 1, //表示未上传
-                  toId: random.id,
+                  toId: random.id == null ? 1 : random.id,  // 1 为了没选择测试用例时避免用 toId 判断子项错误
                   userId: random.userId,
                   documentId: random.documentId,
                   count: 1,
