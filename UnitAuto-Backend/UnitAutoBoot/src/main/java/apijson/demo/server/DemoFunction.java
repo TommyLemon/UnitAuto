@@ -27,6 +27,7 @@ import javax.servlet.http.HttpSession;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.util.TypeUtils;
 
 import apijson.demo.server.MethodUtil.Argument;
 import apijson.demo.server.model.BaseModel;
@@ -47,7 +48,7 @@ import zuo.biao.apijson.server.RemoteFunction;
 public class DemoFunction extends RemoteFunction {
 	private static final String TAG = "DemoFunction";
 
-	private final HttpSession session;
+	private final HttpSession session;  //interface 可以通过 TypeUtils.cast 转成 HttpSession$Proxy 类，但不能 JSON.toJSONString 序列化
 	public DemoFunction() {
 		this(null, null, 0, null);
 	}

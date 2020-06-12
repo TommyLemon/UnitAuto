@@ -127,8 +127,8 @@ public class StructureUtil {
 				}
 			}
 
-			if (target == null || target.isEmpty()) {
-				Log.e(TAG, "init  for  target == null || target.isEmpty()");
+			if (target == null) {
+				Log.e(TAG, "init  for  target == null");
 				onServerError("服务器内部错误，Request 表中的 version = " + version + ", method = " + method + ", tag = " + tag +  " 对应的 structure 不能为空！", shutdownWhenServerError);
 			}
 

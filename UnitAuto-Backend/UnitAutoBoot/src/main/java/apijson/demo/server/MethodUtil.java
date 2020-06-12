@@ -20,8 +20,12 @@ import java.util.Set;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.annotation.JSONField;
 import com.alibaba.fastjson.parser.ParserConfig;
 import com.alibaba.fastjson.util.TypeUtils;
+
+import apijson.demo.server.Test.MyJSONObject;
+import zuo.biao.apijson.StringUtil;
 
 public class MethodUtil {
 
@@ -546,12 +550,16 @@ public class MethodUtil {
 			////				}
 			//			}
 
-			types[i] = getType(typeName, value, defaultType);
+			Class<?> t = getType(typeName, value, defaultType);
 
-			if (value != null && types[i] != null && value.getClass().equals(types[i]) == false) {
-				value = TypeUtils.cast(value, types[i], new ParserConfig());
+			if (value != null && t != null && value.getClass().equals(t) == false) {
+				if (t.isInterface() && value instanceof InterfaceImpl == false) {
+					value = JSON.parseObject(JSON.toJSONString(value), InterfaceImpl.class);
+				}
+				value = TypeUtils.cast(value, t, new ParserConfig());
 			}
 
+			types[i] = t;
 			args[i] = value;
 		}
 	}
@@ -587,7 +595,7 @@ public class MethodUtil {
 		return obj;
 	}
 
-	private static String[] trimTypes(Type[] types) {
+	public static String[] trimTypes(Type[] types) {
 		if (types != null && types.length > 0) {
 			String[] names = new String[types.length];
 			for (int i = 0; i < types.length; i++) {
@@ -856,6 +864,108 @@ public class MethodUtil {
 		}
 		public void setValue(Object value) {
 			this.value = value;
+		}
+	}
+	
+	/**
+	 * 将 interface 转成 JSONObject，便于返回时查看
+	 * TODO 应该在 JSON.parseObject(json, clazz) 时代理 clazz 内所有的 interface 
+	 */
+	public static class InterfaceImpl extends JSONObject {
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+			Class<?>[] parameterTypes = method.getParameterTypes();
+			if (parameterTypes.length == 1) {
+				Class<?> returnType = method.getReturnType();
+				if (returnType != void.class) {
+					//	               return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
+					return virtualIncoke(proxy, method, args);
+				}
+
+				String name = null;
+				JSONField annotation = method.getAnnotation(JSONField.class);
+				if (annotation != null) {
+					if (annotation.name().length() != 0) {
+						name = annotation.name();
+					}
+				}
+
+				if (name == null) {
+					name = method.getName();
+
+					if (!name.startsWith("set")) {
+						//	 	               return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
+						return virtualIncoke(proxy, method, args);
+					}
+
+					name = name.substring(3);
+					if (name.length() == 0) {
+						//	 	               return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
+						return virtualIncoke(proxy, method, args);
+					}
+					name = Character.toLowerCase(name.charAt(0)) + name.substring(1);
+				}
+
+				return super.invoke(proxy, method, args);
+			}
+
+			if (parameterTypes.length == 0) {
+				Class<?> returnType = method.getReturnType();
+				if (returnType == void.class) {
+					//		               return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
+					return virtualIncoke(proxy, method, args);
+				}
+
+				String name = null;
+				JSONField annotation = method.getAnnotation(JSONField.class);
+				if (annotation != null) {
+					if (annotation.name().length() != 0) {
+						name = annotation.name();
+					}
+				}
+
+				if (name == null) {
+					name = method.getName();
+					if (name.startsWith("get")) {
+						name = name.substring(3);
+						if (name.length() == 0) {
+							//	     	               return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
+							return virtualIncoke(proxy, method, args);
+						}
+					} else if (name.startsWith("is")) {
+						name = name.substring(2);
+						if (name.length() == 0) {
+							//	     	               return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
+							return virtualIncoke(proxy, method, args);
+						}
+					} else if (name.startsWith("hashCode")) {
+					} else if (name.startsWith("toString")) {
+					} else {
+						//	 	               return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
+						return virtualIncoke(proxy, method, args);
+					}
+				}
+
+				return super.invoke(proxy, method, args);
+			}
+
+			//            return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
+			return virtualIncoke(proxy, method, args);
+		}
+
+		private Object virtualIncoke(Object proxy, Method method, Object[] args) {
+			String name = method == null ? null : method.getName();
+			if (name == null || args == null || args.length <= 0) {
+				return null;
+			}
+
+			JSONObject methodObj = MethodUtil.parseMethodObject(method);
+			methodObj.put("args", args);
+			String key = name + "(" + StringUtil.getString(method.getGenericParameterTypes()) + ")";
+			put(key, methodObj);
+			return null;
 		}
 	}
 
