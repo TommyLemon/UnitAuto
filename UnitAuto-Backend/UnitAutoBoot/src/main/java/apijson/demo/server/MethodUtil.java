@@ -3,6 +3,7 @@ package apijson.demo.server;
 import java.io.File;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -468,9 +469,20 @@ public class MethodUtil {
 				Class<?> t = types[i];
 				Object v = args[i];
 				//无效	if (v != null && v.getClass() == InterfaceImpl.class) { // v instanceof InterfaceImpl) { // v.getClass().isInterface()) {
-				if (t != null && t.isInterface()) {  //解决只有 interface getter 方法才有对应字段返回
-					v = parseObject(v.toString()); //can not cast to : apijson.demo.server.MethodUtil$InterfaceImpl TypeUtils.cast(v, InterfaceImpl.class, new ParserConfig());
-				}
+
+                try {  //解决只有 interface getter 方法才有对应字段返回
+                    if (t.isArray() || Collection.class.isAssignableFrom(t) || GenericArrayType.class.isAssignableFrom(t)) {
+                        if (t.getComponentType() != null && t.getComponentType().isInterface()) {
+                            v = JSON.parseArray(v.toString());
+                        }
+                    }
+                    else if (t.isInterface()) {
+                        v = parseObject(v.toString());
+                    }
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                }
 
 				JSONObject o = new JSONObject(true);
 				o.put(KEY_TYPE, t.toGenericString());
@@ -599,10 +611,24 @@ public class MethodUtil {
 			type = getType(typeName, value, defaultType);
 
 			if (value != null && type != null && value.getClass().equals(type) == false) {
-				if (type.isInterface() && value instanceof InterfaceImpl == false) {
-					value = JSON.parseObject(JSON.toJSONString(value), InterfaceImpl.class);
-				}
-				value = TypeUtils.cast(value, type, new ParserConfig());
+                try {  //解决只有 interface getter 方法才有对应字段返回
+                    if (type.isArray() || Collection.class.isAssignableFrom(type) || GenericArrayType.class.isAssignableFrom(type)) {
+                        if (type.getComponentType() != null && type.getComponentType().isInterface()) {
+                            value = JSON.parseArray(JSON.toJSONString(value), InterfaceImpl.class);
+                        }
+                    }
+                    else if (type.isInterface()) {
+                        value = JSON.parseObject(JSON.toJSONString(value), InterfaceImpl.class);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+				try {
+				    value = TypeUtils.cast(value, type, new ParserConfig());
+                } catch (Exception e) {
+				    e.printStackTrace();
+                }
 			}
 
 			types[i] = type;
@@ -651,10 +677,10 @@ public class MethodUtil {
 		}
 		return null;
 	}
-	private static String trimType(Type type) {
+    public static String trimType(Type type) {
 		return trimType(type == null ? null : type.getTypeName());
 	}
-	private static String trimType(String name) {
+	public static String trimType(String name) {
 		if (name == null || "void".equals(name)) {
 			return null;
 		}
