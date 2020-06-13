@@ -21,10 +21,10 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.annotation.JSONField;
+import com.alibaba.fastjson.parser.Feature;
 import com.alibaba.fastjson.parser.ParserConfig;
 import com.alibaba.fastjson.util.TypeUtils;
 
-import apijson.demo.server.Test.MyJSONObject;
 import zuo.biao.apijson.StringUtil;
 
 public class MethodUtil {
@@ -249,7 +249,7 @@ public class MethodUtil {
 			if (clazz == null) {
 				throw new ClassNotFoundException("找不到 " + dot2Separator(pkgName) + "/" + clsName + " 对应的类！");
 			}
-			
+
 			if (instance == null && req.getBooleanValue("static") == false) {
 				instance = getInvokeInstance(clazz, getArgList(req, "classArgs"));
 			}
@@ -288,7 +288,7 @@ public class MethodUtil {
 
 	public static List<Argument> getArgList(JSONObject req, String arrKey) {
 		JSONArray arr = req == null ? null : JSON.parseArray(req.getString(arrKey));
-		
+
 		List<Argument> list = null;
 		if (arr != null && arr.isEmpty() == false) {
 			list = new ArrayList<>();
@@ -436,9 +436,19 @@ public class MethodUtil {
 			initTypesAndValues(methodArgs, types, args, true);
 		}
 
-		JSONObject result = new JSONObject();
+		JSONObject result = new JSONObject(true);
 		result.put("invoke", clazz.getMethod(methodName, types).invoke(instance, args));
 		result.put("types", types);
+
+		if (args != null) {
+			for (int i = 0; i < args.length; i++) {
+				//				if (args[i] != null && args[i].getClass() == InterfaceImpl.class) { // args[i] instanceof InterfaceImpl) { // args[i].getClass().isInterface()) {
+				if (types[i] != null && types[i].isInterface()) {  //解决只有 interface getter 方法才有对应字段返回
+					args[i] = parseObject(args[i].toString()); //can not cast to : apijson.demo.server.MethodUtil$InterfaceImpl TypeUtils.cast(args[i], InterfaceImpl.class, new ParserConfig());
+				}
+			}
+		}
+
 		result.put("args", args);
 		return result;
 	}
@@ -866,13 +876,20 @@ public class MethodUtil {
 			this.value = value;
 		}
 	}
-	
+
 	/**
 	 * 将 interface 转成 JSONObject，便于返回时查看
 	 * TODO 应该在 JSON.parseObject(json, clazz) 时代理 clazz 内所有的 interface 
 	 */
 	public static class InterfaceImpl extends JSONObject {
 		private static final long serialVersionUID = 1L;
+
+		public InterfaceImpl() {
+			super(true);
+		}
+		public InterfaceImpl(int initialCapacity){
+			super(initialCapacity, true);
+		}
 
 		@Override
 		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
@@ -881,7 +898,7 @@ public class MethodUtil {
 				Class<?> returnType = method.getReturnType();
 				if (returnType != void.class) {
 					//	               return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
-					return virtualIncoke(proxy, method, args);
+					return virtualInvoke(proxy, method, args);
 				}
 
 				String name = null;
@@ -897,13 +914,13 @@ public class MethodUtil {
 
 					if (!name.startsWith("set")) {
 						//	 	               return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
-						return virtualIncoke(proxy, method, args);
+						return virtualInvoke(proxy, method, args);
 					}
 
 					name = name.substring(3);
 					if (name.length() == 0) {
 						//	 	               return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
-						return virtualIncoke(proxy, method, args);
+						return virtualInvoke(proxy, method, args);
 					}
 					name = Character.toLowerCase(name.charAt(0)) + name.substring(1);
 				}
@@ -915,7 +932,7 @@ public class MethodUtil {
 				Class<?> returnType = method.getReturnType();
 				if (returnType == void.class) {
 					//		               return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
-					return virtualIncoke(proxy, method, args);
+					return virtualInvoke(proxy, method, args);
 				}
 
 				String name = null;
@@ -932,19 +949,19 @@ public class MethodUtil {
 						name = name.substring(3);
 						if (name.length() == 0) {
 							//	     	               return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
-							return virtualIncoke(proxy, method, args);
+							return virtualInvoke(proxy, method, args);
 						}
 					} else if (name.startsWith("is")) {
 						name = name.substring(2);
 						if (name.length() == 0) {
 							//	     	               return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
-							return virtualIncoke(proxy, method, args);
+							return virtualInvoke(proxy, method, args);
 						}
 					} else if (name.startsWith("hashCode")) {
 					} else if (name.startsWith("toString")) {
 					} else {
 						//	 	               return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
-						return virtualIncoke(proxy, method, args);
+						return virtualInvoke(proxy, method, args);
 					}
 				}
 
@@ -952,21 +969,48 @@ public class MethodUtil {
 			}
 
 			//            return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
-			return virtualIncoke(proxy, method, args);
+			return virtualInvoke(proxy, method, args);
 		}
 
-		private Object virtualIncoke(Object proxy, Method method, Object[] args) {
+		private Object virtualInvoke(Object proxy, Method method, Object[] args) {
 			String name = method == null ? null : method.getName();
-			if (name == null || args == null || args.length <= 0) {
+			if (name == null) {
 				return null;
 			}
+			String key = name + "(" + StringUtil.getString(method.getGenericParameterTypes()) + ")";
+			Object value = get(key);
 
 			JSONObject methodObj = MethodUtil.parseMethodObject(method);
+			methodObj.put("time", System.currentTimeMillis());
+			methodObj.put("return", value);
 			methodObj.put("args", args);
-			String key = name + "(" + StringUtil.getString(method.getGenericParameterTypes()) + ")";
-			put(key, methodObj);
-			return null;
+			
+			//方法调用记录，同一个方法可能被调用多次
+			JSONArray list = getJSONArray("call()[]");
+			if (list == null) {
+				list = new JSONArray();
+			}
+			list.add(methodObj);
+			put("call()[]", list);
+
+			return value; //实例是这个代理类，而不是原本的 interface，所以不行，除非能动态 implements。 return Modifier.isAbstract(method.getModifiers()) ? value : 执行非抽放方法(default 和 static);
 		}
+	}
+
+
+	/**对象转有序 JSONObject
+	 * @param json
+	 * @return
+	 */
+	public static JSONObject parseObject(Object obj) {
+		return parseObject(obj instanceof String ? ((String) obj) : JSON.toJSONString(obj));
+	}
+	/**JSON 字符串转有序 JSONObject
+	 * @param json
+	 * @return
+	 */
+	public static JSONObject parseObject(String json) {
+		return JSON.parseObject(json, JSONObject.class, com.alibaba.fastjson.JSON.DEFAULT_PARSER_FEATURE | Feature.OrderedField.getMask());
 	}
 
 }

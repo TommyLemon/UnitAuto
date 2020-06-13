@@ -1,5 +1,7 @@
 package apijson.demo.server;
 
+import java.io.Serializable;
+
 public class MathUtil {
 
 	public static long plus(long a, long b) {
@@ -51,7 +53,7 @@ public class MathUtil {
 	public static double pow(Number a, Number b) {
 		return pow(a.doubleValue(), b.doubleValue());
 	}
-	
+
 	public static double sqrt(long a) {
 		return Math.sqrt(a);
 	}
@@ -61,5 +63,36 @@ public class MathUtil {
 	public static double sqrt(Number a) {
 		return sqrt(a.doubleValue());
 	}
+
+	public static Long computeAsyc(long a, long b, TestInterface callback) {
+		callback.setData("Mock outer interface success!");
+		Boolean sort = callback.sort();
+		if (sort != null && sort && a > b) {
+			callback.minusAsId(b, a);
+		}
+		else {
+			callback.minusAsId(a, b);
+		}
+		return callback.getId();
+	}
+	public static double computeAsyc(long a, long b, Callback callback) {
+		callback.addAsId(a, b);
+		callback.setData("Mock inner interface success!");
+		return callback.getId();
+	}
+
+	//FIXME  内部类会找不到 No qualifying bean of type [apijson.demo.server.MathUtil] is defined
+	public static interface Callback extends Serializable {    
+
+		void setData(Object data);
+		public Object getData();
+
+		void setId(Long id);
+		Long getId();
+
+		default void addAsId(long a, long b) {
+			setId(a + b);
+		}
+	}    
 
 }
