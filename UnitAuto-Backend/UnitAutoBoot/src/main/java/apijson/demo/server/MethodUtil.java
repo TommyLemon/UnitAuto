@@ -979,10 +979,19 @@ public class MethodUtil {
 			}
 			String key = name + "(" + StringUtil.getString(method.getGenericParameterTypes()) + ")";
 			Object value = get(key);
+			
+			String[] types = null;
+			if (args != null) {
+				types = new String[args.length];
+				for (int i = 0; i < args.length; i++) {				
+					types[i] = args[i] == null ? "Object" : trimType(args[i].getClass());
+				}
+			}
 
 			JSONObject methodObj = MethodUtil.parseMethodObject(method);
 			methodObj.put("time", System.currentTimeMillis());
 			methodObj.put("return", value);
+			methodObj.put("types", types);
 			methodObj.put("args", args);
 			
 			//方法调用记录，同一个方法可能被调用多次
