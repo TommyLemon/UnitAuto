@@ -5,7 +5,7 @@ import java.io.Serializable;
 public interface TestInterface extends Serializable {    
 
 	void setData(Object data);
-	public Object getData();
+	Object getData();
 
 	void setId(Long id);
 	Long getId();

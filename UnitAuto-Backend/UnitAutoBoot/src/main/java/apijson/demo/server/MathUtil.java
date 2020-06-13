@@ -81,8 +81,8 @@ public class MathUtil {
 		return callback.getId();
 	}
 
-	//FIXME  内部类会找不到 No qualifying bean of type [apijson.demo.server.MathUtil] is defined
-	public static interface Callback extends Serializable {    
+	//需要用 $ 隔开内部类与它所在的类  apijson.demo.server.MathUtil$Callback
+	public interface Callback extends Serializable {
 
 		void setData(Object data);
 		public Object getData();

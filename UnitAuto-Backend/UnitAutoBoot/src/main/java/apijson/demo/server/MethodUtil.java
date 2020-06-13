@@ -41,6 +41,23 @@ public class MethodUtil {
 	public static int CODE_SUCCESS = 200;
 	public static int CODE_SERVER_ERROR = 500;
 	public static String MSG_SUCCESS = "success";
+
+
+	public static String KEY_TIME = "time";
+	public static String KEY_PACKAGE = "package";
+	public static String KEY_CLASS = "class";
+	public static String KEY_TYPE = "type";
+	public static String KEY_STATIC = "static";
+	public static String KEY_NAME = "name";
+	public static String KEY_METHOD = "method";
+	public static String KEY_RETURN = "return";
+	public static String KEY_ARGUMENT_TYPES = "argTypes";
+	public static String KEY_ARGUMENT_VALUES = "argValues";
+
+	public static String KEY_CALL_LIST = "call()[]";
+	public static String KEY_CALL_MAP = "call(){}";
+
+
 	public static Callback CALLBACK = new Callback() {
 
 		@Override
@@ -142,9 +159,9 @@ public class MethodUtil {
 			}
 			boolean sync = req.getBooleanValue("sync");
 			//			boolean returnList = req.getBooleanValue("return");
-			String pkgName = req.getString("package");
-			String clsName = req.getString("class");
-			String methodName = req.getString("method");
+			String pkgName = req.getString(KEY_PACKAGE);
+			String clsName = req.getString(KEY_CLASS);
+			String methodName = req.getString(KEY_METHOD);
 			JSONArray methodArgTypes = null;
 
 			boolean allMethod = isEmpty(methodName, true);
@@ -239,9 +256,9 @@ public class MethodUtil {
 		if (req == null) {
 			req = new JSONObject(true);
 		}
-		String pkgName = req.getString("package");
-		String clsName = req.getString("class");
-		String methodName = req.getString("method");
+		String pkgName = req.getString(KEY_PACKAGE);
+		String clsName = req.getString(KEY_CLASS);
+		String methodName = req.getString(KEY_METHOD);
 
 		JSONObject result;
 		try {
@@ -250,16 +267,16 @@ public class MethodUtil {
 				throw new ClassNotFoundException("找不到 " + dot2Separator(pkgName) + "/" + clsName + " 对应的类！");
 			}
 
-			if (instance == null && req.getBooleanValue("static") == false) {
+			if (instance == null && req.getBooleanValue(KEY_STATIC) == false) {
 				instance = getInvokeInstance(clazz, getArgList(req, "classArgs"));
 			}
 
 			JSONObject ir = getInvokeResult(clazz, instance, methodName, getArgList(req, "methodArgs"));
 
 			result = CALLBACK.newSuccessResult();
-			result.put("invoke", ir == null ? null : ir.get("invoke"));
-			result.put("types", ir == null ? null : ir.get("types"));
-			result.put("args", ir == null ? null : ir.get("args"));
+			if (ir != null) {
+				result.putAll(ir);
+			}
 			result.put("instance", instance);
 		}
 		catch (Exception e) {
@@ -325,8 +342,6 @@ public class MethodUtil {
 
 	/**获取示例
 	 * @param clazz
-	 * @param pkgName
-	 * @param clsName
 	 * @param classArgs
 	 * @return
 	 * @throws Exception
@@ -436,9 +451,13 @@ public class MethodUtil {
 			initTypesAndValues(methodArgs, types, args, true);
 		}
 
+		Method method = clazz.getMethod(methodName, types);
+		Object val = method.invoke(instance, args);
+
 		JSONObject result = new JSONObject(true);
-		result.put("invoke", clazz.getMethod(methodName, types).invoke(instance, args));
-		result.put("types", types);
+		result.put(KEY_TYPE, trimType(val.getClass()));
+		result.put(KEY_RETURN, val);
+		result.put(KEY_ARGUMENT_TYPES, types);
 
 		if (args != null) {
 			for (int i = 0; i < args.length; i++) {
@@ -449,7 +468,7 @@ public class MethodUtil {
 			}
 		}
 
-		result.put("args", args);
+		result.put(KEY_ARGUMENT_VALUES, args);
 		return result;
 	}
 
@@ -479,9 +498,9 @@ public class MethodUtil {
 
 				JSONObject clsObj = new JSONObject(true);
 
-				clsObj.put("name", cls.getSimpleName());
-				clsObj.put("type", trimType(cls.getGenericSuperclass()));
-				clsObj.put("package", dot2Separator(cls.getPackage().getName()));
+				clsObj.put(KEY_NAME, cls.getSimpleName());
+				clsObj.put(KEY_TYPE, trimType(cls.getGenericSuperclass()));
+				clsObj.put(KEY_PACKAGE, dot2Separator(cls.getPackage().getName()));
 
 				JSONArray methodList = null;
 				if (allMethod == false && argTypes != null && argTypes.length > 0) {
@@ -542,6 +561,7 @@ public class MethodUtil {
 		Argument argObj;
 
 		String typeName;
+		Class<?> type;
 		Object value;
 		for (int i = 0; i < methodArgs.size(); i++) {
 			argObj = methodArgs.get(i);
@@ -560,16 +580,16 @@ public class MethodUtil {
 			////				}
 			//			}
 
-			Class<?> t = getType(typeName, value, defaultType);
+			type = getType(typeName, value, defaultType);
 
-			if (value != null && t != null && value.getClass().equals(t) == false) {
-				if (t.isInterface() && value instanceof InterfaceImpl == false) {
+			if (value != null && type != null && value.getClass().equals(type) == false) {
+				if (type.isInterface() && value instanceof InterfaceImpl == false) {
 					value = JSON.parseObject(JSON.toJSONString(value), InterfaceImpl.class);
 				}
-				value = TypeUtils.cast(value, t, new ParserConfig());
+				value = TypeUtils.cast(value, type, new ParserConfig());
 			}
 
-			types[i] = t;
+			types[i] = type;
 			args[i] = value;
 		}
 	}
@@ -744,7 +764,7 @@ public class MethodUtil {
 		boolean allPackage = isEmpty(packageOrFileName, true);
 		boolean allName = isEmpty(className, true);
 
-		//将报名替换成目录
+		//将包名替换成目录  TODO 应该一层层查找进去，实时判断是 package 还是 class，如果已经是 class 还有下一级，应该用 $ 隔开内部类。简单点也可以认为大驼峰是类
 		String fileName = allPackage ? File.separator : dot2Separator(packageOrFileName);
 
 		ClassLoader loader = Thread.currentThread().getContextClassLoader();
@@ -847,6 +867,21 @@ public class MethodUtil {
 	public static String trim(String s) {
 		//		Log.i(TAG, "trim   s = " + s);
 		return s == null ? null : s.trim();
+	}
+
+	/**对象转有序 JSONObject
+	 * @param obj
+	 * @return
+	 */
+	public static JSONObject parseObject(Object obj) {
+		return parseObject(obj instanceof String ? ((String) obj) : JSON.toJSONString(obj));
+	}
+	/**JSON 字符串转有序 JSONObject
+	 * @param json
+	 * @return
+	 */
+	public static JSONObject parseObject(String json) {
+		return JSON.parseObject(json, JSONObject.class, com.alibaba.fastjson.JSON.DEFAULT_PARSER_FEATURE | Feature.OrderedField.getMask());
 	}
 
 
@@ -988,38 +1023,41 @@ public class MethodUtil {
 				}
 			}
 
-			JSONObject methodObj = MethodUtil.parseMethodObject(method);
-			methodObj.put("time", System.currentTimeMillis());
-			methodObj.put("return", value);
-			methodObj.put("types", types);
-			methodObj.put("args", args);
-			
-			//方法调用记录，同一个方法可能被调用多次
-			JSONArray list = getJSONArray("call()[]");
+			JSONObject methodObj = new JSONObject(true);  //只需要简要信息	JSONObject methodObj = parseMethodObject(method);
+			methodObj.put(KEY_TIME, System.currentTimeMillis());
+			methodObj.put(KEY_RETURN, value);
+			methodObj.put(KEY_ARGUMENT_TYPES, types);
+			methodObj.put(KEY_ARGUMENT_VALUES, args);
+
+			//方法调用记录列表分组对象，按方法分组，且每组是按调用顺序排列的数组，同一个方法可能被调用多次
+			JSONObject map = getJSONObject(KEY_CALL_MAP);
+			if (map == null) {
+				map = new JSONObject(true);
+			}
+			JSONArray cList = map.getJSONArray(key);
+			if (cList == null) {
+				cList = new JSONArray();
+			}
+			cList.add(0, methodObj);  //倒序，因为要最上方显示最终状态
+			map.put(key, cList);
+			put(KEY_CALL_MAP, map);
+
+
+			//方法调用记录列表，按调用顺序排列的数组，同一个方法可能被调用多次
+			JSONObject methodObj2 = new JSONObject(true);
+			methodObj2.put(KEY_METHOD, key);
+			methodObj2.putAll(methodObj);
+
+			JSONArray list = getJSONArray(KEY_CALL_LIST);
 			if (list == null) {
 				list = new JSONArray();
 			}
-			list.add(methodObj);
-			put("call()[]", list);
+			list.add(methodObj2);  //顺序，因为要直观看到调用过程
+			put(KEY_CALL_LIST, list);
 
 			return value; //实例是这个代理类，而不是原本的 interface，所以不行，除非能动态 implements。 return Modifier.isAbstract(method.getModifiers()) ? value : 执行非抽放方法(default 和 static);
 		}
 	}
 
-
-	/**对象转有序 JSONObject
-	 * @param json
-	 * @return
-	 */
-	public static JSONObject parseObject(Object obj) {
-		return parseObject(obj instanceof String ? ((String) obj) : JSON.toJSONString(obj));
-	}
-	/**JSON 字符串转有序 JSONObject
-	 * @param json
-	 * @return
-	 */
-	public static JSONObject parseObject(String json) {
-		return JSON.parseObject(json, JSONObject.class, com.alibaba.fastjson.JSON.DEFAULT_PARSER_FEATURE | Feature.OrderedField.getMask());
-	}
 
 }
