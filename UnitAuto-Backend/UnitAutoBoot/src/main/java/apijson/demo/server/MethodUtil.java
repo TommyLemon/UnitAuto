@@ -47,12 +47,13 @@ public class MethodUtil {
 	public static String KEY_PACKAGE = "package";
 	public static String KEY_CLASS = "class";
 	public static String KEY_TYPE = "type";
+	public static String KEY_VALUE = "value";
 	public static String KEY_STATIC = "static";
 	public static String KEY_NAME = "name";
 	public static String KEY_METHOD = "method";
 	public static String KEY_RETURN = "return";
-	public static String KEY_ARGUMENT_TYPES = "argTypes";
-	public static String KEY_ARGUMENT_VALUES = "argValues";
+	public static String KEY_CLASS_ARGS = "classArgs";
+	public static String KEY_METHOD_ARGS = "methodArgs";
 
 	public static String KEY_CALL_LIST = "call()[]";
 	public static String KEY_CALL_MAP = "call(){}";
@@ -268,10 +269,10 @@ public class MethodUtil {
 			}
 
 			if (instance == null && req.getBooleanValue(KEY_STATIC) == false) {
-				instance = getInvokeInstance(clazz, getArgList(req, "classArgs"));
+				instance = getInvokeInstance(clazz, getArgList(req, KEY_CLASS_ARGS));
 			}
 
-			JSONObject ir = getInvokeResult(clazz, instance, methodName, getArgList(req, "methodArgs"));
+			JSONObject ir = getInvokeResult(clazz, instance, methodName, getArgList(req, KEY_METHOD_ARGS));
 
 			result = CALLBACK.newSuccessResult();
 			if (ir != null) {
@@ -455,20 +456,35 @@ public class MethodUtil {
 		Object val = method.invoke(instance, args);
 
 		JSONObject result = new JSONObject(true);
-		result.put(KEY_TYPE, trimType(val.getClass()));
+		result.put(KEY_TYPE, method.getReturnType());  //给 UnitAuto 共享用的 trimType(val.getClass()));
 		result.put(KEY_RETURN, val);
-		result.put(KEY_ARGUMENT_TYPES, types);
+//		result.put(KEY_ARGUMENT_TYPES, types);
 
-		if (args != null) {
-			for (int i = 0; i < args.length; i++) {
-				//				if (args[i] != null && args[i].getClass() == InterfaceImpl.class) { // args[i] instanceof InterfaceImpl) { // args[i].getClass().isInterface()) {
-				if (types[i] != null && types[i].isInterface()) {  //解决只有 interface getter 方法才有对应字段返回
-					args[i] = parseObject(args[i].toString()); //can not cast to : apijson.demo.server.MethodUtil$InterfaceImpl TypeUtils.cast(args[i], InterfaceImpl.class, new ParserConfig());
+		List<JSONObject> finalMethodArgs = null;
+		if (types != null) {
+			finalMethodArgs = new ArrayList<>();
+
+			for (int i = 0; i < types.length; i++) {
+				Class<?> t = types[i];
+				Object v = args[i];
+				//无效	if (v != null && v.getClass() == InterfaceImpl.class) { // v instanceof InterfaceImpl) { // v.getClass().isInterface()) {
+				if (t != null && t.isInterface()) {  //解决只有 interface getter 方法才有对应字段返回
+					v = parseObject(v.toString()); //can not cast to : apijson.demo.server.MethodUtil$InterfaceImpl TypeUtils.cast(v, InterfaceImpl.class, new ParserConfig());
 				}
+
+				JSONObject o = new JSONObject(true);
+				o.put(KEY_TYPE, t.toGenericString());
+				o.put(KEY_VALUE, v);
+
+				finalMethodArgs.add(o);
 			}
 		}
 
-		result.put(KEY_ARGUMENT_VALUES, args);
+//		result.put(KEY_ARGUMENT_VALUES, args);
+
+		result.put(KEY_METHOD_ARGS, finalMethodArgs);
+
+
 		return result;
 	}
 
@@ -933,7 +949,7 @@ public class MethodUtil {
 				Class<?> returnType = method.getReturnType();
 				if (returnType != void.class) {
 					//	               return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
-					return virtualInvoke(proxy, method, args);
+					return onInvoke(proxy, method, args);
 				}
 
 				String name = null;
@@ -949,25 +965,24 @@ public class MethodUtil {
 
 					if (!name.startsWith("set")) {
 						//	 	               return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
-						return virtualInvoke(proxy, method, args);
+						return onInvoke(proxy, method, args);
 					}
 
 					name = name.substring(3);
 					if (name.length() == 0) {
 						//	 	               return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
-						return virtualInvoke(proxy, method, args);
+						return onInvoke(proxy, method, args);
 					}
-					name = Character.toLowerCase(name.charAt(0)) + name.substring(1);
 				}
 
-				return super.invoke(proxy, method, args);
+                return onInvoke(proxy, method, args, true);
 			}
 
 			if (parameterTypes.length == 0) {
 				Class<?> returnType = method.getReturnType();
 				if (returnType == void.class) {
 					//		               return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
-					return virtualInvoke(proxy, method, args);
+					return onInvoke(proxy, method, args);
 				}
 
 				String name = null;
@@ -984,50 +999,64 @@ public class MethodUtil {
 						name = name.substring(3);
 						if (name.length() == 0) {
 							//	     	               return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
-							return virtualInvoke(proxy, method, args);
+							return onInvoke(proxy, method, args);
 						}
 					} else if (name.startsWith("is")) {
 						name = name.substring(2);
 						if (name.length() == 0) {
 							//	     	               return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
-							return virtualInvoke(proxy, method, args);
+							return onInvoke(proxy, method, args);
 						}
 					} else if (name.startsWith("hashCode")) {
 					} else if (name.startsWith("toString")) {
 					} else {
 						//	 	               return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
-						return virtualInvoke(proxy, method, args);
+						return onInvoke(proxy, method, args);
 					}
 				}
 
-				return super.invoke(proxy, method, args);
+                return onInvoke(proxy, method, args, true);
 			}
 
 			//            return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
-			return virtualInvoke(proxy, method, args);
+			return onInvoke(proxy, method, args);
 		}
 
-		private Object virtualInvoke(Object proxy, Method method, Object[] args) {
+		private Object onInvoke(Object proxy, Method method, Object[] args) throws Throwable {
+		    return onInvoke(proxy, method, args, false);
+        }
+		private Object onInvoke(Object proxy, Method method, Object[] args, boolean callSuper) throws Throwable {
 			String name = method == null ? null : method.getName();
 			if (name == null) {
 				return null;
 			}
 			String key = name + "(" + StringUtil.getString(method.getGenericParameterTypes()) + ")";
-			Object value = get(key);
-			
-			String[] types = null;
-			if (args != null) {
-				types = new String[args.length];
-				for (int i = 0; i < args.length; i++) {				
-					types[i] = args[i] == null ? "Object" : trimType(args[i].getClass());
-				}
-			}
+			Object value = callSuper ? super.invoke(proxy, method, args) : get(key);
 
 			JSONObject methodObj = new JSONObject(true);  //只需要简要信息	JSONObject methodObj = parseMethodObject(method);
 			methodObj.put(KEY_TIME, System.currentTimeMillis());
 			methodObj.put(KEY_RETURN, value);
-			methodObj.put(KEY_ARGUMENT_TYPES, types);
-			methodObj.put(KEY_ARGUMENT_VALUES, args);
+//			methodObj.put(KEY_ARGUMENT_TYPES, types);
+//			methodObj.put(KEY_ARGUMENT_VALUES, args);
+
+			List<JSONObject> finalMethodArgs = null;
+			if (args != null) {
+				finalMethodArgs = new ArrayList<>();
+
+				for (int i = 0; i < args.length; i++) {
+					Object v = args[i];
+					String t = v == null ? "Object" : args[i].getClass().toGenericString();
+
+					JSONObject o = new JSONObject(true);
+					o.put(KEY_TYPE, t);
+					o.put(KEY_VALUE, v);
+
+					finalMethodArgs.add(o);
+				}
+			}
+			methodObj.put(KEY_METHOD_ARGS, finalMethodArgs);
+
+
 
 			//方法调用记录列表分组对象，按方法分组，且每组是按调用顺序排列的数组，同一个方法可能被调用多次
 			JSONObject map = getJSONObject(KEY_CALL_MAP);

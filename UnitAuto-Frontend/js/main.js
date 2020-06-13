@@ -555,7 +555,7 @@
         id: 0,
         balance: null //点击更新提示需要判空 0.00
       },
-      type: REQUEST_TYPE_JSON,
+      type: '',
       types: [ REQUEST_TYPE_JSON ],
       host: 'apijson/demo/server/MathUtil/', // 'apijson/demo/server/DemoFunction/',
       branch: 'countArray',
@@ -1374,7 +1374,7 @@
               'testAccountId': currentAccount.isLoggedIn ? currentAccount.id : null,
               'method': App.getMethod(),
               'detail': App.exTxt.name,
-              'type': App.type,
+              'type': (currentResponse.type || App.type) || null,
               'class': App.getClass(),
               'package': App.getPackage(),
               'request': App.toDoubleJSON(inputted)
