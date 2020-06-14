@@ -1,6 +1,16 @@
 package apijson.demo.server;
 
+import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
+import static java.lang.annotation.ElementType.CONSTRUCTOR;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
 import java.io.File;
+import java.lang.annotation.Documented;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.GenericArrayType;
@@ -30,6 +40,23 @@ import zuo.biao.apijson.StringUtil;
 
 public class MethodUtil {
 
+	/**非null注解
+	 * javax.validation.constraints.NotNull不在JDK里面，为了减少第三方库引用就在这里实现了一个替代品
+	 * @author Lemon
+	 */
+	@Target({ METHOD, FIELD, ANNOTATION_TYPE, CONSTRUCTOR, PARAMETER })
+	@Retention(RUNTIME)
+	@Documented
+	public @interface NotNull {
+	}
+
+	public interface Listener<T> {
+		void complete(T data, Method method, InterfaceImpl proxy, Object... extras) throws Exception;
+		default void complete(T data) throws Exception {
+			complete(data, null, null);
+		}
+	}
+
 
 	public interface Callback {
 		JSONObject newSuccessResult();
@@ -55,6 +82,7 @@ public class MethodUtil {
 	public static String KEY_RETURN = "return";
 	public static String KEY_CLASS_ARGS = "classArgs";
 	public static String KEY_METHOD_ARGS = "methodArgs";
+	public static String KEY_CALLBACK = "callback";
 
 	public static String KEY_CALL_LIST = "call()[]";
 	public static String KEY_CALL_MAP = "call(){}";
@@ -197,25 +225,12 @@ public class MethodUtil {
 
 	/**执行方法
 	 * @param request
-	 * @return {@link #invokeMethod(String, Object)}
-	 */
-	public static JSONObject invokeMethod(String request) {
-		return invokeMethod(request, null);
-	}
-	/**执行方法
-	 * @param request
-	 * @return {@link #invokeMethod(JSONObject, Object)}
-	 */
-	public static JSONObject invokeMethod(JSONObject request) {
-		return invokeMethod(request, null);
-	}
-	/**执行方法
-	 * @param request
 	 * @param instance
-	 * @return {@link #invokeMethod(JSONObject, Object)}
+	 * @return {@link #invokeMethod(JSONObject, Object, Listener<JSONObject>)}
+	 * @throws Exception 
 	 */
-	public static JSONObject invokeMethod(String request, Object instance) {
-		return invokeMethod(JSON.parseObject(request), instance);
+	public static void invokeMethod(String request, Object instance, Listener<JSONObject> listener) throws Exception {
+		invokeMethod(JSON.parseObject(request), instance, listener);
 	}
 	/**执行方法
 	 * @param req : 
@@ -253,8 +268,9 @@ public class MethodUtil {
 	 }
 	 * @param instance 默认自动 new，传非 null 值一般是因为 Spring 自动注入的 Service, Component, Mapper 等不能自己 new
 	 * @return
+	 * @throws Exception 
 	 */
-	public static JSONObject invokeMethod(JSONObject req, Object instance) {
+	public static void invokeMethod(JSONObject req, Object instance, @NotNull Listener<JSONObject> listener) throws Exception {
 		if (req == null) {
 			req = new JSONObject(true);
 		}
@@ -262,7 +278,6 @@ public class MethodUtil {
 		String clsName = req.getString(KEY_CLASS);
 		String methodName = req.getString(KEY_METHOD);
 
-		JSONObject result;
 		try {
 			Class<?> clazz = getInvokeClass(pkgName, clsName);
 			if (clazz == null) {
@@ -273,13 +288,21 @@ public class MethodUtil {
 				instance = getInvokeInstance(clazz, getArgList(req, KEY_CLASS_ARGS));
 			}
 
-			JSONObject ir = getInvokeResult(clazz, instance, methodName, getArgList(req, KEY_METHOD_ARGS));
+			Object finalInstance = instance;
 
-			result = CALLBACK.newSuccessResult();
-			if (ir != null) {
-				result.putAll(ir);
-			}
-			result.put("instance", instance);
+			getInvokeResult(clazz, instance, methodName, getArgList(req, KEY_METHOD_ARGS), new Listener<JSONObject>() {
+
+				@Override
+				public void complete(JSONObject data, Method method, InterfaceImpl proxy, Object... extras) throws Exception {
+					JSONObject result = CALLBACK.newSuccessResult();
+					if (data != null) {
+						result.putAll(data);
+					}
+					result.put("instance", finalInstance); //TODO InterfaceImpl proxy 改成泛型 I instance ？
+
+					listener.complete(result);
+				}
+			});
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -295,13 +318,13 @@ public class MethodUtil {
 				e = new IllegalArgumentException("字符 " + methodName + " 对应的方法传参类型错误！"
 						+ "\n请检查 key:value 中value的类型是否满足已定义的函数的要求！\n" + e.getMessage());
 			}
-			result = CALLBACK.newErrorResult(e);
+			JSONObject result = CALLBACK.newErrorResult(e);
 			result.put("throw", e.getClass().getTypeName());
 			result.put("cause", e.getCause());
 			result.put("trace", e.getStackTrace());
+			listener.complete(result);
 		}
 
-		return result;
 	}
 
 
@@ -348,7 +371,9 @@ public class MethodUtil {
 	 * @return
 	 * @throws Exception
 	 */
-	public static Object getInvokeInstance(Class<?> clazz, List<Argument> classArgs) throws Exception {
+	public static Object getInvokeInstance(@NotNull Class<?> clazz, List<Argument> classArgs) throws Exception {
+		Objects.requireNonNull(clazz);
+
 		//new 出实例
 		Map<Object, Object> clsMap = INSTANCE_MAP.get(clazz);
 		if (clsMap == null) {
@@ -415,7 +440,7 @@ public class MethodUtil {
 	 * @return
 	 * @throws Exception
 	 */
-	public static Method getInvokeMethod(Class<?> clazz, String methodName, List<Argument> methodArgs) throws Exception {
+	public static Method getInvokeMethod(@NotNull Class<?> clazz, @NotNull String methodName, List<Argument> methodArgs) throws Exception {
 		Objects.requireNonNull(clazz);
 		Objects.requireNonNull(methodName);
 
@@ -436,68 +461,119 @@ public class MethodUtil {
 	 * @param instance
 	 * @param methodName
 	 * @param methodArgs
+	 * @param listener 
 	 * @return
 	 * @throws Exception
 	 */
-	public static JSONObject getInvokeResult(Class<?> clazz, Object instance, String methodName, List<Argument> methodArgs) throws Exception {
+	public static void getInvokeResult(@NotNull Class<?> clazz, Object instance, @NotNull String methodName
+			, List<Argument> methodArgs, @NotNull Listener<JSONObject> listener) throws Exception {
+
 		Objects.requireNonNull(clazz);
 		Objects.requireNonNull(methodName);
+		Objects.requireNonNull(listener);
+
+		int size = methodArgs == null ? 0 : methodArgs.size();
+		boolean isEmpty = size <= 0;
 
 		//method argument, types and values
-		Class<?>[] types = null;
-		Object[] args = null;
+		Class<?>[] types = isEmpty ? null : new Class<?>[size];
+		Object[] args = isEmpty ? null : new Object[size];
 
-		if (methodArgs != null && methodArgs.isEmpty() == false) {
-			types = new Class<?>[methodArgs.size()];
-			args = new Object[methodArgs.size()];
-			initTypesAndValues(methodArgs, types, args, true);
+		if (isEmpty == false) {
+			initTypesAndValues(methodArgs, types, args, true, false);
 		}
 
 		Method method = clazz.getMethod(methodName, types);
-		Object val = method.invoke(instance, args);
 
-		JSONObject result = new JSONObject(true);
-		result.put(KEY_TYPE, method.getReturnType());  //给 UnitAuto 共享用的 trimType(val.getClass()));
-		result.put(KEY_RETURN, val);
-//		result.put(KEY_ARGUMENT_TYPES, types);
+		Listener<Object> itemListener = new Listener<Object>() {
 
-		List<JSONObject> finalMethodArgs = null;
-		if (types != null) {
-			finalMethodArgs = new ArrayList<>();
+			@Override
+			public void complete(Object data, Method m, InterfaceImpl proxy, Object... extra) throws Exception {
+				JSONObject result = new JSONObject(true);
+				result.put(KEY_TYPE, method.getReturnType());  //给 UnitAuto 共享用的 trimType(val.getClass()));
+				result.put(KEY_RETURN, data);
+				//		result.put(KEY_ARGUMENT_TYPES, types);
 
-			for (int i = 0; i < types.length; i++) {
-				Class<?> t = types[i];
-				Object v = args[i];
-				//无效	if (v != null && v.getClass() == InterfaceImpl.class) { // v instanceof InterfaceImpl) { // v.getClass().isInterface()) {
+				List<JSONObject> finalMethodArgs = null;
+				if (types != null) {
+					finalMethodArgs = new ArrayList<>();
 
-                try {  //解决只有 interface getter 方法才有对应字段返回
-                    if (t.isArray() || Collection.class.isAssignableFrom(t) || GenericArrayType.class.isAssignableFrom(t)) {
-                        if (t.getComponentType() != null && t.getComponentType().isInterface()) {
-                            v = JSON.parseArray(v.toString());
-                        }
-                    }
-                    else if (t.isInterface()) {
-                        v = parseObject(v.toString());
-                    }
-                }
-                catch (Exception e) {
-                    e.printStackTrace();
-                }
+					for (int i = 0; i < types.length; i++) {
+						Class<?> t = types[i];
+						Object v = args[i];
+						//无效	if (v != null && v.getClass() == InterfaceImpl.class) { // v instanceof InterfaceImpl) { // v.getClass().isInterface()) {
 
-				JSONObject o = new JSONObject(true);
-				o.put(KEY_TYPE, t.toGenericString());
-				o.put(KEY_VALUE, v);
+						try {  //解决只有 interface getter 方法才有对应字段返回
+							if (t.isArray() || Collection.class.isAssignableFrom(t) || GenericArrayType.class.isAssignableFrom(t)) {
+								if (t.getComponentType() != null && t.getComponentType().isInterface()) {
+									v = JSON.parseArray(v.toString());
+								}
+							}
+							else if (t.isInterface()) {
+								v = parseObject(v.toString());
+							}
+						}
+						catch (Exception e) {
+							e.printStackTrace();
+						}
 
-				finalMethodArgs.add(o);
+						JSONObject o = new JSONObject(true);
+						o.put(KEY_TYPE, t.toGenericString());
+						o.put(KEY_VALUE, v);
+
+						finalMethodArgs.add(o);
+					}
+				}
+
+				//		result.put(KEY_ARGUMENT_VALUES, args);
+
+				result.put(KEY_METHOD_ARGS, finalMethodArgs);
+
+				listener.complete(result);
+			}
+		};
+
+		boolean isSync = true;
+		for (int i = 0; i < types.length; i++) {  //当其中有 interface 且用 KEY_CALLBACK 标记了内部至少一个方法，则认为是触发异步回调的方法
+			Class<?> type = types[i];
+			Object value = args[i];
+
+			if (value instanceof InterfaceImpl || (type != null && type.isInterface())) {  //如果这里不行，就 initTypesAndValues 给个回调
+				try {
+					InterfaceImpl impl = value instanceof InterfaceImpl ? ((InterfaceImpl) value) : TypeUtils.cast(value, InterfaceImpl.class, new ParserConfig());
+					Set<Entry<String, Object>> set = impl.entrySet();
+					if (set != null)  {
+						for (Entry<String, Object> e : set) {
+							//判断是否符合 "fun(arg0,arg1...)": { "callback": true } 格式
+							String key = e == null ? null : e.getKey();
+							JSONObject val = key != null && e.getValue() instanceof JSONObject ? ((JSONObject) e.getValue()) : null;
+
+							int index = val == null || key.endsWith(")") == false ? -1 : key.indexOf("(");
+
+							if (index > 0 && StringUtil.isName(key.substring(0, index))) {
+
+								if (val.getBooleanValue(KEY_CALLBACK)) {
+									impl.$_putCallback(key, itemListener);
+								}
+							}
+						}
+					}
+					
+					args[i] = TypeUtils.cast(impl, type, new ParserConfig());
+					isSync = impl.$_getCallbackMap().isEmpty();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
 		}
 
-//		result.put(KEY_ARGUMENT_VALUES, args);
 
-		result.put(KEY_METHOD_ARGS, finalMethodArgs);
+		Object val = method.invoke(instance, args);
 
+		if (isSync) {
+			itemListener.complete(val);
+		}
 
-		return result;
 	}
 
 
@@ -576,6 +652,14 @@ public class MethodUtil {
 
 	public static void initTypesAndValues(List<Argument> methodArgs, Class<?>[] types, Object[] args, boolean defaultType)
 			throws IllegalArgumentException, ClassNotFoundException {
+		initTypesAndValues(methodArgs, types, args, defaultType, true);
+	}
+	public static void initTypesAndValues(List<Argument> methodArgs, Class<?>[] types, Object[] args, boolean defaultType, boolean castValue2Type)
+			throws IllegalArgumentException, ClassNotFoundException {
+		initTypesAndValues(methodArgs, types, args, defaultType, castValue2Type, null);
+	}
+	public static void initTypesAndValues(List<Argument> methodArgs, Class<?>[] types, Object[] args, boolean defaultType, boolean castValue2Type, Listener<Object> listener)
+			throws IllegalArgumentException, ClassNotFoundException {
 		if (methodArgs == null || methodArgs.isEmpty()) {
 			return;
 		}
@@ -611,24 +695,29 @@ public class MethodUtil {
 			type = getType(typeName, value, defaultType);
 
 			if (value != null && type != null && value.getClass().equals(type) == false) {
-                try {  //解决只有 interface getter 方法才有对应字段返回
-                    if (type.isArray() || Collection.class.isAssignableFrom(type) || GenericArrayType.class.isAssignableFrom(type)) {
-                        if (type.getComponentType() != null && type.getComponentType().isInterface()) {
-                            value = JSON.parseArray(JSON.toJSONString(value), InterfaceImpl.class);
-                        }
-                    }
-                    else if (type.isInterface()) {
-                        value = JSON.parseObject(JSON.toJSONString(value), InterfaceImpl.class);
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+				try {  //解决只有 interface getter 方法才有对应字段返回
+					if (type.isArray() || Collection.class.isAssignableFrom(type) || GenericArrayType.class.isAssignableFrom(type)) {
+						if (type.getComponentType() != null && type.getComponentType().isInterface()) {
+							List<InterfaceImpl> implList = JSON.parseArray(JSON.toJSONString(value), InterfaceImpl.class);
+							value = implList;
+						}
+					}
+					else if (type.isInterface()) {
+						InterfaceImpl impl = JSON.parseObject(JSON.toJSONString(value), InterfaceImpl.class);
+						impl.$_setType(type);
+						value = impl;
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 
-				try {
-				    value = TypeUtils.cast(value, type, new ParserConfig());
-                } catch (Exception e) {
-				    e.printStackTrace();
-                }
+				if (castValue2Type) {
+					try {
+						value = TypeUtils.cast(value, type, new ParserConfig());
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
 			}
 
 			types[i] = type;
@@ -677,7 +766,7 @@ public class MethodUtil {
 		}
 		return null;
 	}
-    public static String trimType(Type type) {
+	public static String trimType(Type type) {
 		return trimType(type == null ? null : type.getTypeName());
 	}
 	public static String trimType(String name) {
@@ -968,6 +1057,41 @@ public class MethodUtil {
 			super(initialCapacity, true);
 		}
 
+		//奇葩命名加忽略注解可以避免被 fastjson 序列化或反序列化，奇葩命名避免和代理的 interface 中的方法冲突
+		private Class<?> type;
+		@JSONField(serialize = false, deserialize = false)
+		public Class<?> $_getType() {
+			return type;
+		}
+		@JSONField(serialize = false, deserialize = false) 
+		public InterfaceImpl $_setType(Class<?> type) {
+			this.type = type;
+			return this;
+		}
+
+
+		private Map<String, Listener<?>> callbackMap = new HashMap<>();
+		@NotNull
+		@JSONField(serialize = false, deserialize = false)
+		public Map<String, Listener<?>> $_getCallbackMap() {
+			return callbackMap;
+		}
+		@JSONField(serialize = false, deserialize = false)
+		public InterfaceImpl $_setCallbackMap(Map<String, Listener<?>> callbackMap) {
+			this.callbackMap = callbackMap != null ? callbackMap : new HashMap<>();
+			return this;
+		}
+		
+		@JSONField(serialize = false, deserialize = false)
+		public Listener<?> $_getCallback(String method) {
+			return callbackMap.get(method);
+		}
+		@JSONField(serialize = false, deserialize = false)
+		public InterfaceImpl $_putCallback(String method, Listener<?> callback) {
+			callbackMap.put(method, callback);
+			return this;
+		}
+
 		@Override
 		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 			Class<?>[] parameterTypes = method.getParameterTypes();
@@ -1001,7 +1125,7 @@ public class MethodUtil {
 					}
 				}
 
-                return onInvoke(proxy, method, args, true);
+				return onInvoke(proxy, method, args, true);
 			}
 
 			if (parameterTypes.length == 0) {
@@ -1041,7 +1165,7 @@ public class MethodUtil {
 					}
 				}
 
-                return onInvoke(proxy, method, args, true);
+				return onInvoke(proxy, method, args, true);
 			}
 
 			//            return method.invoke(this, args);  //java.lang.IllegalArgumentException: object is not an instance of declaring clas
@@ -1049,21 +1173,32 @@ public class MethodUtil {
 		}
 
 		private Object onInvoke(Object proxy, Method method, Object[] args) throws Throwable {
-		    return onInvoke(proxy, method, args, false);
-        }
+			return onInvoke(proxy, method, args, false);
+		}
 		private Object onInvoke(Object proxy, Method method, Object[] args, boolean callSuper) throws Throwable {
 			String name = method == null ? null : method.getName();
 			if (name == null) {
 				return null;
 			}
 			String key = name + "(" + StringUtil.getString(method.getGenericParameterTypes()) + ")";
-			Object value = callSuper ? super.invoke(proxy, method, args) : get(key);
+			Object handlerValue = get(key);
+			
+			Object value = callSuper ? super.invoke(proxy, method, args) : null;
+			if (callSuper == false) {
+				if (handlerValue instanceof JSONObject) {
+					JSONObject handler = (JSONObject) handlerValue;
+					value = handler.get(KEY_RETURN);  //TODO 可能根据传参而返回不同值
+				}
+				else {
+					value = handlerValue;
+				}
+			}
 
 			JSONObject methodObj = new JSONObject(true);  //只需要简要信息	JSONObject methodObj = parseMethodObject(method);
 			methodObj.put(KEY_TIME, System.currentTimeMillis());
 			methodObj.put(KEY_RETURN, value);
-//			methodObj.put(KEY_ARGUMENT_TYPES, types);
-//			methodObj.put(KEY_ARGUMENT_VALUES, args);
+			//			methodObj.put(KEY_ARGUMENT_TYPES, types);
+			//			methodObj.put(KEY_ARGUMENT_VALUES, args);
 
 			List<JSONObject> finalMethodArgs = null;
 			if (args != null) {
@@ -1110,6 +1245,10 @@ public class MethodUtil {
 			list.add(methodObj2);  //顺序，因为要直观看到调用过程
 			put(KEY_CALL_LIST, list);
 
+			Listener<?> listener = $_getCallback(key);
+			if (listener != null) { //提前判断 && handler.getBooleanValue(KEY_CALLBACK)) {
+				listener.complete(null);
+			}
 			return value; //实例是这个代理类，而不是原本的 interface，所以不行，除非能动态 implements。 return Modifier.isAbstract(method.getModifiers()) ? value : 执行非抽放方法(default 和 static);
 		}
 	}
