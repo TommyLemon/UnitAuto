@@ -54,7 +54,7 @@ import org.springframework.web.client.RestTemplate;
 
 import com.alibaba.fastjson.JSONObject;
 
-import apijson.demo.server.MethodUtil.InterfaceImpl;
+import apijson.demo.server.MethodUtil.InterfaceProxy;
 import apijson.demo.server.model.BaseModel;
 import apijson.demo.server.model.Privacy;
 import apijson.demo.server.model.User;
@@ -1018,19 +1018,26 @@ public class Controller {
 	}
 
 
+
+	@PostMapping("method/list")
+	public JSONObject listMethod(@RequestBody String request) {
+		return MethodUtil.listMethod(request);
+	}
+	
 	@PostMapping("method/invoke")
-	public void invokeMethod(@RequestBody String request, HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
+	public void invokeMethod(@RequestBody String request, HttpServletRequest servletRequest) {
 		AsyncContext asyncContext = servletRequest.startAsync();
 
 		MethodUtil.Listener<JSONObject> listener = new MethodUtil.Listener<JSONObject>() {
 
 			@Override
-			public void complete(JSONObject data, Method method, InterfaceImpl proxy, Object... extras) throws Exception {
+			public void complete(JSONObject data, Method method, InterfaceProxy proxy, Object... extras) throws Exception {
 				ServletResponse servletResponse = asyncContext.getResponse();
 				if (servletResponse.isCommitted()) {
-					return;
+                    Log.w(TAG, "invokeMethod  listener.complete  servletResponse.isCommitted() >> return;");
+                    return;
 				}
-				
+
 				servletResponse.setCharacterEncoding(servletRequest.getCharacterEncoding());
 				servletResponse.setContentType(servletRequest.getContentType());
 				servletResponse.getWriter().println(data);
@@ -1048,13 +1055,13 @@ public class Controller {
 				instance = APIJSONApplication.APPLICATION_CONTEXT.getBean(Class.forName(pkgName.replaceAll("/", ".") + "." + clsName));
 			}
 			catch (Exception e) {
-				Log.e(TAG, "listMethod  try { instance = APIJSONApplication.APPLICATION_CONTEXT.getBean(Class.forName(pkgName ... } catch (Exception e) { \n" + e.getMessage());
+				Log.e(TAG, "invokeMethod  try { instance = APIJSONApplication.APPLICATION_CONTEXT.getBean(Class.forName(pkgName ... } catch (Exception e) { \n" + e.getMessage());
 			}
 
 			MethodUtil.invokeMethod(req, instance, listener);
 		}
 		catch (Exception e) {
-			Log.e(TAG, "listMethod  try { JSONObject req = JSON.parseObject(request); ... } catch (Exception e) { \n" + e.getMessage());
+			Log.e(TAG, "invokeMethod  try { JSONObject req = JSON.parseObject(request); ... } catch (Exception e) { \n" + e.getMessage());
 			try {
 				listener.complete(MethodUtil.CALLBACK.newErrorResult(e));
 			}
@@ -1065,10 +1072,6 @@ public class Controller {
 		}
 	}
 
-	@PostMapping("method/list")
-	public JSONObject listMethod(@RequestBody String request) {
-		return MethodUtil.listMethod(request);
-	}
 
 
 }

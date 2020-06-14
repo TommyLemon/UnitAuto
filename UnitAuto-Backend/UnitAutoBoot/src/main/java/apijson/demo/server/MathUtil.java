@@ -147,6 +147,15 @@ public class MathUtil {
 		static long currentTime() {
 			return System.currentTimeMillis();
 		}
+
+		@Override
+        default void minusAsId(long a, long b) {
+            System.out.println("minusAsId  startTime: " + currentTime());
+            setA(a);
+            setB(b);
+            setId(a + b);
+            System.out.println("minusAsId  endTime: " + currentTime());
+        }
 	}
 
 }

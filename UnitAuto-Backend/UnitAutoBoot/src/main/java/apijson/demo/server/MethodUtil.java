@@ -51,7 +51,7 @@ public class MethodUtil {
 	}
 
 	public interface Listener<T> {
-		void complete(T data, Method method, InterfaceImpl proxy, Object... extras) throws Exception;
+		void complete(T data, Method method, InterfaceProxy proxy, Object... extras) throws Exception;
 		default void complete(T data) throws Exception {
 			complete(data, null, null);
 		}
@@ -170,7 +170,6 @@ public class MethodUtil {
 	/**获取方法列表
 	 * @param request : 
 	 {
-		"sync": true,  //同步到数据库
 		"package": "apijson.demo.server",
 		"class": "DemoFunction",
 		"method": "plus",
@@ -187,8 +186,6 @@ public class MethodUtil {
 			if (req  == null) {
 				req = new JSONObject(true);
 			}
-			boolean sync = req.getBooleanValue("sync");
-			//			boolean returnList = req.getBooleanValue("return");
 			String pkgName = req.getString(KEY_PACKAGE);
 			String clsName = req.getString(KEY_CLASS);
 			String methodName = req.getString(KEY_METHOD);
@@ -210,9 +207,7 @@ public class MethodUtil {
 
 			JSONArray list = getMethodListGroupByClass(pkgName, clsName, methodName, argTypes);
 			result = CALLBACK.newSuccessResult();
-			//			if (returnList) {
 			result.put("classList", list);  //序列化 Class	只能拿到 name		result.put("Class[]", JSON.parseArray(JSON.toJSONString(classlist)));
-			//			}
 		} catch (Exception e) {
 			e.printStackTrace();
 			result = CALLBACK.newErrorResult(e);
@@ -293,12 +288,12 @@ public class MethodUtil {
 			getInvokeResult(clazz, instance, methodName, getArgList(req, KEY_METHOD_ARGS), new Listener<JSONObject>() {
 
 				@Override
-				public void complete(JSONObject data, Method method, InterfaceImpl proxy, Object... extras) throws Exception {
+				public void complete(JSONObject data, Method method, InterfaceProxy proxy, Object... extras) throws Exception {
 					JSONObject result = CALLBACK.newSuccessResult();
 					if (data != null) {
 						result.putAll(data);
 					}
-					result.put("instance", finalInstance); //TODO InterfaceImpl proxy 改成泛型 I instance ？
+					result.put("instance", finalInstance); //TODO InterfaceProxy proxy 改成泛型 I instance ？
 
 					listener.complete(result);
 				}
@@ -488,11 +483,10 @@ public class MethodUtil {
 		Listener<Object> itemListener = new Listener<Object>() {
 
 			@Override
-			public void complete(Object data, Method m, InterfaceImpl proxy, Object... extra) throws Exception {
+			public void complete(Object data, Method m, InterfaceProxy proxy, Object... extra) throws Exception {
 				JSONObject result = new JSONObject(true);
 				result.put(KEY_TYPE, method.getReturnType());  //给 UnitAuto 共享用的 trimType(val.getClass()));
 				result.put(KEY_RETURN, data);
-				//		result.put(KEY_ARGUMENT_TYPES, types);
 
 				List<JSONObject> finalMethodArgs = null;
 				if (types != null) {
@@ -501,7 +495,7 @@ public class MethodUtil {
 					for (int i = 0; i < types.length; i++) {
 						Class<?> t = types[i];
 						Object v = args[i];
-						//无效	if (v != null && v.getClass() == InterfaceImpl.class) { // v instanceof InterfaceImpl) { // v.getClass().isInterface()) {
+						//无效	if (v != null && v.getClass() == InterfaceProxy.class) { // v instanceof InterfaceProxy) { // v.getClass().isInterface()) {
 
 						try {  //解决只有 interface getter 方法才有对应字段返回
 							if (t.isArray() || Collection.class.isAssignableFrom(t) || GenericArrayType.class.isAssignableFrom(t)) {
@@ -525,8 +519,6 @@ public class MethodUtil {
 					}
 				}
 
-				//		result.put(KEY_ARGUMENT_VALUES, args);
-
 				result.put(KEY_METHOD_ARGS, finalMethodArgs);
 
 				listener.complete(result);
@@ -538,10 +530,10 @@ public class MethodUtil {
 			Class<?> type = types[i];
 			Object value = args[i];
 
-			if (value instanceof InterfaceImpl || (type != null && type.isInterface())) {  //如果这里不行，就 initTypesAndValues 给个回调
+			if (value instanceof InterfaceProxy || (type != null && type.isInterface())) {  //如果这里不行，就 initTypesAndValues 给个回调
 				try {
-					InterfaceImpl impl = value instanceof InterfaceImpl ? ((InterfaceImpl) value) : TypeUtils.cast(value, InterfaceImpl.class, new ParserConfig());
-					Set<Entry<String, Object>> set = impl.entrySet();
+					InterfaceProxy proxy = value instanceof InterfaceProxy ? ((InterfaceProxy) value) : TypeUtils.cast(value, InterfaceProxy.class, new ParserConfig());
+					Set<Entry<String, Object>> set = proxy.entrySet();
 					if (set != null)  {
 						for (Entry<String, Object> e : set) {
 							//判断是否符合 "fun(arg0,arg1...)": { "callback": true } 格式
@@ -553,14 +545,14 @@ public class MethodUtil {
 							if (index > 0 && StringUtil.isName(key.substring(0, index))) {
 
 								if (val.getBooleanValue(KEY_CALLBACK)) {
-									impl.$_putCallback(key, itemListener);
+									proxy.$_putCallback(key, itemListener);
 								}
 							}
 						}
 					}
 					
-					args[i] = TypeUtils.cast(impl, type, new ParserConfig());
-					isSync = impl.$_getCallbackMap().isEmpty();
+					args[i] = TypeUtils.cast(proxy, type, new ParserConfig());
+					isSync = proxy.$_getCallbackMap().isEmpty();
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -698,14 +690,14 @@ public class MethodUtil {
 				try {  //解决只有 interface getter 方法才有对应字段返回
 					if (type.isArray() || Collection.class.isAssignableFrom(type) || GenericArrayType.class.isAssignableFrom(type)) {
 						if (type.getComponentType() != null && type.getComponentType().isInterface()) {
-							List<InterfaceImpl> implList = JSON.parseArray(JSON.toJSONString(value), InterfaceImpl.class);
+							List<InterfaceProxy> implList = JSON.parseArray(JSON.toJSONString(value), InterfaceProxy.class);
 							value = implList;
 						}
 					}
 					else if (type.isInterface()) {
-						InterfaceImpl impl = JSON.parseObject(JSON.toJSONString(value), InterfaceImpl.class);
-						impl.$_setType(type);
-						value = impl;
+						InterfaceProxy proxy = JSON.parseObject(JSON.toJSONString(value), InterfaceProxy.class);
+						proxy.$_setType(type);
+						value = proxy;
 					}
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -1047,13 +1039,13 @@ public class MethodUtil {
 	 * 将 interface 转成 JSONObject，便于返回时查看
 	 * TODO 应该在 JSON.parseObject(json, clazz) 时代理 clazz 内所有的 interface 
 	 */
-	public static class InterfaceImpl extends JSONObject {
+	public static class InterfaceProxy extends JSONObject {
 		private static final long serialVersionUID = 1L;
 
-		public InterfaceImpl() {
+		public InterfaceProxy() {
 			super(true);
 		}
-		public InterfaceImpl(int initialCapacity){
+		public InterfaceProxy(int initialCapacity){
 			super(initialCapacity, true);
 		}
 
@@ -1064,7 +1056,7 @@ public class MethodUtil {
 			return type;
 		}
 		@JSONField(serialize = false, deserialize = false) 
-		public InterfaceImpl $_setType(Class<?> type) {
+		public InterfaceProxy $_setType(Class<?> type) {
 			this.type = type;
 			return this;
 		}
@@ -1077,7 +1069,7 @@ public class MethodUtil {
 			return callbackMap;
 		}
 		@JSONField(serialize = false, deserialize = false)
-		public InterfaceImpl $_setCallbackMap(Map<String, Listener<?>> callbackMap) {
+		public InterfaceProxy $_setCallbackMap(Map<String, Listener<?>> callbackMap) {
 			this.callbackMap = callbackMap != null ? callbackMap : new HashMap<>();
 			return this;
 		}
@@ -1087,7 +1079,7 @@ public class MethodUtil {
 			return callbackMap.get(method);
 		}
 		@JSONField(serialize = false, deserialize = false)
-		public InterfaceImpl $_putCallback(String method, Listener<?> callback) {
+		public InterfaceProxy $_putCallback(String method, Listener<?> callback) {
 			callbackMap.put(method, callback);
 			return this;
 		}
@@ -1184,8 +1176,11 @@ public class MethodUtil {
 			Object handlerValue = get(key);
 			
 			Object value = callSuper ? super.invoke(proxy, method, args) : null;
-			if (callSuper == false) {
-				if (handlerValue instanceof JSONObject) {
+			if (callSuper == false) {  //TODO default 方法如何执行里面的代码块？可能需要参考热更新，把方法动态加进去
+			    if (Modifier.isStatic(method.getModifiers())) {  //正常情况不会进这个分支，因为 interface 中 static 方法不允许用实例来调用
+                    value = method.invoke(null, args);
+			    }
+				else if (handlerValue instanceof JSONObject) {
 					JSONObject handler = (JSONObject) handlerValue;
 					value = handler.get(KEY_RETURN);  //TODO 可能根据传参而返回不同值
 				}
@@ -1197,8 +1192,6 @@ public class MethodUtil {
 			JSONObject methodObj = new JSONObject(true);  //只需要简要信息	JSONObject methodObj = parseMethodObject(method);
 			methodObj.put(KEY_TIME, System.currentTimeMillis());
 			methodObj.put(KEY_RETURN, value);
-			//			methodObj.put(KEY_ARGUMENT_TYPES, types);
-			//			methodObj.put(KEY_ARGUMENT_VALUES, args);
 
 			List<JSONObject> finalMethodArgs = null;
 			if (args != null) {
@@ -1245,10 +1238,13 @@ public class MethodUtil {
 			list.add(methodObj2);  //顺序，因为要直观看到调用过程
 			put(KEY_CALL_LIST, list);
 
+			
+			//是否被设置为 HTTP 回调方法
 			Listener<?> listener = $_getCallback(key);
 			if (listener != null) { //提前判断 && handler.getBooleanValue(KEY_CALLBACK)) {
 				listener.complete(null);
 			}
+			
 			return value; //实例是这个代理类，而不是原本的 interface，所以不行，除非能动态 implements。 return Modifier.isAbstract(method.getModifiers()) ? value : 执行非抽放方法(default 和 static);
 		}
 	}

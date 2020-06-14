@@ -27,7 +27,6 @@ import javax.servlet.http.HttpSession;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.alibaba.fastjson.util.TypeUtils;
 
 import apijson.demo.server.MethodUtil.Argument;
 import apijson.demo.server.model.BaseModel;
