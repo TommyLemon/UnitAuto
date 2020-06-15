@@ -1626,7 +1626,7 @@
 
         var ct = ''
         if (type.endsWith('[]')) {
-          ct = type.substring(0, type.length - 2)
+          return null //除了 null，其它任何类型的值都不行 argument type mismatch   ct = type.substring(0, type.length - 2)
         }
         else {
           var index = type.indexOf('<')
@@ -1666,7 +1666,7 @@
           return this.mockValue4Type('Number')
         }
 
-        return null
+        return type == 'Object' || type == 'java.lang.Object' ? null : {}
       },
 
       // 切换主题
