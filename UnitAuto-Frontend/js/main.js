@@ -3644,9 +3644,9 @@
           var standard = StringUtil.isEmpty(tr[standardKey], true) ? null : JSON.parse(tr[standardKey])
 
           var rsp = JSON.parse(JSON.stringify(App.removeDebugInfo(response) || {}))
-          rsp.methodArgs = JSONResponse.array2object(rsp.methodArgs, 'methodArgs', true)
+          rsp.methodArgs = JSONResponse.array2object(rsp.methodArgs, 'methodArgs', ['methodArgs'], true)
 
-          tr.compare = JSONResponse.compareResponse(standard, rsp, '', App.isMLEnabled) || {}
+          tr.compare = JSONResponse.compareResponse(standard, rsp, '', App.isMLEnabled, null, ['call()[]']) || {}
         }
 
         App.onTestResponse(allCount, list, index, it, d, r, tr, response, tr.compare || {}, isRandom, accountIndex, justRecoverTest);
@@ -3936,10 +3936,10 @@
             delete currentResponse.throw; //throw必须一致
 
             var rsp = JSON.parse(JSON.stringify(currentResponse || {}))
-            rsp.methodArgs = JSONResponse.array2object(rsp.methodArgs, 'methodArgs', true)
+            rsp.methodArgs = JSONResponse.array2object(rsp.methodArgs, 'methodArgs', ['methodArgs'], true)
 
             var isML = this.isMLEnabled;
-            var stddObj = isML ? JSONResponse.updateStandard(standard || {}, rsp) : {};
+            var stddObj = isML ? JSONResponse.updateStandard(standard || {}, rsp, ['call()[]']) : {};
             stddObj.code = code;
             currentResponse.code = code;
             stddObj.throw = thrw;

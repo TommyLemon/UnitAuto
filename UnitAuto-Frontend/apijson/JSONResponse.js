@@ -309,7 +309,7 @@ var JSONResponse = {
    3-对象缺少字段/整数变小数，黄色；
    4-code/值类型 改变，红色；
    */
-  compareResponse: function(target, real, folder, isMachineLearning, codeName,) {
+  compareResponse: function(target, real, folder, isMachineLearning, codeName, exceptKeys) {
     codeName = StringUtil.isEmpty(codeName, true) ? 'code' : codeName;
     var tCode = (target || {})[codeName];
     var rCode = (real || {})[codeName];
@@ -360,8 +360,8 @@ var JSONResponse = {
     // delete real.msg;
 
     var result = isMachineLearning == true
-      ? JSONResponse.compareWithStandard(target, real, folder)
-      : JSONResponse.compareWithBefore(target, real, folder);
+      ? JSONResponse.compareWithStandard(target, real, folder, exceptKeys)
+      : JSONResponse.compareWithBefore(target, real, folder, exceptKeys);
 
     target[codeName] = tCode;
     real[codeName] = rCode;
@@ -379,7 +379,7 @@ var JSONResponse = {
    3-缺少字段/整数变小数，黄色；
    4-类型/code 改变，红色；
    */
-  compareWithBefore: function(target, real, folder) {
+  compareWithBefore: function(target, real, folder, exceptKeys) {
     folder = folder == null ? '' : folder;
 
     if (target == null) {
@@ -428,7 +428,7 @@ var JSONResponse = {
       }
       //下载需要看源JSON  real = [all];
 
-      each = JSONResponse.compareWithBefore(target[0], all, JSONResponse.getAbstractPath(folder, i));
+      each = JSONResponse.compareWithBefore(target[0], all, JSONResponse.getAbstractPath(folder, i), exceptKeys);
 
       if (max.code < each.code) {
         max = each;
@@ -448,11 +448,11 @@ var JSONResponse = {
       var key;
       for (var i = 0; i < tks.length; i++) { //遍历并递归下一层
         key = tks[i];
-        if (key == null) {
+        if (key == null || (exceptKeys != null && exceptKeys.indexOf(key) >= 0)) {
           continue;
         }
 
-        each = JSONResponse.compareWithBefore(target[key], real[key], JSONResponse.getAbstractPath(folder, key));
+        each = JSONResponse.compareWithBefore(target[key], real[key], JSONResponse.getAbstractPath(folder, key), exceptKeys);
         if (max.code < each.code) {
           max = each;
         }
@@ -542,7 +542,7 @@ var JSONResponse = {
    3-缺少字段/整数变小数，黄色；
    4-类型/code 改变，红色；
    */
-  compareWithStandard: function(target, real, folder) {
+  compareWithStandard: function(target, real, folder, exceptKeys) {
     folder = folder == null ? '' : folder;
 
     if (target == null) {
@@ -623,7 +623,7 @@ var JSONResponse = {
       for (var i = 0; i < real.length; i ++) { //检查real的每一项
         log('compareWithStandard  for i = ' + i + ' >> ');
 
-        each = JSONResponse.compareWithStandard(values[0], real[i], JSONResponse.getAbstractPath(folder, i));
+        each = JSONResponse.compareWithStandard(values[0], real[i], JSONResponse.getAbstractPath(folder, i), exceptKeys);
 
         if (max.code < each.code) {
           max = each;
@@ -649,12 +649,12 @@ var JSONResponse = {
       var tk;
       for (var i = 0; i < tks.length; i++) { //遍历并递归下一层
         tk = tks[i];
-        if (tk == null) {
+        if (tk == null || (exceptKeys != null && exceptKeys.indexOf(tk) >= 0)) {
           continue;
         }
         log('compareWithStandard  for tk = ' + tk + ' >> ');
 
-        each = JSONResponse.compareWithStandard(values[0][tk], real[tk], JSONResponse.getAbstractPath(folder,  tk));
+        each = JSONResponse.compareWithStandard(values[0][tk], real[tk], JSONResponse.getAbstractPath(folder,  tk), exceptKeys);
         if (max.code < each.code) {
           max = each;
         }
@@ -672,7 +672,8 @@ var JSONResponse = {
         for (var k in real) {
           log('compareWithStandard  for k = ' + k + ' >> ');
 
-          if (k != null && real[k] != null && (values == null || values[0] == null || values[0][k] == null)) { //解决 null 值总是提示是新增的，且无法纠错 tks.indexOf(k) < 0) {
+          if (k != null && real[k] != null && (values == null || values[0] == null || values[0][k] == null)
+            && (exceptKeys == null || exceptKeys.indexOf(tk) >= 0)) { //解决 null 值总是提示是新增的，且无法纠错 tks.indexOf(k) < 0) {
             log('compareWithStandard  k != null && tks.indexOf(k) < 0 >> max = COMPARE_KEY_MORE;');
 
             max.code = JSONResponse.COMPARE_KEY_MORE;
@@ -702,8 +703,7 @@ var JSONResponse = {
         var realLength = JSONResponse.getLength(real);
         log('compareWithStandard  realLength = ' + realLength + ' >> ');
 
-        if (realLength != null
-          && JSONResponse.isValueCorrect(target.lengthLevel, target.lengths, realLength) != true) {
+        if (realLength != null && JSONResponse.isValueCorrect(target.lengthLevel, target.lengths, realLength) != true) {
           max.code = JSONResponse.COMPARE_LENGTH_CHANGE;
           max.msg = '长度超出范围';
           max.path = folder;
@@ -770,7 +770,7 @@ var JSONResponse = {
 
   /**更新测试标准，通过原来的标准与最新的数据合并来实现
    */
-  updateStandard: function(target, real) {
+  updateStandard: function(target, real, exceptKeys) {
     if (target instanceof Array) { // JSONArray
       throw new Error("Standard 语法错误，不应该有 array！");
     }
@@ -837,7 +837,7 @@ var JSONResponse = {
         log('updateStandard for i = ' + i + '; child = '
           + JSON.stringify(child, null, '    ') + ';\n real[i] = '  + JSON.stringify(real[i], null, '    ') + ' >>');
 
-        child = JSONResponse.updateStandard(child, real[i]);
+        child = JSONResponse.updateStandard(child, real[i], exceptKeys);
       }
       if (child == null) {
         log('updateStandard  child == null >> child = {}');
@@ -865,14 +865,18 @@ var JSONResponse = {
         // log('updateStandard for k2 in values[0] = ' + k2 + ' >>');
         if (realKeys.indexOf(k2) < 0) {
           // log('updateStandard Object.keys(real).indexOf(k2) < 0 >> real[k2] = null;');
-          real[k2] = null;
+          real[k2] = null;  //TODO delete real[k2] ? 避免多出来 key: null 这种
         }
       }
 
       for(var k in real) {
+        if (k == null || (exceptKeys != null && exceptKeys.indexOf(k) >= 0)) {
+          continue
+        }
+
         log('updateStandard for k in real = ' + k + '; values[0][k] = '
           + JSON.stringify(values[0][k], null, '    ') + ';\n real[k] = '  + JSON.stringify(real[k], null, '    ') + ' >>');
-        values[0][k] = JSONResponse.updateStandard(values[0][k], real[k]);
+        values[0][k] = JSONResponse.updateStandard(values[0][k], real[k], exceptKeys);
       }
 
       target.values = values;
@@ -1076,37 +1080,41 @@ var JSONResponse = {
   },
 
   /** [1, true, 'a', {}, []] => { '0': 1, '1': true, '2': 'a', '3': {}, '4': [] }
-   * @param json
-   * @param key
-   * @param transferSelf
+   * @param value
+   * @param name
+   * @param onlyKeys
+   * @param containChild
    * @return {*}
    */
-  array2object: function (json, key, transferSelf) {
-    if (json == null) {
-      return null;
-    }
-
-    if (json instanceof Array) {
-      if (transferSelf) {
+  array2object: function (value, name, onlyKeys, containChild) {
+    if (value instanceof Array) {
+      if (onlyKeys == null || onlyKeys.indexOf(name) >= 0) {
         var obj = {}
-        for (var i = 0; i < json.length; i++) {
-          obj[String(i)] = JSONResponse.array2object(json[i], key, transferSelf);
+        for (var i = 0; i < value.length; i++) {
+          obj[String(i)] = containChild ? JSONResponse.array2object(value[i], i, onlyKeys, containChild) : value[i];
         }
         return obj;
       }
 
-      for (var i = 0; i < json.length; i++) {
-        json[i] = JSONResponse.array2object(json[i], key, transferSelf);
+      for (var i = 0; i < value.length; i++) {
+        value[i] = JSONResponse.array2object(value[i], i, onlyKeys, containChild);
       }
     }
-    else if (json instanceof Object) {
-      for (var k in json) {
-        json[k] = JSONResponse.array2object(json[k], key, k == null || k == key);
-      }
+    else if (value instanceof Object) {
+      for (var k in value) {
+        if (k != null) {
+          var v = value[k]
 
+          if (containChild != true && (v instanceof Array == false || (onlyKeys != null && onlyKeys.indexOf(name) < 0))) {
+            continue
+          }
+
+          value[k] = JSONResponse.array2object(v, k, onlyKeys, containChild);
+        }
+      }
     }
 
-    return json;
+    return value;
   }
 
 }
