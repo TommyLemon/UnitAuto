@@ -47,7 +47,7 @@ import zuo.biao.apijson.server.RemoteFunction;
 public class DemoFunction extends RemoteFunction {
 	private static final String TAG = "DemoFunction";
 
-	private final HttpSession session;
+	private final HttpSession session;  //interface 可以通过 TypeUtils.cast 转成 HttpSession$Proxy 类，但不能 JSON.toJSONString 序列化
 	public DemoFunction() {
 		this(null, null, 0, null);
 	}
@@ -611,41 +611,56 @@ public class DemoFunction extends RemoteFunction {
 	 * @throws IOException
 	 */
 	public String getMethodArguments(@NotNull JSONObject request, String methodArgsKey) throws IllegalArgumentException, ClassNotFoundException, IOException {
-		String argsStr = request.getString(methodArgsKey);
+        JSONObject obj = request.getJSONObject("request");
+        String argsStr = obj == null ? null : obj.getString(methodArgsKey);
 		if (StringUtil.isEmpty(argsStr, true)) {
-			JSONObject obj = request.getJSONObject("request");
-			argsStr = obj == null ? null : obj.getString(methodArgsKey);
+            argsStr = request.getString(methodArgsKey);
 		}
 		List<Argument> methodArgs = JSON.parseArray(removeComment(argsStr), Argument.class);
 		if (methodArgs == null || methodArgs.isEmpty()) {
 			return "";
 		}
 
-		Class<?>[] types = new Class<?>[methodArgs.size()];
-		Object[] args = new Object[methodArgs.size()];
-		MethodUtil.initTypesAndValues(methodArgs, types, args, true);
+//		Class<?>[] types = new Class<?>[methodArgs.size()];
+//		Object[] args = new Object[methodArgs.size()];
+//		MethodUtil.initTypesAndValues(methodArgs, types, args, true);
 
 		String s = "";
-		if (types != null) {
-			String sn;
-			for (int i = 0; i < types.length; i++) {
-				sn = types[i] == null ? null : types[i].getSimpleName();
-				if (sn == null) {
-					sn = Object.class.getSimpleName();
-				}
+//		if (types != null) {
+//			String sn;
+//			for (int i = 0; i < types.length; i++) {
+//				sn = types[i] == null ? null : types[i].getSimpleName();
+//				if (sn == null) {
+//					sn = Object.class.getSimpleName();
+//				}
+//
+//				if (i > 0) {
+//					s += ",";
+//				}
+//
+//				if (MethodUtil.CLASS_MAP.containsKey(sn)) {
+//					s += sn;
+//				}
+//				else {
+//					s += types[i].getName();
+//				}
+//			}
+//		}
 
-				if (i > 0) {
-					s += ",";
-				}
+        for (int i = 0; i < methodArgs.size(); i++) {
+            Argument arg = methodArgs.get(i);
 
-				if (MethodUtil.CLASS_MAP.containsKey(sn)) {
-					s += sn;
-				}
-				else {
-					s += types[i].getName();
-				}
-			}
-		}
+            String sn = arg == null ? null : arg.getType();
+            if (sn == null) {
+                sn = arg.getValue() == null ? Object.class.getSimpleName() : MethodUtil.trimType(arg.getValue().getClass());
+            }
+
+            if (i > 0) {
+                s += ",";
+            }
+            s += sn;
+        }
+
 		return s;
 	}
 
@@ -660,7 +675,7 @@ public class DemoFunction extends RemoteFunction {
 	public String getMethodDefination(@NotNull JSONObject request)
 			throws IllegalArgumentException, ClassNotFoundException, IOException {
 //		request.put("arguments", removeComment(request.getString("methodArgs")));
-		return getMethodDefination(request, "method", "arguments", "type", "exceptions", "Java");
+		return getMethodDefination(request, "method", "arguments", "genericType", "genericExceptions", "Java");
 	}
 	/**获取方法的定义
 	 * @param request

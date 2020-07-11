@@ -16,6 +16,9 @@
   <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-Test-removeKey-small.jpg"></a>
 </p>
 <p align="center" >
+  <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-Test-interface-small.jpg"></a>
+</p>
+<p align="center" >
   <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-Compare-Code-small.jpg"></a>
 </p>
 
@@ -23,6 +26,7 @@
 ### 原理说明
 后端不需要写任何单元测试代码（逻辑代码、注解代码等全都不要），<br />
 这个工具会自动生成测试参数，并执行方法，拿到返回值进行校验。<br />
+泛型、接口等自动模拟，异步执行方法记录回调过程，都是零代码。<br />
 <br />
 前端是类似 APIAuto 的机器学习自动化测试工具（查看、上传、执行、测试 后端项目中的方法等），<br />
 后端提供扫描所有方法、执行某个方法两个 API （主要引入 MethodUtil.java 这个类，里面已实现）。<br />

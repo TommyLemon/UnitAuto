@@ -375,7 +375,7 @@
   function randomInt(min, max) {
     return Math.round(randomNum(min, max));
   }
-  function randomNum(min, max) {
+  function randomNum(min, max, precision) {
     // 0 居然也会转成  Number.MIN_SAFE_INTEGER ！！！
     // start = start || Number.MIN_SAFE_INTEGER
     // end = end || Number.MAX_SAFE_INTEGER
@@ -386,8 +386,13 @@
     if (max == null) {
       max = Number.MAX_SAFE_INTEGER
     }
-    return (max - min)*Math.random() + min;
+    if (precision == null) {
+      precision = 2
+    }
+
+    return + ((max - min)*Math.random() + min).toFixed(precision);
   }
+
   function randomStr(minLength, maxLength, availableChars) {
     return 'Ab_Cd' + randomNum();
   }
@@ -555,7 +560,7 @@
         id: 0,
         balance: null //点击更新提示需要判空 0.00
       },
-      type: REQUEST_TYPE_JSON,
+      type: '',
       types: [ REQUEST_TYPE_JSON ],
       host: 'apijson/demo/server/MathUtil/', // 'apijson/demo/server/DemoFunction/',
       branch: 'countArray',
@@ -1374,7 +1379,8 @@
               'testAccountId': currentAccount.isLoggedIn ? currentAccount.id : null,
               'method': App.getMethod(),
               'detail': App.exTxt.name,
-              'type': App.type,
+              'type': (currentResponse.type || App.type) || null,
+              'genericType': (currentResponse.type || App.type) || null,
               'class': App.getClass(),
               'package': App.getPackage(),
               'request': App.toDoubleJSON(inputted)
@@ -1528,10 +1534,14 @@
               'class': classItem.name,
               'method': methodItem.name,
               'classArgs': classArgs,
+              'genericClassArgs': App.getArgs4Sync(classItem.genericParameterTypeList),
               'methodArgs': App.getArgs4Sync(methodItem.parameterTypeList),
+              'genericMethodArgs': App.getArgs4Sync(methodItem.genericParameterTypeList),
               'type': methodItem.returnType == null ? null : methodItem.returnType.replace(/[.]/g, '/'),
+              'genericType': methodItem.genericReturnType == null ? null : methodItem.genericReturnType.replace(/[.]/g, '/'),
               'static': methodItem.static ? 1 : 0,
               'exceptions': methodItem.exceptionTypeList == null ? null : methodItem.exceptionTypeList.replace(/[.]/g, '/').join(),
+              'genericExceptions': methodItem.genericExceptionTypeList == null ? null : methodItem.genericExceptionTypeList.replace(/[.]/g, '/').join(),
               'detail': methodItem.name
             },
             'TestRecord': {
@@ -1572,14 +1582,91 @@
           return null
         }
 
+
         var args = []
         for (var l = 0; l < typeList.length; l++) {
+
+          var type = typeList[l] == null ? null : typeList[l].replace(/[.]/g, '/')
+          var value = App.mockValue4Type(type);
+
           args.push({
-            type: typeList[l] == null ? undefined : typeList[l].replace(/[.]/g, '/'),
-            value: null  //TODO 根据 type 来给默认值
+            type: type,
+            value: value
           })
         }
         return args
+      },
+
+      mockValue4Type: function (type) {
+        type = StringUtil.trim(type)
+        if (type == '') {
+          return
+        }
+
+        switch (type) {
+          case 'Boolean':
+          case 'boolean':
+            return randomInt(0, 1) == 1
+          case 'Number':
+          case 'Double':
+          case 'Float':
+          case 'double':
+          case 'float':
+            return randomNum(-100, 200, randomInt(0, 2))
+          case 'Long':
+          case 'long':
+            return randomInt(-100, 200)
+          case 'Integer':
+          case 'int':
+            return randomInt(-10, 20)
+          case 'String':
+          case 'CharSequence':
+            return randomStr(0, 5)
+        }
+
+        var ct = ''
+        if (type.endsWith('[]')) {
+          return null //除了 null，其它任何类型的值都不行 argument type mismatch   ct = type.substring(0, type.length - 2)
+        }
+        else {
+          var index = type.indexOf('<')
+          if (index >= 0) {
+            type = type.substring(0, index).trim();
+            ct = type.substring(index + 1, type.lastIndexOf('>')).trim()
+          }
+        }
+
+        if (type.endsWith('[]') || type.endsWith('List') || type.endsWith('Array') || type.endsWith('Set') || type.endsWith('Collection')) {
+          var size = randomInt(0, 10)
+          var arr = []
+          for (var i = 0; i < size; i ++) {
+            var v = App.mockValue4Type(ct)
+            if (v != null) {
+              arr.push(v)
+            }
+          }
+          return arr
+        }
+
+        if (type.endsWith('Map') || type.endsWith('Table') || type.endsWith('JSONObject')) {
+          var size = randomInt(0, 10)
+
+          var index = ct.indexOf(',')
+          var lct = index < 0 ? 'String' : ct.substring(0, index).trim()
+          var rct = index < 0 ? ct : ct.substring(index + 1).trim()
+
+          var obj = {}
+          for (var i = 0; i < size; i ++) {
+            obj[this.mockValue4Type(lct), this.mockValue4Type(rct)]
+          }
+          return obj
+        }
+
+        if (type.endsWith('Decimal')) {
+          return this.mockValue4Type('Number')
+        }
+
+        return type == 'Object' || type == 'java.lang.Object' ? null : {}
       },
 
       // 切换主题
@@ -1795,7 +1882,7 @@
               'Method': {
                 '@order': 'date-',
                 'userId{}': [0, App.User.id],
-                'arguments()': 'getMethodArguments(methodArgs)',
+                'arguments()': 'getMethodArguments(genericMethodArgs)',
                 'defination()': 'getMethodDefination(method,arguments,type,exceptions,null)',
                 'request()': 'getMethodRequest()',
                 'package$': StringUtil.isEmpty(packagePrefix) ? null : packagePrefix + '%',
@@ -2747,9 +2834,9 @@
               'Method': {
                 'package@': '[]/Method/package',
                 'class@': '/Method:group/class',
-                '@column': 'class,classArgs',
+                '@column': 'class,genericClassArgs',
                 '@order': 'class+',
-                'arguments()': "getMethodArguments(classArgs)",
+                'arguments()': "getMethodArguments(genericClassArgs)",
               }
             }
           }
@@ -3555,7 +3642,11 @@
         else {
           var standardKey = App.isMLEnabled != true ? 'response' : 'standard'
           var standard = StringUtil.isEmpty(tr[standardKey], true) ? null : JSON.parse(tr[standardKey])
-          tr.compare = JSONResponse.compareResponse(standard, App.removeDebugInfo(response) || {}, '', App.isMLEnabled) || {}
+
+          var rsp = JSON.parse(JSON.stringify(App.removeDebugInfo(response) || {}))
+          rsp.methodArgs = JSONResponse.array2object(rsp.methodArgs, 'methodArgs', ['methodArgs'], true)
+
+          tr.compare = JSONResponse.compareResponse(standard, rsp, '', App.isMLEnabled, null, ['call()[]']) || {}
         }
 
         App.onTestResponse(allCount, list, index, it, d, r, tr, response, tr.compare || {}, isRandom, accountIndex, justRecoverTest);
@@ -3844,8 +3935,11 @@
             delete currentResponse.code; //code必须一致
             delete currentResponse.throw; //throw必须一致
 
+            var rsp = JSON.parse(JSON.stringify(currentResponse || {}))
+            rsp.methodArgs = JSONResponse.array2object(rsp.methodArgs, 'methodArgs', ['methodArgs'], true)
+
             var isML = this.isMLEnabled;
-            var stddObj = isML ? JSONResponse.updateStandard(standard || {}, currentResponse) : {};
+            var stddObj = isML ? JSONResponse.updateStandard(standard || {}, rsp, ['call()[]']) : {};
             stddObj.code = code;
             currentResponse.code = code;
             stddObj.throw = thrw;

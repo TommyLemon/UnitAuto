@@ -22,28 +22,20 @@ import static zuo.biao.apijson.RequestMethod.HEADS;
 import static zuo.biao.apijson.RequestMethod.POST;
 import static zuo.biao.apijson.RequestMethod.PUT;
 
-import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URLDecoder;
 import java.rmi.ServerException;
 import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.Random;
-import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
+import javax.servlet.AsyncContext;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import javax.validation.constraints.NotNull;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
@@ -60,11 +52,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
-import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.mysql.cj.x.protobuf.MysqlxDatatypes.Array;
-import com.mysql.cj.xdevapi.Collection;
 
+import apijson.demo.server.MethodUtil.InterfaceProxy;
 import apijson.demo.server.model.BaseModel;
 import apijson.demo.server.model.Privacy;
 import apijson.demo.server.model.User;
@@ -977,7 +967,7 @@ public class Controller {
 	HttpServletResponse response;
 
 	@RequestMapping(value = "/delegate")
-//	@ResponseBody
+	//	@ResponseBody
 	public String delegate(@RequestParam("$_delegate_url") String url, @RequestBody String body, HttpMethod method, HttpSession session){
 		Enumeration<String> names = request.getHeaderNames();
 		HttpHeaders headers = null;
@@ -988,7 +978,8 @@ public class Controller {
 				name = names.nextElement();
 				headers.add(name, request.getHeader(name));
 			}
-			
+
+			@SuppressWarnings("unchecked")
 			List<String> cookie = session == null ? null : (List<String>) session.getAttribute("Cookie");
 			if (cookie != null && cookie.isEmpty() == false) {
 				List<String> c = headers.get("Cookie");
@@ -1010,7 +1001,7 @@ public class Controller {
 		HttpEntity<String> requestEntity = new HttpEntity<>(method == HttpMethod.GET ? JSON.toJSONString(request.getParameterMap()) : body, headers);
 		//  执行HTTP请求
 		ResponseEntity<String> entity = client.exchange(url, method, requestEntity, String.class);
-		
+
 		HttpHeaders hs = entity.getHeaders();
 		if (session != null && hs != null) {
 			List<String> cookie = hs.get("Set-Cookie");
@@ -1027,31 +1018,60 @@ public class Controller {
 	}
 
 
-	@PostMapping("method/invoke")
-	public JSONObject invokeMethod(@RequestBody String request) {
-		try {
-			JSONObject req = JSON.parseObject(request);
-			if (req != null) {
-				String pkgName = req.getString("package");
-				String clsName = req.getString("class");
-				return MethodUtil.invokeMethod(
-						req,
-						APIJSONApplication.APPLICATION_CONTEXT.getBean(
-								Class.forName(pkgName.replaceAll("/", ".") + "." + clsName)
-						)
-				);
-			}
-		} catch (Exception e) {
-			Log.e(TAG, "listMethod  try { JSONObject req = JSON.parseObject(request); ... } catch (Exception e) { \n" + e.getMessage());
-		}
-		
-		return MethodUtil.invokeMethod(request);
-	}
 
 	@PostMapping("method/list")
 	public JSONObject listMethod(@RequestBody String request) {
 		return MethodUtil.listMethod(request);
 	}
+	
+	@PostMapping("method/invoke")
+	public void invokeMethod(@RequestBody String request, HttpServletRequest servletRequest) {
+		AsyncContext asyncContext = servletRequest.startAsync();
+
+		MethodUtil.Listener<JSONObject> listener = new MethodUtil.Listener<JSONObject>() {
+
+			@Override
+			public void complete(JSONObject data, Method method, InterfaceProxy proxy, Object... extras) throws Exception {
+				ServletResponse servletResponse = asyncContext.getResponse();
+				if (servletResponse.isCommitted()) {
+                    Log.w(TAG, "invokeMethod  listener.complete  servletResponse.isCommitted() >> return;");
+                    return;
+				}
+
+				servletResponse.setCharacterEncoding(servletRequest.getCharacterEncoding());
+				servletResponse.setContentType(servletRequest.getContentType());
+				servletResponse.getWriter().println(data);
+				asyncContext.complete();
+			}
+		};
+
+		try {
+			JSONObject req = JSON.parseObject(request);
+
+			Object instance = null;
+			try {
+				String pkgName = req.getString("package");
+				String clsName = req.getString("class");
+				instance = APIJSONApplication.APPLICATION_CONTEXT.getBean(Class.forName(pkgName.replaceAll("/", ".") + "." + clsName));
+			}
+			catch (Exception e) {
+				Log.e(TAG, "invokeMethod  try { instance = APIJSONApplication.APPLICATION_CONTEXT.getBean(Class.forName(pkgName ... } catch (Exception e) { \n" + e.getMessage());
+			}
+
+			MethodUtil.invokeMethod(req, instance, listener);
+		}
+		catch (Exception e) {
+			Log.e(TAG, "invokeMethod  try { JSONObject req = JSON.parseObject(request); ... } catch (Exception e) { \n" + e.getMessage());
+			try {
+				listener.complete(MethodUtil.CALLBACK.newErrorResult(e));
+			}
+			catch (Exception e1) {
+				e1.printStackTrace();
+				asyncContext.complete();
+			}
+		}
+	}
+
 
 
 }
