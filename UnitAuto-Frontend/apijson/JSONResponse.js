@@ -1073,6 +1073,40 @@ var JSONResponse = {
     }
 
     return s2;
+  },
+
+  /** [1, true, 'a', {}, []] => { '0': 1, '1': true, '2': 'a', '3': {}, '4': [] }
+   * @param json
+   * @param key
+   * @param transferSelf
+   * @return {*}
+   */
+  array2object: function (json, key, transferSelf) {
+    if (json == null) {
+      return null;
+    }
+
+    if (json instanceof Array) {
+      if (transferSelf) {
+        var obj = {}
+        for (var i = 0; i < json.length; i++) {
+          obj[String(i)] = JSONResponse.array2object(json[i], key, transferSelf);
+        }
+        return obj;
+      }
+
+      for (var i = 0; i < json.length; i++) {
+        json[i] = JSONResponse.array2object(json[i], key, transferSelf);
+      }
+    }
+    else if (json instanceof Object) {
+      for (var k in json) {
+        json[k] = JSONResponse.array2object(json[k], key, k == null || k == key);
+      }
+
+    }
+
+    return json;
   }
 
 }

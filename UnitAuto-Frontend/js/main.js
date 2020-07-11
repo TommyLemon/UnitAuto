@@ -3642,7 +3642,11 @@
         else {
           var standardKey = App.isMLEnabled != true ? 'response' : 'standard'
           var standard = StringUtil.isEmpty(tr[standardKey], true) ? null : JSON.parse(tr[standardKey])
-          tr.compare = JSONResponse.compareResponse(standard, App.removeDebugInfo(response) || {}, '', App.isMLEnabled) || {}
+
+          var rsp = JSON.parse(JSON.stringify(App.removeDebugInfo(response) || {}))
+          rsp.methodArgs = JSONResponse.array2object(rsp.methodArgs, 'methodArgs', true)
+
+          tr.compare = JSONResponse.compareResponse(standard, rsp, '', App.isMLEnabled) || {}
         }
 
         App.onTestResponse(allCount, list, index, it, d, r, tr, response, tr.compare || {}, isRandom, accountIndex, justRecoverTest);
@@ -3931,8 +3935,11 @@
             delete currentResponse.code; //code必须一致
             delete currentResponse.throw; //throw必须一致
 
+            var rsp = JSON.parse(JSON.stringify(currentResponse || {}))
+            rsp.methodArgs = JSONResponse.array2object(rsp.methodArgs, 'methodArgs', true)
+
             var isML = this.isMLEnabled;
-            var stddObj = isML ? JSONResponse.updateStandard(standard || {}, currentResponse) : {};
+            var stddObj = isML ? JSONResponse.updateStandard(standard || {}, rsp) : {};
             stddObj.code = code;
             currentResponse.code = code;
             stddObj.throw = thrw;
