@@ -24,7 +24,7 @@
 
 <br />
 <br />
-客户端可作为 HTTP Server 来提供 UnitAuto 网页工具远程调用的接口
+客户端可作为 HTTP Server 来为 UnitAuto 网页工具 提供远程调用的接口：
 <p align="center" >
   <a ><img src="https://user-images.githubusercontent.com/5738175/87251324-6b759900-c49d-11ea-8468-aaf26124b7e0.png"></a>
 </p>
