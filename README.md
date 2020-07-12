@@ -67,13 +67,17 @@ UnitAuto 不需要写任何代码，直接读取方法的属性，自动注入�
 <br />
 
 ### 演讲视频
+UnitAuto-机器学习自动化单元测试平台简介 <br />
 https://www.bilibili.com/video/BV1Tk4y1R7Yo
+<br />
+UnitAuto-异步回调方法的零代码单元测试 <br />
+https://www.bilibili.com/video/BV1kk4y1z7bW
 <br />
 <br />
 
 ### 技术交流
 QQ技术交流群：734652054（免费）607020115（付费）
-
+<br />
 如果有什么问题或建议可以 [提 ISSUE ](https://github.com/TommyLemon/UnitAuto/issues) 或 加群，交流技术，分享经验。<br >
 如果你解决了某些 Bug，或者新增了一些功能，欢迎 [贡献代码](https://github.com/TommyLemon/UnitAuto/pulls)，感激不尽^_^
 <br />
@@ -81,16 +85,16 @@ QQ技术交流群：734652054（免费）607020115（付费）
 
 ### 其它项目
 [APIJSON](https://github.com/TommyLemon/APIJSON) 后端接口和文档自动化，前端(客户端) 定制返回 JSON 的数据和结构
-
+<br />
 [APIAuto](https://github.com/TommyLemon/APIAuto) 机器学习测试、自动生成代码、自动静态检查、自动生成文档与注释等，做最先进的接口管理工具
+<br />
+<br />
 
-<br />
-<br />
 ### 持续更新
 [https://github.com/TommyLemon/UnitAuto/commits/master](https://github.com/TommyLemon/UnitAuto/commits/master)
+<br />
+<br />
 
-<br />
-<br />
 ### 我要赞赏
 创作不易，右上角点 ⭐Star 支持下吧，谢谢 ^_^ <br />
 [https://gitee.com/TommyLemon/UnitAuto](https://gitee.com/TommyLemon/UnitAuto)
