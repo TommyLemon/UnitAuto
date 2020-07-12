@@ -18,10 +18,26 @@
 <p align="center" >
   <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-Test-interface-small.jpg"></a>
 </p>
+
+<br />
+
+后端不再需要像以下示例一样编写和维护大量单元测试用例代码（逻辑代码、注解代码等）：
 <p align="center" >
   <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-Compare-Code-small.jpg"></a>
 </p>
 
+<br />
+<br />
+客户端可作为 HTTP Server 来为 UnitAuto 网页工具 提供远程调用的接口，效果同样：
+<p align="center" >
+  <a ><img src="https://user-images.githubusercontent.com/5738175/87251324-6b759900-c49d-11ea-8468-aaf26124b7e0.png"></a>
+</p>
+<p align="center" >
+  <a ><img src="https://user-images.githubusercontent.com/5738175/87251395-f5bdfd00-c49d-11ea-809f-3c7330d7b6e1.png"></a>
+</p>
+
+<br />
+<br />
 
 ### 原理说明
 后端不需要写任何单元测试代码（逻辑代码、注解代码等全都不要），<br />
@@ -30,7 +46,8 @@
 <br />
 前端是类似 APIAuto 的机器学习自动化测试工具（查看、上传、执行、测试 后端项目中的方法等），<br />
 后端提供扫描所有方法、执行某个方法两个 API （主要引入 MethodUtil.java 这个类，里面已实现）。<br />
-
+<br />
+<br />
 
 ### 特点优势
 相比 JUnit, JTest 等一堆 Compiling testing 工具：<br />
@@ -39,30 +56,48 @@ UnitAuto 不需要写任何代码，直接读取方法的属性，自动注入�
 <br />
 2.UnitAuto 这种 Runtime testing 工具无需 Mock 环境(Application, Context 等)，<br />
 更不用为 Mock 出来的环境满足不了需求导致测试用例无法通过而头疼。<br />
+<br />
+<br />
 
+### 示例项目
+[UnitAuto Java 后端服务](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Backend/UnitAutoBoot/src/main/java/apijson/demo/server/Controller.java) <br />
+[APIJSON Java 后端服务](https://github.com/APIJSON/APIJSON/blob/master/APIJSON-Java-Server/APIJSONBoot/src/main/java/apijson/boot/DemoController.java) <br />
+[APIJSON Android 客户端](https://github.com/APIJSON/APIJSON/blob/master/APIJSON-Android/APIJSONTest/app/src/main/java/apijson/demo/ui/UnitActivity.java)
+<br />
+<br />
 
 ### 演讲视频
+UnitAuto-机器学习自动化单元测试平台简介 <br />
 https://www.bilibili.com/video/BV1Tk4y1R7Yo
-
+<br />
+<br />
+UnitAuto-异步回调方法的零代码单元测试 <br />
+https://www.bilibili.com/video/BV1kk4y1z7bW
+<br />
+<br />
 
 ### 技术交流
 QQ技术交流群：734652054（免费）607020115（付费）
-
+<br />
 如果有什么问题或建议可以 [提 ISSUE ](https://github.com/TommyLemon/UnitAuto/issues) 或 加群，交流技术，分享经验。<br >
 如果你解决了某些 Bug，或者新增了一些功能，欢迎 [贡献代码](https://github.com/TommyLemon/UnitAuto/pulls)，感激不尽^_^
-
+<br />
+<br />
 
 ### 其它项目
 [APIJSON](https://github.com/TommyLemon/APIJSON) 后端接口和文档自动化，前端(客户端) 定制返回 JSON 的数据和结构
-
+<br />
 [APIAuto](https://github.com/TommyLemon/APIAuto) 机器学习测试、自动生成代码、自动静态检查、自动生成文档与注释等，做最先进的接口管理工具
-
+<br />
+<br />
 
 ### 持续更新
 [https://github.com/TommyLemon/UnitAuto/commits/master](https://github.com/TommyLemon/UnitAuto/commits/master)
-
+<br />
+<br />
 
 ### 我要赞赏
 创作不易，右上角点 ⭐Star 支持下吧，谢谢 ^_^ <br />
 [https://gitee.com/TommyLemon/UnitAuto](https://gitee.com/TommyLemon/UnitAuto)
-
+<br />
+<br />
