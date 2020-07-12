@@ -18,13 +18,17 @@
 <p align="center" >
   <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-Test-interface-small.jpg"></a>
 </p>
+
+<br />
+
+后端不再需要像以下示例一样编写和维护大量单元测试用例代码（逻辑代码、注解代码等）：
 <p align="center" >
   <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-Compare-Code-small.jpg"></a>
 </p>
 
 <br />
 <br />
-客户端可作为 HTTP Server 来为 UnitAuto 网页工具 提供远程调用的接口：
+客户端可作为 HTTP Server 来为 UnitAuto 网页工具 提供远程调用的接口，效果同样：
 <p align="center" >
   <a ><img src="https://user-images.githubusercontent.com/5738175/87251324-6b759900-c49d-11ea-8468-aaf26124b7e0.png"></a>
 </p>
