@@ -22,6 +22,16 @@
   <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-Compare-Code-small.jpg"></a>
 </p>
 
+<br />
+<br />
+客户端可作为 HTTP Server 来提供 UnitAuto 网页工具远程调用的接口
+<p align="center" >
+  <a ><img src="https://user-images.githubusercontent.com/5738175/87251324-6b759900-c49d-11ea-8468-aaf26124b7e0.png"></a>
+</p>
+<p align="center" >
+  <a ><img src="https://user-images.githubusercontent.com/5738175/87251395-f5bdfd00-c49d-11ea-809f-3c7330d7b6e1.png"></a>
+</p>
+
 
 ### 原理说明
 后端不需要写任何单元测试代码（逻辑代码、注解代码等全都不要），<br />
