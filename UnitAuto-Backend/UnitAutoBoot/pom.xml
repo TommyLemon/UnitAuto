@@ -65,6 +65,12 @@
 		</dependency>
 		<!-- 没找到合适且稳定的 Oracle 的 JDBC Maven 依赖，已在 libs 目录放了对应的 jar 包来替代 -->
 
+		<dependency>
+		    <groupId>io.github.classgraph</groupId>
+		    <artifactId>classgraph</artifactId>
+		    <version>4.8.87</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>

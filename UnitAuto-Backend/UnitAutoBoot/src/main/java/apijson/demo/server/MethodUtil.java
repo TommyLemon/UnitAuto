@@ -36,9 +36,16 @@ import com.alibaba.fastjson.parser.Feature;
 import com.alibaba.fastjson.parser.ParserConfig;
 import com.alibaba.fastjson.util.TypeUtils;
 
+import io.github.classgraph.AnnotationInfo;
+import io.github.classgraph.AnnotationParameterValue;
+import io.github.classgraph.ClassGraph;
+import io.github.classgraph.ClassInfo;
+import io.github.classgraph.ScanResult;
 import zuo.biao.apijson.StringUtil;
 
 public class MethodUtil {
+
+	public static final boolean DEBUG = true;
 
 	/**非null注解
 	 * javax.validation.constraints.NotNull不在JDK里面，为了减少第三方库引用就在这里实现了一个替代品
@@ -550,7 +557,7 @@ public class MethodUtil {
 							}
 						}
 					}
-					
+
 					args[i] = TypeUtils.cast(proxy, type, new ParserConfig());
 					isSync = proxy.$_getCallbackMap().isEmpty();
 				} catch (Exception e) {
@@ -616,7 +623,10 @@ public class MethodUtil {
 								continue;
 							}
 							if (allMethod || methodName.equals(m.getName())) {
-								methodList.add(parseMethodObject(m));
+								Object mObj = parseMethodObject(m);
+								if (mObj != null) {
+									methodList.add(mObj);
+								}
 							}
 						}
 					}
@@ -635,6 +645,9 @@ public class MethodUtil {
 
 	public static String dot2Separator(String name) {
 		return name == null ? null : name.replaceAll("\\.", File.separator);
+	}
+	public static String separator2dot(String name) {
+		return name == null ? null : name.replaceAll(File.separator, ".");
 	}
 
 	//	private void initTypesAndValues(JSONArray methodArgs, Class<?>[] types, Object[] args)
@@ -854,7 +867,7 @@ public class MethodUtil {
 
 		//FIXME 这个方法在 jar 包里获取不到 class，主要是 ClassLoader.getResource(packageOrFileName) 取出来为 null，试了多种方法都没解决
 		try {
-			List<Class<?>> list = findClassList(packageOrFileName, className, ignoreError);
+			List<Class<?>> list = findClassList(packageOrFileName, className, ignoreError, true);
 			Class<?> cls = list == null || list.isEmpty() ? null : list.get(0);
 			if (cls != null) {
 				return cls;
@@ -877,9 +890,19 @@ public class MethodUtil {
 	 * @throws ClassNotFoundException
 	 */
 	public static List<Class<?>> findClassList(String packageOrFileName, String className, boolean ignoreError) throws ClassNotFoundException {
+		return findClassList(packageOrFileName, className, ignoreError, false);
+	}
+	/**
+	 * @param packageOrFileName
+	 * @param className
+	 * @param ignoreError
+	 * @return
+	 * @throws ClassNotFoundException
+	 */
+	public static List<Class<?>> findClassList(String packageOrFileName, String className, boolean ignoreError, boolean onlyOne) throws ClassNotFoundException {
 		List<Class<?>> list = new ArrayList<>();
 
-		int index = className.indexOf("<");
+		int index = className == null ? -1 : className.indexOf("<");
 		if (index >= 0) {
 			className = className.substring(0, index);
 		}
@@ -887,79 +910,126 @@ public class MethodUtil {
 		boolean allPackage = isEmpty(packageOrFileName, true);
 		boolean allName = isEmpty(className, true);
 
+
+		ClassGraph classGraph = new ClassGraph()
+				.verbose(DEBUG)                   // Log to stderr
+				.enableAllInfo();             // Scan classes, methods, fields, annotations
+
+		if (allPackage == false) {
+			classGraph.acceptPackages(dot2Separator(packageOrFileName));         // Scan com.xyz and subpackages (omit to scan all packages)
+//FIXME  也没解决不是从头匹配			classGraph.acceptPaths("/" + separator2dot(packageOrFileName));         // Scan com.xyz and subpackages (omit to scan all packages)
+		}
+		if (allName == false) {
+			classGraph.acceptClasses(className);
+		}
+
+		String pkg = separator2dot(packageOrFileName);
+		
+		try (ScanResult scanResult = classGraph.scan()) {
+
+			for (ClassInfo routeClassInfo : scanResult.getAllStandardClasses()) {
+
+				String name = routeClassInfo != null && routeClassInfo.isPublic() && routeClassInfo.isEnum() == false ? routeClassInfo.getSimpleName() : null;
+				if (isEmpty(name, false)) {  // 需要内部类，而且 classgraph 不会扫描出动态临时类  || name.contains("$")) {
+					continue;
+				}
+				
+				//上面 ClassGraph 查找是任意匹配，需要自己再过滤下
+				if (allPackage == false && (routeClassInfo.getPackageName() == null || routeClassInfo.getPackageName().startsWith(pkg) == false)) {
+					continue;
+				}
+				if (allName == false && className.equals(routeClassInfo.getSimpleName()) == false) {
+					continue;
+				}
+
+				Class<?> clazz = routeClassInfo.loadClass();
+				if (clazz == null) {
+					continue;
+				}
+				
+				list.add(clazz);
+
+				if (onlyOne) {
+					break;
+				}
+			}
+		}
+
+
 		//将包名替换成目录  TODO 应该一层层查找进去，实时判断是 package 还是 class，如果已经是 class 还有下一级，应该用 $ 隔开内部类。简单点也可以认为大驼峰是类
-		String fileName = allPackage ? File.separator : dot2Separator(packageOrFileName);
-
-		ClassLoader loader = Thread.currentThread().getContextClassLoader();
-
-		//通过 ClassLoader 来获取文件列表
-		File file;
-		try {
-			file = new File(loader.getResource(fileName).getFile());
-		} catch (Exception e) {
-			if (ignoreError) {
-				return null;
-			}
-			throw e;
-		}
-
-		File[] files;
-		//		if (allPackage) {  //getResource 已经过滤了
-		files = file.listFiles();
+		//		String fileName = allPackage ? File.separator : dot2Separator(packageOrFileName);
+		//
+		//		
+		//		ClassLoader loader = Thread.currentThread().getContextClassLoader();
+		//
+		//		//通过 ClassLoader 来获取文件列表
+		//		File file;
+		//		try {
+		//			file = new File(loader.getResource(fileName).getFile());
+		//		} catch (Exception e) {
+		//			if (ignoreError) {
+		//				return null;
+		//			}
+		//			throw e;
 		//		}
-		//		else {
-		//			files = file.listFiles(new FilenameFilter() {
-		//				
-		//				@Override
-		//				public boolean accept(File dir, String name) {
-		//					if (fileName.equals(dir.getAbsolutePath())) {
-		//						
+		//
+		//		File[] files;
+		//		//		if (allPackage) {  //getResource 已经过滤了
+		//		files = file.listFiles();
+		//		//		}
+		//		//		else {
+		//		//			files = file.listFiles(new FilenameFilter() {
+		//		//				
+		//		//				@Override
+		//		//				public boolean accept(File dir, String name) {
+		//		//					if (fileName.equals(dir.getAbsolutePath())) {
+		//		//						
+		//		//					}
+		//		//					return false;
+		//		//				}
+		//		//			});
+		//		//		}
+		//
+		//		if (files != null) {
+		//			for (File f : files) {
+		//				if (f.isDirectory()) {  //如果是目录，这进一个寻找
+		//					if (allPackage) {
+		//						//进一步寻找
+		//						List<Class<?>> childList = findClassList(f.getAbsolutePath(), className, ignoreError);
+		//						if (childList != null && childList.isEmpty() == false) {
+		//							list.addAll(childList);
+		//						}
 		//					}
-		//					return false;
 		//				}
-		//			});
+		//				else {  //如果是class文件
+		//					String name = trim(f.getName());
+		//					if (name != null && name.endsWith(".class")) {
+		//						name = name.substring(0, name.length() - ".class".length());
+		//						if (name.isEmpty() || name.equals("package-info") || name.contains("$")) {
+		//							continue;
+		//						}
+		//
+		//						if (allName || className.equals(name)) {
+		//							//反射出实例
+		//							try {
+		//								Class<?> clazz = loader.loadClass(packageOrFileName.replaceAll(File.separator, "\\.") + "." + name);
+		//								list.add(clazz);
+		//
+		//								if (allName == false) {
+		//									break;
+		//								}
+		//							} catch (Exception e) {
+		//								if (ignoreError == false) {
+		//									throw e;
+		//								}
+		//								e.printStackTrace();
+		//							}
+		//
+		//						}
+		//					}
+		//				}
+		//			}
 		//		}
-
-		if (files != null) {
-			for (File f : files) {
-				if (f.isDirectory()) {  //如果是目录，这进一个寻找
-					if (allPackage) {
-						//进一步寻找
-						List<Class<?>> childList = findClassList(f.getAbsolutePath(), className, ignoreError);
-						if (childList != null && childList.isEmpty() == false) {
-							list.addAll(childList);
-						}
-					}
-				}
-				else {  //如果是class文件
-					String name = trim(f.getName());
-					if (name != null && name.endsWith(".class")) {
-						name = name.substring(0, name.length() - ".class".length());
-						if (name.isEmpty() || name.equals("package-info") || name.contains("$")) {
-							continue;
-						}
-
-						if (allName || className.equals(name)) {
-							//反射出实例
-							try {
-								Class<?> clazz = loader.loadClass(packageOrFileName.replaceAll(File.separator, "\\.") + "." + name);
-								list.add(clazz);
-
-								if (allName == false) {
-									break;
-								}
-							} catch (Exception e) {
-								if (ignoreError == false) {
-									throw e;
-								}
-								e.printStackTrace();
-							}
-
-						}
-					}
-				}
-			}
-		}
 
 		return list;
 	}
@@ -1073,7 +1143,7 @@ public class MethodUtil {
 			this.callbackMap = callbackMap != null ? callbackMap : new HashMap<>();
 			return this;
 		}
-		
+
 		@JSONField(serialize = false, deserialize = false)
 		public Listener<?> $_getCallback(String method) {
 			return callbackMap.get(method);
@@ -1174,12 +1244,12 @@ public class MethodUtil {
 			}
 			String key = name + "(" + StringUtil.getString(method.getGenericParameterTypes()) + ")";
 			Object handlerValue = get(key);
-			
+
 			Object value = callSuper ? super.invoke(proxy, method, args) : null;
 			if (callSuper == false) {  //TODO default 方法如何执行里面的代码块？可能需要参考热更新，把方法动态加进去
-			    if (Modifier.isStatic(method.getModifiers())) {  //正常情况不会进这个分支，因为 interface 中 static 方法不允许用实例来调用
-                    value = method.invoke(null, args);
-			    }
+				if (Modifier.isStatic(method.getModifiers())) {  //正常情况不会进这个分支，因为 interface 中 static 方法不允许用实例来调用
+					value = method.invoke(null, args);
+				}
 				else if (handlerValue instanceof JSONObject) {
 					JSONObject handler = (JSONObject) handlerValue;
 					value = handler.get(KEY_RETURN);  //TODO 可能根据传参而返回不同值
@@ -1238,13 +1308,13 @@ public class MethodUtil {
 			list.add(methodObj2);  //顺序，因为要直观看到调用过程
 			put(KEY_CALL_LIST, list);
 
-			
+
 			//是否被设置为 HTTP 回调方法
 			Listener<?> listener = $_getCallback(key);
 			if (listener != null) { //提前判断 && handler.getBooleanValue(KEY_CALLBACK)) {
 				listener.complete(null);
 			}
-			
+
 			return value; //实例是这个代理类，而不是原本的 interface，所以不行，除非能动态 implements。 return Modifier.isAbstract(method.getModifiers()) ? value : 执行非抽放方法(default 和 static);
 		}
 	}
