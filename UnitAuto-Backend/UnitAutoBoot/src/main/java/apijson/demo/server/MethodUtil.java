@@ -923,16 +923,30 @@ public class MethodUtil {
 			classGraph.acceptClasses(className);
 		}
 
+		String pkg = separator2dot(packageOrFileName);
+		
 		try (ScanResult scanResult = classGraph.scan()) {
 
 			for (ClassInfo routeClassInfo : scanResult.getAllStandardClasses()) {
 
-				Class<?> clazz = routeClassInfo != null && routeClassInfo.isPublic() && routeClassInfo.isEnum() == false ? routeClassInfo.loadClass() : null;
-				String name = clazz == null ? null : trim(clazz.getSimpleName());
+				String name = routeClassInfo != null && routeClassInfo.isPublic() && routeClassInfo.isEnum() == false ? routeClassInfo.getSimpleName() : null;
 				if (isEmpty(name, false)) {  // 需要内部类，而且 classgraph 不会扫描出动态临时类  || name.contains("$")) {
 					continue;
 				}
+				
+				//上面 ClassGraph 查找是任意匹配，需要自己再过滤下
+				if (allPackage == false && (routeClassInfo.getPackageName() == null || routeClassInfo.getPackageName().startsWith(pkg) == false)) {
+					continue;
+				}
+				if (allName == false && className.equals(routeClassInfo.getSimpleName()) == false) {
+					continue;
+				}
 
+				Class<?> clazz = routeClassInfo.loadClass();
+				if (clazz == null) {
+					continue;
+				}
+				
 				list.add(clazz);
 
 				if (onlyOne) {
@@ -945,7 +959,7 @@ public class MethodUtil {
 		//将包名替换成目录  TODO 应该一层层查找进去，实时判断是 package 还是 class，如果已经是 class 还有下一级，应该用 $ 隔开内部类。简单点也可以认为大驼峰是类
 		//		String fileName = allPackage ? File.separator : dot2Separator(packageOrFileName);
 		//
-		//
+		//		
 		//		ClassLoader loader = Thread.currentThread().getContextClassLoader();
 		//
 		//		//通过 ClassLoader 来获取文件列表
@@ -965,11 +979,11 @@ public class MethodUtil {
 		//		//		}
 		//		//		else {
 		//		//			files = file.listFiles(new FilenameFilter() {
-		//		//
+		//		//				
 		//		//				@Override
 		//		//				public boolean accept(File dir, String name) {
 		//		//					if (fileName.equals(dir.getAbsolutePath())) {
-		//		//
+		//		//						
 		//		//					}
 		//		//					return false;
 		//		//				}
