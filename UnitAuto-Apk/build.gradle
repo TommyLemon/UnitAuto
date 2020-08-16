@@ -22,8 +22,8 @@ android {
 }
 
 dependencies {
-    implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation files('libs/unitauto-1.0.jar')
+    compile fileTree(include: ['*.jar'], dir: 'libs')
+    compile files('libs/unitauto-1.0.jar')
     compile 'com.alibaba:fastjson:1.2.61'
     compile 'com.koushikdutta.async:androidasync:2.+'
 }
