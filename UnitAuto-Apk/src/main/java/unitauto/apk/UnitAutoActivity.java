@@ -313,11 +313,11 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
                     catch (Exception e) {
                         Log.e(TAG, "invokeMethod  try { JSONObject req = JSON.parseObject(request); ... } catch (Exception e) { \n" + e.getMessage());
                         try {
-                            listener.complete(MethodUtil.CALLBACK.newErrorResult(e));
+                            listener.complete(MethodUtil.JSON_CALLBACK.newErrorResult(e));
                         }
                         catch (Exception e1) {
                             e1.printStackTrace();
-                            send(asyncHttpServerResponse, MethodUtil.CALLBACK.newErrorResult(e1).toJSONString());
+                            send(asyncHttpServerResponse, MethodUtil.JSON_CALLBACK.newErrorResult(e1).toJSONString());
                         }
                     }
 
@@ -328,7 +328,7 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
             }
         } catch (Exception e) {
             e.printStackTrace();
-            send(asyncHttpServerResponse, MethodUtil.CALLBACK.newErrorResult(e).toJSONString());
+            send(asyncHttpServerResponse, MethodUtil.JSON_CALLBACK.newErrorResult(e).toJSONString());
         }
 
     }

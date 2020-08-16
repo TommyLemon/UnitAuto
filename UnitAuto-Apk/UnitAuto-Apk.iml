@@ -105,5 +105,6 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="Gradle: com.alibaba:fastjson:1.2.61@jar" level="project" />
     <orderEntry type="library" name="Gradle: com.koushikdutta.async:androidasync-2.2.1" level="project" />
+    <orderEntry type="library" name="Gradle: __local_aars__:/Users/Tommy/Documents/APIJSON/APIJSON/APIJSON-Android/APIJSONTest/UnitAuto-Apk/libs/unitauto-1.0.jar:unspecified@jar" level="project" />
   </component>
 </module>
