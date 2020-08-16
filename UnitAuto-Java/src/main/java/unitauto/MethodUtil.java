@@ -58,7 +58,7 @@ public class MethodUtil {
 
 	public interface JSONCallback {
 		JSONObject newSuccessResult();
-		JSONObject newErrorResult(Exception e);
+		JSONObject newErrorResult(Throwable e);
 	}
 
 
@@ -125,7 +125,7 @@ public class MethodUtil {
 		}
 
 		@Override
-		public JSONObject newErrorResult(Exception e) {
+		public JSONObject newErrorResult(Throwable e) {
 			JSONObject result = new JSONObject(true);
 			result.put(KEY_CODE, CODE_SERVER_ERROR);
 			result.put(KEY_MSG, e.getMessage());
@@ -234,7 +234,8 @@ public class MethodUtil {
 			JSONArray list = getMethodListGroupByClass(pkgName, clsName, methodName, argTypes);
 			result = JSON_CALLBACK.newSuccessResult();
 			result.put("classList", list);  //序列化 Class	只能拿到 name		result.put("Class[]", JSON.parseArray(JSON.toJSONString(classlist)));
-		} catch (Exception e) {
+		}
+		catch (Throwable e) {
 			e.printStackTrace();
 			result = JSON_CALLBACK.newErrorResult(e);
 		}
@@ -325,7 +326,7 @@ public class MethodUtil {
 				}
 			});
 		}
-		catch (Exception e) {
+		catch (Throwable e) {
 			e.printStackTrace();
 			if (e instanceof NoSuchMethodException) {
 				e = new IllegalArgumentException("字符 " + methodName + " 对应的方法不在 " + pkgName +  "/" + clsName + " 内！"
@@ -436,7 +437,9 @@ public class MethodUtil {
 									instance = constructors[i].newInstance(classArgValues);
 									break;
 								}
-								catch (Exception e) {}
+								catch (Throwable e) {
+									e.printStackTrace();
+								}
 							}
 						}
 					}
@@ -533,7 +536,7 @@ public class MethodUtil {
 								v = parseObject(v.toString());
 							}
 						}
-						catch (Exception e) {
+						catch (Throwable e) {
 							e.printStackTrace();
 						}
 
@@ -582,7 +585,7 @@ public class MethodUtil {
 						args[i] = TypeUtils.cast(proxy, type, new ParserConfig());
 						isSync = proxy.$_getCallbackMap().isEmpty();
 					}
-					catch (Exception e) {
+					catch (Throwable e) {
 						e.printStackTrace();
 					}
 				}
@@ -590,7 +593,7 @@ public class MethodUtil {
 					try {
 						args[i] = TypeUtils.cast(value, type, new ParserConfig());
 					}
-					catch (Exception e) {
+					catch (Throwable e) {
 						e.printStackTrace();
 					}
 				}
@@ -629,43 +632,49 @@ public class MethodUtil {
 					continue;
 				}
 
-				JSONObject clsObj = new JSONObject(true);
+				try {
+					JSONObject clsObj = new JSONObject(true);
 
-				clsObj.put(KEY_NAME, cls.getSimpleName());
-				clsObj.put(KEY_TYPE, trimType(cls.getGenericSuperclass()));
-				clsObj.put(KEY_PACKAGE, dot2Separator(cls.getPackage().getName()));
+					clsObj.put(KEY_NAME, cls.getSimpleName());
+					clsObj.put(KEY_TYPE, trimType(cls.getGenericSuperclass()));
+					clsObj.put(KEY_PACKAGE, dot2Separator(cls.getPackage().getName()));
 
-				JSONArray methodList = null;
-				if (allMethod == false && argTypes != null && argTypes.length > 0) {
-					Object mObj = parseMethodObject(cls.getMethod(methodName, argTypes));
-					if (mObj != null) {
-						methodList = new JSONArray(1);
-						methodList.add(mObj);
+					JSONArray methodList = null;
+					if (allMethod == false && argTypes != null && argTypes.length > 0) {
+						Object mObj = parseMethodObject(cls.getMethod(methodName, argTypes));
+						if (mObj != null) {
+							methodList = new JSONArray(1);
+							methodList.add(mObj);
+						}
 					}
-				}
-				else {
-					Method[] methods = cls.getDeclaredMethods(); //父类的就用父类去获取 cls.getMethods();
-					if (methods != null && methods.length > 0) {
-						methodList = new JSONArray(methods.length);
+					else {
+						Method[] methods = cls.getDeclaredMethods(); //父类的就用父类去获取 cls.getMethods();
+						if (methods != null && methods.length > 0) {
+							methodList = new JSONArray(methods.length);
 
-						for (Method m : methods) {
-							if (m == null) {
-								continue;
-							}
-							if (allMethod || methodName.equals(m.getName())) {
-								Object mObj = parseMethodObject(m);
-								if (mObj != null) {
-									methodList.add(mObj);
+							for (Method m : methods) {
+								if (m == null) {
+									continue;
+								}
+								if (allMethod || methodName.equals(m.getName())) {
+									Object mObj = parseMethodObject(m);
+									if (mObj != null) {
+										methodList.add(mObj);
+									}
 								}
 							}
 						}
 					}
+					clsObj.put("methodList", methodList);  //太多不需要的信息，导致后端返回慢、前端卡 UI	clsObj.put("Method[]", JSON.parseArray(methods));
+
+					list.add(clsObj);
+
 				}
-				clsObj.put("methodList", methodList);  //太多不需要的信息，导致后端返回慢、前端卡 UI	clsObj.put("Method[]", JSON.parseArray(methods));
+				catch (Throwable e) {
+					e.printStackTrace();
+				}
 
-				list.add(clsObj);
 			}
-
 		}
 
 		return list;
@@ -743,14 +752,16 @@ public class MethodUtil {
 						proxy.$_setType(type);
 						value = proxy;
 					}
-				} catch (Exception e) {
+				}
+				catch (Throwable e) {
 					e.printStackTrace();
 				}
 
 				if (castValue2Type) {
 					try {
 						value = TypeUtils.cast(value, type, new ParserConfig());
-					} catch (Exception e) {
+					}
+					catch (Throwable e) {
 						e.printStackTrace();
 					}
 				}
@@ -938,7 +949,8 @@ public class MethodUtil {
 		File file;
 		try {
 			file = new File(loader.getResource(fileName).getFile());
-		} catch (Exception e) {
+		}
+		catch (Throwable e) {
 			if (ignoreError) {
 				return null;
 			}
@@ -999,8 +1011,8 @@ public class MethodUtil {
 										break;
 									}
 								}
-
-							} catch (Exception e) {
+							}
+							catch (Throwable e) {
 								if (ignoreError == false) {
 									throw e;
 								}
@@ -1302,14 +1314,14 @@ public class MethodUtil {
 			try {
 				value = TypeUtils.cast(value, getType(type, value, true), new ParserConfig());
 			}
-			catch (Exception e) {
+			catch (Throwable e) {
 				e.printStackTrace();
 				if (type == null) {
 					type = value == null ? "Object" : dot2Separator(value.getClass().getName());
 				}
 				throw new IllegalArgumentException(key + " 中 " + KEY_RETURN + " 值无法转为 " + type + "! " + e.getMessage());
 			}
-			
+
 			return value; //实例是这个代理类，而不是原本的 interface，所以不行，除非能动态 implements。 return Modifier.isAbstract(method.getModifiers()) ? value : 执行非抽放方法(default 和 static);
 		}
 	}
