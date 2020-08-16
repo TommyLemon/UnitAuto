@@ -2,8 +2,9 @@ apply plugin: 'com.android.library'
 
 android {
     compileSdkVersion 29
+    buildToolsVersion '29.0.0'
     defaultConfig {
-        minSdkVersion 21
+        minSdkVersion 26
         targetSdkVersion 26
         versionCode 1
         versionName "1.0"
@@ -22,8 +23,7 @@ android {
 }
 
 dependencies {
-    compile fileTree(include: ['*.jar'], dir: 'libs')
-    compile files('libs/unitauto-1.0.jar')
-    compile 'com.alibaba:fastjson:1.2.61'
-    compile 'com.koushikdutta.async:androidasync:2.+'
+    api fileTree(include: ['*.jar'], dir: 'libs')
+    api 'com.alibaba:fastjson:1.2.61'
+    api 'com.koushikdutta.async:androidasync:2.+'
 }
