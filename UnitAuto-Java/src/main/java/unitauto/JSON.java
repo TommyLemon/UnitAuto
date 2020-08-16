@@ -14,12 +14,12 @@ limitations under the License.*/
 
 package unitauto;
 
+import java.util.List;
+
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.parser.Feature;
 import com.alibaba.fastjson.serializer.SerializerFeature;
-
-import java.util.List;
 
 
 /**阿里FastJSON封装类 防止解析时异常
@@ -123,8 +123,12 @@ public class JSON {
 	 * @param clazz
 	 * @return
 	 */
-	public static <T> T parseObject(JSONObject object, Class<T> clazz) {
-		return parseObject(toJSONString(object), clazz);
+	@SuppressWarnings("unchecked")
+	public static <T> T parseObject(Object obj, Class<T> clazz) {
+		if (obj != null && clazz != null && clazz.isAssignableFrom(obj.getClass())) {
+			return (T) obj;
+		}
+		return parseObject(toJSONString(obj), clazz);
 	}
 	/**json转实体类
 	 * @param json

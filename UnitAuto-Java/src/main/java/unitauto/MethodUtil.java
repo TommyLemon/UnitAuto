@@ -1227,6 +1227,7 @@ public class MethodUtil {
 			String key = name + "(" + StringUtil.getString(trimTypes(method.getGenericParameterTypes())) + ")";
 			Object handlerValue = get(key);
 
+			String type = null;
 			Object value = callSuper ? super.invoke(proxy, method, args) : null;
 			if (callSuper == false) {  //TODO default 方法如何执行里面的代码块？可能需要参考热更新，把方法动态加进去
 				if (Modifier.isStatic(method.getModifiers())) {  //正常情况不会进这个分支，因为 interface 中 static 方法不允许用实例来调用
@@ -1235,6 +1236,7 @@ public class MethodUtil {
 				else if (handlerValue instanceof JSONObject) {
 					JSONObject handler = (JSONObject) handlerValue;
 					value = handler.get(KEY_RETURN);  //TODO 可能根据传参而返回不同值
+					type = handler.getString(KEY_TYPE);
 				}
 				else {
 					value = handlerValue;
@@ -1297,6 +1299,13 @@ public class MethodUtil {
 				listener.complete(null);
 			}
 
+			try {
+				value = TypeUtils.cast(value, getType(type, value, true), new ParserConfig());
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+			
 			return value; //实例是这个代理类，而不是原本的 interface，所以不行，除非能动态 implements。 return Modifier.isAbstract(method.getModifiers()) ? value : 执行非抽放方法(default 和 static);
 		}
 	}
