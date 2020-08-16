@@ -54,11 +54,12 @@ import org.springframework.web.client.RestTemplate;
 
 import com.alibaba.fastjson.JSONObject;
 
-import apijson.demo.server.MethodUtil.InterfaceProxy;
 import apijson.demo.server.model.BaseModel;
 import apijson.demo.server.model.Privacy;
 import apijson.demo.server.model.User;
 import apijson.demo.server.model.Verify;
+import unitauto.MethodUtil.InterfaceProxy;
+import unitauto.jar.MethodUtil;
 import zuo.biao.apijson.JSON;
 import zuo.biao.apijson.JSONResponse;
 import zuo.biao.apijson.Log;
@@ -1063,7 +1064,7 @@ public class Controller {
 		catch (Exception e) {
 			Log.e(TAG, "invokeMethod  try { JSONObject req = JSON.parseObject(request); ... } catch (Exception e) { \n" + e.getMessage());
 			try {
-				listener.complete(MethodUtil.CALLBACK.newErrorResult(e));
+				listener.complete(MethodUtil.JSON_CALLBACK.newErrorResult(e));
 			}
 			catch (Exception e1) {
 				e1.printStackTrace();

@@ -27,6 +27,8 @@
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry combineaccessrules="false" kind="src" path="/unitauto-jar"/>
 	<classpathentry kind="lib" path="libs/apijson-orm-3.8.6.jar"/>
+	<classpathentry kind="src" path="/unitauto"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>
