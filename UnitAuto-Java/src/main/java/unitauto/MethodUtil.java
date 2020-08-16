@@ -653,10 +653,13 @@ public class MethodUtil {
 							methodList = new JSONArray(methods.length);
 
 							for (Method m : methods) {
-								if (m == null) {
+								String name = m == null ? null : m.getName();
+								if (isEmpty(name, true) || name.contains("$") || name.length() < 2) {
 									continue;
 								}
-								if (allMethod || methodName.equals(m.getName())) {
+								
+								if (allMethod || methodName.equals(name)) {
+									
 									Object mObj = parseMethodObject(m);
 									if (mObj != null) {
 										methodList.add(mObj);
