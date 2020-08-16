@@ -1304,6 +1304,10 @@ public class MethodUtil {
 			}
 			catch (Exception e) {
 				e.printStackTrace();
+				if (type == null) {
+					type = value == null ? "Object" : dot2Separator(value.getClass().getName());
+				}
+				throw new IllegalArgumentException(key + " 中 " + KEY_RETURN + " 值无法转为 " + type + "! " + e.getMessage());
 			}
 			
 			return value; //实例是这个代理类，而不是原本的 interface，所以不行，除非能动态 implements。 return Modifier.isAbstract(method.getModifiers()) ? value : 执行非抽放方法(default 和 static);
