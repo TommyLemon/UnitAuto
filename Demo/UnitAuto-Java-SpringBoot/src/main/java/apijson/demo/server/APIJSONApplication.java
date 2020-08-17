@@ -14,6 +14,8 @@ limitations under the License.*/
 
 package apijson.demo.server;
 
+import java.util.List;
+
 import org.springframework.beans.BeansException;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -27,6 +29,10 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
+import unitauto.MethodUtil.Argument;
+import unitauto.MethodUtil.InstanceGetter;
+import unitauto.NotNull;
+import unitauto.jar.MethodUtil;
 import zuo.biao.apijson.Log;
 
 
@@ -37,6 +43,26 @@ import zuo.biao.apijson.Log;
 @Configuration
 @SpringBootApplication
 public class APIJSONApplication implements ApplicationContextAware {
+
+	static {
+		MethodUtil.INSTANCE_GETTER = new InstanceGetter() {
+
+			@Override
+			public Object getInstance(@NotNull Class<?> clazz, List<Argument> classArgs, Boolean reuse) throws Exception {
+				//多余的判断		if (ApplicationContext.class.isAssignableFrom(clazz)) {
+				if (APPLICATION_CONTEXT != null && clazz.isAssignableFrom(APPLICATION_CONTEXT.getClass())) {
+					return APPLICATION_CONTEXT;
+				}
+				//				}
+
+				if (reuse != null && reuse && (classArgs == null || classArgs.isEmpty())) {
+					return APPLICATION_CONTEXT.getBean(clazz);
+				}
+
+				return MethodUtil.getInvokeInstance(clazz, classArgs, reuse);
+			}
+		};
+	}
 
 	public static void main(String[] args) throws Exception {
 		SpringApplication.run(APIJSONApplication.class, args);
@@ -141,7 +167,7 @@ public class APIJSONApplication implements ApplicationContextAware {
 	//支持JavaScript跨域请求 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 	public static ApplicationContext APPLICATION_CONTEXT;
-	
+
 	@Override
 	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
 		APPLICATION_CONTEXT = applicationContext;		

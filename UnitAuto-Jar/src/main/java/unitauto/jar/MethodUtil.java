@@ -158,6 +158,16 @@ public class MethodUtil extends unitauto.MethodUtil {
 	public static void invokeMethod(JSONObject request, Object instance, @NotNull Listener<JSONObject> listener) throws Exception {
 		unitauto.MethodUtil.invokeMethod(request, instance, listener);
 	}
+	
+	public static void initTypesAndValues(List<unitauto.MethodUtil.Argument> methodArgs, Class<?>[] types, Object[] args, boolean defaultType) throws IllegalArgumentException, ClassNotFoundException, IOException {
+		unitauto.MethodUtil.initTypesAndValues(methodArgs, types, args, defaultType);
+	}
+	public static void initTypesAndValues(List<unitauto.MethodUtil.Argument> methodArgs, Class<?>[] types, Object[] args, boolean defaultType, boolean castValue2Type) throws IllegalArgumentException, ClassNotFoundException, IOException {
+		unitauto.MethodUtil.initTypesAndValues(methodArgs, types, args, defaultType, castValue2Type);
+	}
+	public static void initTypesAndValues(List<unitauto.MethodUtil.Argument> methodArgs, Class<?>[] types, Object[] args, boolean defaultType, boolean castValue2Type, unitauto.MethodUtil.Listener<Object> listener) throws IllegalArgumentException, ClassNotFoundException, IOException {
+		unitauto.MethodUtil.initTypesAndValues(methodArgs, types, args, defaultType, castValue2Type, listener);
+	}
 
 
 }

@@ -55,6 +55,13 @@ public class MethodUtil {
 		}
 	}
 
+	public interface InstanceGetter {
+		Object getInstance(@NotNull Class<?> clazz, List<Argument> classArgs, Boolean reuse) throws Exception;
+
+		default Object getInstance(@NotNull Class<?> clazz, List<Argument> classArgs) throws Exception {
+			return getInstance(clazz, classArgs, null);
+		}
+	}
 
 	public interface JSONCallback {
 		JSONObject newSuccessResult();
@@ -72,6 +79,7 @@ public class MethodUtil {
 		}
 	}
 
+
 	public static String KEY_CODE = "code";
 	public static String KEY_MSG = "msg";
 
@@ -85,6 +93,7 @@ public class MethodUtil {
 	public static String KEY_CLASS = "class";
 	public static String KEY_TYPE = "type";
 	public static String KEY_VALUE = "value";
+	public static String KEY_WARN = "warn";
 	public static String KEY_STATIC = "static";
 	public static String KEY_NAME = "name";
 	public static String KEY_METHOD = "method";
@@ -96,6 +105,17 @@ public class MethodUtil {
 	public static String KEY_CALL_LIST = "call()[]";
 	public static String KEY_CALL_MAP = "call(){}";
 
+
+
+	//不能在 static 代码块赋值，否则 MethodUtil 子类中 static 代码块对它赋值的代码不会执行！
+	@NotNull
+	public static InstanceGetter INSTANCE_GETTER = new InstanceGetter() {
+
+		@Override
+		public Object getInstance(@NotNull Class<?> clazz, List<Argument> classArgs, Boolean reuse) throws Exception {
+			return getInvokeInstance(clazz, classArgs, reuse);
+		}
+	};
 
 	//不能在 static 代码块赋值，否则 MethodUtil 子类中 static 代码块对它赋值的代码不会执行！
 	@NotNull
@@ -132,6 +152,8 @@ public class MethodUtil {
 			return result;
 		}
 	};
+
+
 
 	//  Map<class, <constructorArgs, instance>>
 	public static final Map<Class<?>, Map<Object, Object>> INSTANCE_MAP;
@@ -285,6 +307,10 @@ public class MethodUtil {
 					"id": 1,
 					"name": "Tommy"
 				}
+			},
+			{
+				"type": "android.content.Context",  //不可缺省，且必须全称
+				"reuse": true  //复用实例池 INSTANCE_MAP 里的
 			}
 		]
 	 }
@@ -307,7 +333,7 @@ public class MethodUtil {
 			}
 
 			if (instance == null && req.getBooleanValue(KEY_STATIC) == false) {
-				instance = getInvokeInstance(clazz, getArgList(req, KEY_CLASS_ARGS));
+				instance = INSTANCE_GETTER.getInstance(clazz, getArgList(req, KEY_CLASS_ARGS), null);
 			}
 
 			Object finalInstance = instance;
@@ -320,7 +346,10 @@ public class MethodUtil {
 					if (data != null) {
 						result.putAll(data);
 					}
-					result.put("instance", finalInstance); //TODO InterfaceProxy proxy 改成泛型 I instance ？
+
+					if (finalInstance != null) {
+						result.put("instance", parseJSON(finalInstance.getClass(), finalInstance)); //TODO InterfaceProxy proxy 改成泛型 I instance ？
+					}
 
 					listener.complete(result);
 				}
@@ -390,10 +419,11 @@ public class MethodUtil {
 	/**获取示例
 	 * @param clazz
 	 * @param classArgs
+	 * @param reuse
 	 * @return
 	 * @throws Exception
 	 */
-	public static Object getInvokeInstance(@NotNull Class<?> clazz, List<Argument> classArgs) throws Exception {
+	public static Object getInvokeInstance(@NotNull Class<?> clazz, List<Argument> classArgs, Boolean reuse) throws Exception {
 		Objects.requireNonNull(clazz);
 
 		//new 出实例
@@ -404,7 +434,7 @@ public class MethodUtil {
 		}
 
 		String key = classArgs == null || classArgs.isEmpty() ? "" : JSON.toJSONString(classArgs);
-		Object instance = clsMap.get(key);  //必须精确对应值，否则去除缓存的和需要的很可能不符
+		Object instance = reuse != null && reuse ? clsMap.get(key) : null;  //必须精确对应值，否则去除缓存的和需要的很可能不符
 
 		if (instance == null) {
 			if (classArgs == null || classArgs.isEmpty()) {
@@ -433,6 +463,13 @@ public class MethodUtil {
 					if (constructors != null) {
 						for (int i = 0; i < constructors.length; i++) {
 							if (constructors[i] != null && constructors[i].getParameterCount() == classArgValues.length) {
+								try {
+									constructors[i].setAccessible(true);
+								} 
+								catch (Throwable e) {
+									e.printStackTrace();
+								}
+								
 								try {
 									instance = constructors[i].newInstance(classArgValues);
 									break;
@@ -540,11 +577,7 @@ public class MethodUtil {
 							e.printStackTrace();
 						}
 
-						JSONObject o = new JSONObject(true);
-						o.put(KEY_TYPE, t.toGenericString());
-						o.put(KEY_VALUE, v);
-
-						finalMethodArgs.add(o);
+						finalMethodArgs.add(parseJSON(t, v));
 					}
 				}
 
@@ -657,9 +690,9 @@ public class MethodUtil {
 								if (isEmpty(name, true) || name.contains("$") || name.length() < 2) {
 									continue;
 								}
-								
+
 								if (allMethod || methodName.equals(name)) {
-									
+
 									Object mObj = parseMethodObject(m);
 									if (mObj != null) {
 										methodList.add(mObj);
@@ -742,6 +775,15 @@ public class MethodUtil {
 
 			type = getType(typeName, value, defaultType);
 
+			if (value == null) {
+				try {
+					value = INSTANCE_GETTER.getInstance(type, null, argObj.getReuse());
+				}
+				catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+
 			if (value != null && type != null && value.getClass().equals(type) == false) {
 				try {  //解决只有 interface getter 方法才有对应字段返回
 					if (type.isArray() || Collection.class.isAssignableFrom(type) || GenericArrayType.class.isAssignableFrom(type)) {
@@ -805,6 +847,41 @@ public class MethodUtil {
 		obj.put("genericExceptionTypeList", trimTypes(m.getGenericExceptionTypes()));  //不能用泛型，会导致解析崩溃m.getGenericExceptionTypes()));
 		return obj;
 	}
+
+
+	/**转为 JSONObject {"type": t, "value": v }
+	 * @param type
+	 * @param value
+	 * @return
+	 */
+	public static JSONObject parseJSON(Class<?> type, Object value) {
+		return parseJSON(type == null ? (value == null ? "Object" : value.getClass().toGenericString()) : type.toGenericString(), value);
+	}
+	/**转为 JSONObject {"type": t, "value": v }
+	 * @param type
+	 * @param value
+	 * @return
+	 */
+	public static JSONObject parseJSON(String type, Object value) {
+		JSONObject o = new JSONObject(true);
+		o.put(KEY_TYPE, type);
+		if (value == null) {
+			o.put(KEY_VALUE, null);
+		}
+		else {
+			try {
+				o.put(KEY_VALUE, JSON.parse(JSON.toJSONString(value)));  // Context 等不能 toJSONString
+			}
+			catch (Throwable e) {
+				e.printStackTrace();
+				o.put(KEY_VALUE, value.toString());
+				o.put(KEY_WARN, e.getMessage());
+			}
+		}
+		return o;
+	}
+
+
 
 	public static String[] trimTypes(Type[] types) {
 		if (types != null && types.length > 0) {
@@ -1078,6 +1155,7 @@ public class MethodUtil {
 	/**参数，包括类型和值
 	 */
 	public static class Argument {
+		private Boolean reuse;
 		private String type;
 		private Object value;
 
@@ -1086,6 +1164,14 @@ public class MethodUtil {
 		public Argument(String type, Object value) {
 			setType(type);
 			setValue(value);
+		}
+
+
+		public Boolean getReuse() {
+			return reuse;
+		}
+		public void setReuse(Boolean reuse) {
+			this.reuse = reuse;
 		}
 
 		public String getType() {
@@ -1268,13 +1354,9 @@ public class MethodUtil {
 
 				for (int i = 0; i < args.length; i++) {
 					Object v = args[i];
-					String t = v == null ? "Object" : args[i].getClass().toGenericString();
+					String t = v == null ? "Object" : v.getClass().toGenericString();
 
-					JSONObject o = new JSONObject(true);
-					o.put(KEY_TYPE, t);
-					o.put(KEY_VALUE, v);
-
-					finalMethodArgs.add(o);
+					finalMethodArgs.add(parseJSON(t, v));
 				}
 			}
 			methodObj.put(KEY_METHOD_ARGS, finalMethodArgs);
