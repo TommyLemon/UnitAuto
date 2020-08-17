@@ -60,9 +60,9 @@ UnitAuto 不需要写任何代码，直接读取方法的属性，自动注入�
 <br />
 
 ### 示例项目
-[UnitAuto Java 后端服务](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Backend/UnitAutoBoot/src/main/java/apijson/demo/server/Controller.java) <br />
+[UnitAuto Java 后端服务](https://github.com/TommyLemon/UnitAuto/blob/master/Demo/UnitAuto-Java-SpringBoot/src/main/java/apijson/demo/server/Controller.java) <br />
 [APIJSON Java 后端服务](https://github.com/APIJSON/APIJSON/blob/master/APIJSON-Java-Server/APIJSONBoot/src/main/java/apijson/boot/DemoController.java) <br />
-[APIJSON Android 客户端](https://github.com/APIJSON/APIJSON/blob/master/APIJSON-Android/APIJSONTest/app/src/main/java/apijson/demo/ui/UnitActivity.java)
+[APIJSON Android 客户端](https://github.com/APIJSON/APIJSON/blob/master/APIJSON-Android/APIJSONTest)
 <br />
 <br />
 
