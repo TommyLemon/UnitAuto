@@ -15,7 +15,6 @@ limitations under the License.*/
 package unitauto.apk;
 
 import android.app.Activity;
-import android.app.Application;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -272,56 +271,44 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
                         }
                     }).start();
                     break;
+
                 case "/method/invoke":
-                    MethodUtil.Listener<JSONObject> listener = new MethodUtil.Listener<JSONObject>() {
+
+                    runOnUiThread(new Runnable() {
 
                         @Override
-                        public void complete(JSONObject data, Method method, MethodUtil.InterfaceProxy proxy, Object... extras) throws Exception {
-                            if (! asyncHttpServerResponse.isOpen()) {
-                                Log.w(TAG, "invokeMethod  listener.complete  ! asyncHttpServerResponse.isOpen() >> return;");
-                                return;
+                        public void run() {
+                            MethodUtil.Listener<JSONObject> listener = new MethodUtil.Listener<JSONObject>() {
+
+                                @Override
+                                public void complete(JSONObject data, Method method, MethodUtil.InterfaceProxy proxy, Object... extras) throws Exception {
+                                    if (! asyncHttpServerResponse.isOpen()) {
+                                        Log.w(TAG, "invokeMethod  listener.complete  ! asyncHttpServerResponse.isOpen() >> return;");
+                                        return;
+                                    }
+
+                                    send(asyncHttpServerResponse, data.toJSONString());
+                                }
+                            };
+
+                            try {
+                                MethodUtil.invokeMethod(JSON.parseObject(request), null, listener);
+                            }
+                            catch (Exception e) {
+                                Log.e(TAG, "invokeMethod  try { JSONObject req = JSON.parseObject(request); ... } catch (Exception e) { \n" + e.getMessage());
+                                try {
+                                    listener.complete(MethodUtil.JSON_CALLBACK.newErrorResult(e));
+                                }
+                                catch (Exception e1) {
+                                    e1.printStackTrace();
+                                    send(asyncHttpServerResponse, MethodUtil.JSON_CALLBACK.newErrorResult(e1).toJSONString());
+                                }
                             }
 
-                            send(asyncHttpServerResponse, data.toJSONString());
                         }
-                    };
-
-                    try {
-                        JSONObject req = JSON.parseObject(request);
-
-                        Object instance = null;
-                        try {
-                            String pkgName = req.getString("package");
-                            String clsName = req.getString("class");
-                            Class<?> clazz = Class.forName(pkgName.replaceAll("/", ".") + "." + clsName);
-
-                            if (req.getBooleanValue("static") == false) {
-                                if (Activity.class.isAssignableFrom(clazz) || Context.class.isAssignableFrom(clazz)) {
-                                    instance = UnitAutoApp.getInstance().getCurrentActivity();
-                                }
-                                else if (Application.class.isAssignableFrom(clazz)) {
-                                    instance = UnitAutoApp.getApp();
-                                }
-                            }
-                        }
-                        catch (Exception e) {
-                            Log.e(TAG, "invokeMethod  try { instance =  Class<?> clazz = Class.forName(pkgName.replaceAll(\"/\", \".\") + \".\" + clsName); ... } catch (Exception e) { \n" + e.getMessage());
-                        }
-
-                        MethodUtil.invokeMethod(req, instance, listener);
-                    }
-                    catch (Exception e) {
-                        Log.e(TAG, "invokeMethod  try { JSONObject req = JSON.parseObject(request); ... } catch (Exception e) { \n" + e.getMessage());
-                        try {
-                            listener.complete(MethodUtil.JSON_CALLBACK.newErrorResult(e));
-                        }
-                        catch (Exception e1) {
-                            e1.printStackTrace();
-                            send(asyncHttpServerResponse, MethodUtil.JSON_CALLBACK.newErrorResult(e1).toJSONString());
-                        }
-                    }
-
+                    });
                     break;
+
                 default:
                     asyncHttpServerResponse.end();
                     break;

@@ -14,8 +14,21 @@ limitations under the License.*/
 
 package unitauto.apk;
 
+import android.app.Activity;
+import android.app.Application;
+import android.content.ContentResolver;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.res.Resources;
+import android.inputmethodservice.InputMethodService;
+import android.view.KeyEvent;
+import android.view.LayoutInflater;
+import android.view.Window;
+import android.view.WindowManager;
+
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.util.TypeUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -42,6 +55,126 @@ public class MethodUtil extends unitauto.MethodUtil {
 	 * 一般在 Application 中全局调用一次即可。
 	 */
 	public static void init() {
+		INSTANCE_GETTER = new InstanceGetter() {
+
+			@Override
+			public Object getInstance(@NotNull Class<?> clazz, List<Argument> classArgs, Boolean reuse) throws Exception {
+				try {
+					//环境与上下文相关的类 <<<<<<<<<<<<<<<<<<<<<<<<
+
+					Activity activity = UnitAutoApp.getCurrentActivity();
+					if (activity != null && clazz.isAssignableFrom(activity.getClass())) {
+						return activity;
+					}
+
+					Application app = UnitAutoApp.getApp();
+					if (app != null && clazz.isAssignableFrom(app.getClass())) {
+						return app;
+					}
+
+					Context context = activity == null ? app : activity;
+					if (context != null && clazz.isAssignableFrom(context.getClass())) {
+						return context;
+					}
+
+					Resources resources = context == null ? null : context.getResources();
+					if (resources != null && clazz.isAssignableFrom(resources.getClass())) {
+						return resources;
+					}
+
+					LayoutInflater layoutInflater = activity == null ? null : activity.getLayoutInflater();
+					if (layoutInflater != null && clazz.isAssignableFrom(layoutInflater.getClass())) {
+						return layoutInflater;
+					}
+
+					ContentResolver contentResolver = activity == null ? null : activity.getContentResolver();
+					if (contentResolver != null && clazz.isAssignableFrom(contentResolver.getClass())) {
+						return contentResolver;
+					}
+
+
+					SharedPreferences sharedPreferences = null;
+					if (context != null && clazz.isAssignableFrom(SharedPreferences.class)) {
+						String name = classArgs == null || classArgs.isEmpty()
+								? (activity != null ? activity.getLocalClassName() : context.getPackageName())
+								: TypeUtils.castToString(classArgs.get(0).getValue());
+
+						int mode = classArgs == null || classArgs.size() < 1
+								? Context.MODE_PRIVATE
+								: TypeUtils.castToInt(classArgs.get(1).getValue());
+
+						sharedPreferences = context.getSharedPreferences(name, mode);
+						if (sharedPreferences != null) {  // && clazz.isAssignableFrom(sharedPreferences.getClass())) {
+							return sharedPreferences;
+						}
+					}
+
+//					Service service = context == null ? null : new IntentService() {
+//						@Override
+//						protected void onHandleIntent(Intent intent) {
+//
+//						}
+//					};
+
+//					BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {}
+
+
+
+					Window window = activity == null ? null : activity.getWindow();
+					if (window != null && clazz.isAssignableFrom(window.getClass())) {
+						return window;
+					}
+
+					WindowManager windowManager = activity == null ? null : activity.getWindowManager();
+					if (windowManager != null && clazz.isAssignableFrom(windowManager.getClass())) {
+						return windowManager;
+					}
+
+					InputMethodService inputMethodService = context == null ? null : context.getSystemService(InputMethodService.class);
+					if (inputMethodService != null && clazz.isAssignableFrom(inputMethodService.getClass())) {
+						return inputMethodService;
+					}
+
+
+					//环境与上下文相关的类 >>>>>>>>>>>>>>>>>>>>>>>>>
+
+
+					//其它不能通过构造方法来构造的类 <<<<<<<<<<<<<<<<<<<<<<<<
+					if (clazz.isAssignableFrom(KeyEvent.class)) {
+						int action = classArgs == null || classArgs.isEmpty()
+								? KeyEvent.ACTION_DOWN
+								: TypeUtils.castToInt(classArgs.get(0).getValue());
+
+						int code = classArgs == null || classArgs.size() < 1
+								? KeyEvent.KEYCODE_BACK
+								: TypeUtils.castToInt(classArgs.get(1).getValue());
+
+						return new KeyEvent(action, code);
+					}
+
+					//参数太多，且属于 UI 很少用到单元测试，暂时不管
+//					if (clazz.isAssignableFrom(MotionEvent.class)) {
+//						int action = classArgs == null || classArgs.isEmpty()
+//								? KeyEvent.ACTION_DOWN
+//								: TypeUtils.castToInt(classArgs.get(0).getValue());
+//
+//						int code = classArgs == null || classArgs.size() < 1
+//								? KeyEvent.KEYCODE_BACK
+//								: TypeUtils.castToInt(classArgs.get(1).getValue());
+//
+//						return MotionEvent.obtain();
+//					}
+
+					//其它不能通过构造方法来构造的类 >>>>>>>>>>>>>>>>>>>>>>>>>
+				}
+				catch (Throwable e) {
+					e.printStackTrace();
+				}
+
+				return MethodUtil.getInvokeInstance(clazz, classArgs, reuse);
+			}
+		};
+
 		CLASS_LOADER_CALLBACK = new ClassLoaderCallback() {
 
 			@Override
@@ -127,6 +260,16 @@ public class MethodUtil extends unitauto.MethodUtil {
 	}
 	public static void invokeMethod(JSONObject request, Object instance, @NotNull Listener<JSONObject> listener) throws Exception {
 		unitauto.MethodUtil.invokeMethod(request, instance, listener);
+	}
+
+	public static void initTypesAndValues(List<unitauto.MethodUtil.Argument> methodArgs, Class<?>[] types, Object[] args, boolean defaultType) throws IllegalArgumentException, ClassNotFoundException, IOException {
+		unitauto.MethodUtil.initTypesAndValues(methodArgs, types, args, defaultType);
+	}
+	public static void initTypesAndValues(List<unitauto.MethodUtil.Argument> methodArgs, Class<?>[] types, Object[] args, boolean defaultType, boolean castValue2Type) throws IllegalArgumentException, ClassNotFoundException, IOException {
+		unitauto.MethodUtil.initTypesAndValues(methodArgs, types, args, defaultType, castValue2Type);
+	}
+	public static void initTypesAndValues(List<unitauto.MethodUtil.Argument> methodArgs, Class<?>[] types, Object[] args, boolean defaultType, boolean castValue2Type, unitauto.MethodUtil.Listener<Object> listener) throws IllegalArgumentException, ClassNotFoundException, IOException {
+		unitauto.MethodUtil.initTypesAndValues(methodArgs, types, args, defaultType, castValue2Type, listener);
 	}
 
 
