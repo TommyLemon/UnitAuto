@@ -77,7 +77,7 @@ https://www.bilibili.com/video/BV1kk4y1z7bW
 <br />
 
 ### 技术交流
-##### 作者TommyLemon
+##### 关于作者
 [https://github.com/TommyLemon](https://github.com/TommyLemon)<br />
 
 ##### QQ技术交流群
