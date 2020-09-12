@@ -60,9 +60,9 @@ UnitAuto 不需要写任何代码，直接读取方法的属性，自动注入�
 <br />
 
 ### 示例项目
-[UnitAuto Java 后端服务](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Backend/UnitAutoBoot/src/main/java/apijson/demo/server/Controller.java) <br />
+[UnitAuto Java 后端服务](https://github.com/TommyLemon/UnitAuto/blob/master/Demo/UnitAuto-Java-SpringBoot/src/main/java/apijson/demo/server/Controller.java) <br />
 [APIJSON Java 后端服务](https://github.com/APIJSON/APIJSON/blob/master/APIJSON-Java-Server/APIJSONBoot/src/main/java/apijson/boot/DemoController.java) <br />
-[APIJSON Android 客户端](https://github.com/APIJSON/APIJSON/blob/master/APIJSON-Android/APIJSONTest/app/src/main/java/apijson/demo/ui/UnitActivity.java)
+[APIJSON Android 客户端](https://github.com/APIJSON/APIJSON/blob/master/APIJSON-Android/APIJSONTest)
 <br />
 <br />
 
@@ -77,10 +77,15 @@ https://www.bilibili.com/video/BV1kk4y1z7bW
 <br />
 
 ### 技术交流
-QQ技术交流群：734652054（免费）607020115（付费）
-<br />
-如果有什么问题或建议可以 [提 ISSUE ](https://github.com/TommyLemon/UnitAuto/issues) 或 加群，交流技术，分享经验。<br >
-如果你解决了某些 Bug，或者新增了一些功能，欢迎 [贡献代码](https://github.com/TommyLemon/UnitAuto/pulls)，感激不尽^_^
+##### 关于作者
+[https://github.com/TommyLemon](https://github.com/TommyLemon)<br />
+
+##### QQ群聊
+734652054（免费）<a target="_blank" style="bottom:2px;padding-top:4px" href="https://qm.qq.com/cgi-bin/qm/qr?k=rJLwYzITdoQBfiGUOjMrM3eJDyks1tJP&jump_from=webapi"><img border="0" src="http://pub.idqqimg.com/wpa/images/group.png" alt="APIJSON-Free" title="APIJSON技术讨论群" style="bottom:2px;margin-top:4px" /></a>    
+607020115（付费）<a target="_blank" style="bottom:2px;padding-top:4px" href="https://qm.qq.com/cgi-bin/qm/qr?k=1wnUodOM6ngXnl0rubf06DuAUbOX-u44&jump_from=webapi"><img border="0" src="http://pub.idqqimg.com/wpa/images/group.png" alt="APIJSON-Fee" title="APIJSON付费解决群"  style="bottom:2px;margin-top:4px" /></a>    
+
+如果有什么问题或建议可以 [提ISSUE](https://github.com/TommyLemon/UnitAuto/issues) 或 加群，交流技术，分享经验。<br >
+如果你解决了某些bug，或者新增了一些功能，欢迎 [贡献代码](https://github.com/TommyLemon/UnitAuto/pulls)，感激不尽。
 <br />
 <br />
 
