@@ -562,7 +562,7 @@
       },
       type: '',
       types: [ REQUEST_TYPE_JSON ],
-      host: 'apijson/demo/server/MathUtil/', // 'apijson/demo/server/DemoFunction/',
+      host: 'apijson.demo.server.MathUtil.', // 'apijson.demo.server.DemoFunction.',
       branch: 'countArray',
       database: 'MYSQL',// 'POSTGRESQL',
       schema: 'sys',
@@ -747,25 +747,25 @@
           return index + 1
         }
 
-        index = url.lastIndexOf('/')
+        index = url.lastIndexOf('.')
         return index < 0 ? 0 : index + 1
       },
       //获取操作方法
       getMethod: function (url) {
         url = url || new String(vUrl.value).trim()
-        var index = url.lastIndexOf('/')
+        var index = url.lastIndexOf('.')
         url = index <= 0 ? url : url.substring(index + 1)
-        return StringUtil.trim(url.startsWith('/') ? url.substring(1) : url)
+        return StringUtil.trim(url.startsWith('.') ? url.substring(1) : url)
       },
       //获取操作方法
       getClass: function (url) {
         url = url || this.getUrl()
-        var index = url.lastIndexOf('/')
+        var index = url.lastIndexOf('.')
         if (index <= 0) {
-          throw new Error('必须要有类名！完整的 URL 必须符合格式 package/Class/method ！')
+          throw new Error('必须要有类名！完整的 URL 必须符合格式 package.Class.method ！')
         }
         url = url.substring(0, index)
-        index = url.lastIndexOf('/')
+        index = url.lastIndexOf('.')
         var clazz = StringUtil.trim(index < 0 ? url : url.substring(index + 1))
         if (App.language == 'Java' || App.language == 'JavaScript' || App.language == 'TypeScript') {
           if (/[A-Z]{0}[A-Za-z0-9_]/.test(clazz) != true) {
@@ -777,12 +777,12 @@
       //获取操作方法
       getPackage: function (url) {
         url = url || this.getUrl()
-        var index = url.lastIndexOf('/')
+        var index = url.lastIndexOf('.')
         if (index <= 0) {
-          throw new Error('必须要有类名！完整的 URL 必须符合格式 package/Class/method ！')
+          throw new Error('必须要有类名！完整的 URL 必须符合格式 package.Class.method ！')
         }
         url = url.substring(0, index)
-        index = url.lastIndexOf('/')
+        index = url.lastIndexOf('.')
         return StringUtil.trim(index < 0 ? '' : url.substring(0, index))
       },
       //获取请求的tag
@@ -1173,7 +1173,7 @@
           App.requestVersion = item.version;
 
           var host = StringUtil.get(App.host)
-          var url = item.package + '/' + item.class + '/' + item.method
+          var url = item.package + '.' + item.class + '.' + item.method
           if (url.startsWith(host.trim())) {
             var branch = url.substring(host.endsWith(' ') ? host.length - 1 : host.length)
             vUrl.value = branch
@@ -1863,10 +1863,10 @@
           if (host.length > pkg.length) {
             packagePrefix = pkg
             classPrefix = host.substring(pkg.length)
-            var index = classPrefix.indexOf('/')
+            var index = classPrefix.indexOf('.')
             if (index == 0) {
               classPrefix = classPrefix.substring(1)
-              index = classPrefix.indexOf('/')
+              index = classPrefix.indexOf('.')
             }
             if (index >= 0) {
               classPrefix = classPrefix.substring(0, index)
@@ -2571,7 +2571,7 @@
             'class': App.getClass(url),
             'package': App.getPackage(url),
             'type': App.type,
-            'url': '/' + method,
+            'url': method,
             'request': JSON.stringify(req, null, '    '),
             'header': vHeader.value
           }

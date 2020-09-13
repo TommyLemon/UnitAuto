@@ -3975,11 +3975,11 @@ var CodeUtil = {
         case 'static':
           return ['true', 'false'].indexOf(value) < 0 ? ' ! value必须是[true, false]中的一种！' : CodeUtil.getComment('是否为 static 静态方法', false, '  ');
         case 'type':
-          return CodeUtil.getType4Request(value) != 'string' ? ' ! value必须是String类型！且必须符合 apijson/demo/server/model/User 这种类型格式！' : CodeUtil.getComment('参数类型，例如 Integer, java/util/ArrayList, apijson/demo/server/model/User 等', false, '  ');
+          return CodeUtil.getType4Request(value) != 'string' ? ' ! value必须是String类型！且必须符合 apijson.demo.server.model.User 这种类型格式！' : CodeUtil.getComment('参数类型，例如 Integer, java/util/ArrayList, apijson.demo.server.model.User 等', false, '  ');
         case 'value':
           return CodeUtil.getComment('参数值', false, '  ');
         case 'package':
-          return CodeUtil.getType4Request(value) != 'string' ? ' ! value必须是String类型！且必须符合 apijson/demo/server 这种包名格式！' : CodeUtil.getComment('包名', false, '  ');
+          return CodeUtil.getType4Request(value) != 'string' ? ' ! value必须是String类型！且必须符合 apijson.demo.server 这种包名格式！' : CodeUtil.getComment('包名', false, '  ');
         case 'class':
           return CodeUtil.getType4Request(value) != 'string' ? ' ! value必须是String类型！且必须符合 DemoFunction 这种类名格式！' : CodeUtil.getComment('类名', false, '  ');
         case 'method':
@@ -4119,11 +4119,11 @@ var CodeUtil = {
         case 'static':
           return ['true', 'false'].indexOf(value) < 0 ? ' ! value必须是[true, false]中的一种！' : CodeUtil.getComment('是否为 static 静态方法', false, '  ');
         case 'type':
-          return CodeUtil.getType4Request(value) != 'string' ? ' ! value必须是String类型！且必须符合 apijson/demo/server/model/User 这种类型格式！' : CodeUtil.getComment('参数类型，例如 Integer, java/util/ArrayList, apijson/demo/server/model/User 等', false, '  ');
+          return CodeUtil.getType4Request(value) != 'string' ? ' ! value必须是String类型！且必须符合 apijson.demo.server.model.User 这种类型格式！' : CodeUtil.getComment('参数类型，例如 Integer, java/util/ArrayList, apijson.demo.server.model.User 等', false, '  ');
         case 'value':
           return CodeUtil.getComment('参数值', false, '  ');
         case 'package':
-          return CodeUtil.getType4Request(value) != 'string' ? ' ! value必须是String类型！且必须符合 apijson/demo/server 这种包名格式！' : CodeUtil.getComment('包名', false, '  ');
+          return CodeUtil.getType4Request(value) != 'string' ? ' ! value必须是String类型！且必须符合 apijson.demo.server 这种包名格式！' : CodeUtil.getComment('包名', false, '  ');
         case 'class':
           return CodeUtil.getType4Request(value) != 'string' ? ' ! value必须是String类型！且必须符合 DemoFunction 这种类名格式！' : CodeUtil.getComment('类名', false, '  ');
         case 'method':

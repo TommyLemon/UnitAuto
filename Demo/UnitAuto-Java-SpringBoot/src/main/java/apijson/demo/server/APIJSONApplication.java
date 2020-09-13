@@ -50,7 +50,7 @@ public class APIJSONApplication implements ApplicationContextAware {
 			@Override
 			public Object getInstance(@NotNull Class<?> clazz, List<Argument> classArgs, Boolean reuse) throws Exception {
 				//多余的判断		if (ApplicationContext.class.isAssignableFrom(clazz)) {
-				if (APPLICATION_CONTEXT != null && clazz.isAssignableFrom(APPLICATION_CONTEXT.getClass())) {
+				if (APPLICATION_CONTEXT != null && ApplicationContext.class.isAssignableFrom(clazz) && clazz.isAssignableFrom(APPLICATION_CONTEXT.getClass())) {
 					return APPLICATION_CONTEXT;
 				}
 				//				}
