@@ -230,7 +230,7 @@ public class MethodUtil {
 		JSONObject result;
 
 		try {
-			JSONObject req = JSON.parseObject(request);
+			JSONObject req = parseObject(request);
 			if (req  == null) {
 				req = new JSONObject(true);
 			}
@@ -274,7 +274,7 @@ public class MethodUtil {
 	 * @throws Exception
 	 */
 	public static void invokeMethod(String request, Object instance, Listener<JSONObject> listener) throws Exception {
-		invokeMethod(JSON.parseObject(request), instance, listener);
+		invokeMethod(parseObject(request), instance, listener);
 	}
 	/**执行方法
 	 * @param req :
@@ -329,7 +329,7 @@ public class MethodUtil {
 		try {
 			Class<?> clazz = getInvokeClass(pkgName, clsName);
 			if (clazz == null) {
-				throw new ClassNotFoundException("找不到 " + dot2Separator(pkgName) + "/" + clsName + " 对应的类！");
+				throw new ClassNotFoundException("找不到 " + pkgName + "." + clsName + " 对应的类！");
 			}
 
 			if (instance == null && req.getBooleanValue(KEY_STATIC) == false) {
@@ -469,7 +469,7 @@ public class MethodUtil {
 								catch (Throwable e) {
 									e.printStackTrace();
 								}
-								
+
 								try {
 									instance = constructors[i].newInstance(classArgValues);
 									break;
@@ -485,7 +485,7 @@ public class MethodUtil {
 			}
 
 			if (instance == null) { //通过默认方法
-				throw new NullPointerException("找不到 " + dot2Separator(clazz.getName()) + " 以及 classArgs 对应的构造方法！");
+				throw new NullPointerException("找不到 " + clazz.getName() + " 以及 classArgs 对应的构造方法！");
 			}
 
 			clsMap.put(key, instance);
@@ -551,7 +551,7 @@ public class MethodUtil {
 			@Override
 			public void complete(Object data, Method m, InterfaceProxy proxy, Object... extra) throws Exception {
 				JSONObject result = new JSONObject(true);
-				result.put(KEY_TYPE, method.getReturnType());  //给 UnitAuto 共享用的 trimType(val.getClass()));
+				result.put(KEY_TYPE, trimType(method.getReturnType()));  //给 UnitAuto 共享用的 trimType(val.getClass()));
 				result.put(KEY_RETURN, data);
 
 				List<JSONObject> finalMethodArgs = null;
@@ -622,14 +622,14 @@ public class MethodUtil {
 						e.printStackTrace();
 					}
 				}
-				else {  //前面 initTypesAndValues castValue2Type = false
-					try {
-						args[i] = TypeUtils.cast(value, type, new ParserConfig());
-					}
-					catch (Throwable e) {
-						e.printStackTrace();
-					}
+				//始终需要 cast	 else {  //前面 initTypesAndValues castValue2Type = false
+				try {
+					args[i] = TypeUtils.cast(value, type, new ParserConfig());
 				}
+				catch (Throwable e) {
+					e.printStackTrace();
+				}
+				//				}
 			}
 		}
 
@@ -670,7 +670,7 @@ public class MethodUtil {
 
 					clsObj.put(KEY_NAME, cls.getSimpleName());
 					clsObj.put(KEY_TYPE, trimType(cls.getGenericSuperclass()));
-					clsObj.put(KEY_PACKAGE, dot2Separator(cls.getPackage().getName()));
+					clsObj.put(KEY_PACKAGE, cls.getPackage().getName());
 
 					JSONArray methodList = null;
 					if (allMethod == false && argTypes != null && argTypes.length > 0) {
@@ -769,7 +769,7 @@ public class MethodUtil {
 			////				else if (PRIMITIVE_CLASS_MAP.containsKey(typeName)) {
 			////					value = JSON.parse(JSON.toJSONString(value));
 			////				} else {
-			////					value = JSON.parseObject(JSON.toJSONString(value), Class.forName(typeName));
+			////					value = parseObject(JSON.toJSONString(value), Class.forName(typeName));
 			////				}
 			//			}
 
@@ -865,8 +865,8 @@ public class MethodUtil {
 	public static JSONObject parseJSON(String type, Object value) {
 		JSONObject o = new JSONObject(true);
 		o.put(KEY_TYPE, type);
-		if (value == null) {
-			o.put(KEY_VALUE, null);
+		if (value == null || unitauto.JSON.isBooleanOrNumberOrString(value)) {
+			o.put(KEY_VALUE, value);
 		}
 		else {
 			try {
@@ -930,7 +930,7 @@ public class MethodUtil {
 			name = name.substring("com.alibaba.fastjson.".length());
 		}
 
-		return dot2Separator(name) + child;
+		return name + child;
 	}
 
 
@@ -958,8 +958,7 @@ public class MethodUtil {
 
 			type = CLASS_MAP.get(name);
 			if (type == null) {
-				name = dot2Separator(name);
-				index = name.lastIndexOf(File.separator);
+				index = name.lastIndexOf(".");
 				type = CLASS_LOADER_CALLBACK.loadClass(index < 0 ? "" : name.substring(0, index), index < 0 ? name : name.substring(index + 1), defaultType);
 
 				if (type != null) {
@@ -1402,7 +1401,7 @@ public class MethodUtil {
 			catch (Throwable e) {
 				e.printStackTrace();
 				if (type == null) {
-					type = value == null ? "Object" : dot2Separator(value.getClass().getName());
+					type = value == null ? "Object" : value.getClass().getName();
 				}
 				throw new IllegalArgumentException(key + " 中 " + KEY_RETURN + " 值无法转为 " + type + "! " + e.getMessage());
 			}
