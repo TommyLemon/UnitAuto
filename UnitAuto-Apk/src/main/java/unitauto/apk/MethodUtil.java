@@ -21,6 +21,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.inputmethodservice.InputMethodService;
+import android.view.InputEvent;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Window;
@@ -63,38 +64,43 @@ public class MethodUtil extends unitauto.MethodUtil {
 					//环境与上下文相关的类 <<<<<<<<<<<<<<<<<<<<<<<<
 
 					Activity activity = UnitAutoApp.getCurrentActivity();
-					if (activity != null && clazz.isAssignableFrom(activity.getClass())) {
+					if (activity != null && Activity.class.isAssignableFrom(clazz) && clazz.isAssignableFrom(activity.getClass())) {
 						return activity;
 					}
 
 					Application app = UnitAutoApp.getApp();
-					if (app != null && clazz.isAssignableFrom(app.getClass())) {
+					if (app != null && Application.class.isAssignableFrom(clazz) && clazz.isAssignableFrom(app.getClass())) {
 						return app;
 					}
 
-					Context context = activity == null ? app : activity;
-					if (context != null && clazz.isAssignableFrom(context.getClass())) {
+					Context context = activity == null || activity.isFinishing() || activity.isDestroyed() ? app : activity;
+					if (context != null && Context.class.isAssignableFrom(clazz) && clazz.isAssignableFrom(context.getClass())) {
 						return context;
 					}
 
-					Resources resources = context == null ? null : context.getResources();
-					if (resources != null && clazz.isAssignableFrom(resources.getClass())) {
-						return resources;
+					if (context != null && Resources.class.isAssignableFrom(clazz)) {
+						Resources resources = context.getResources();
+						if (resources != null && clazz.isAssignableFrom(resources.getClass())) {
+							return resources;
+						}
 					}
 
-					LayoutInflater layoutInflater = activity == null ? null : activity.getLayoutInflater();
-					if (layoutInflater != null && clazz.isAssignableFrom(layoutInflater.getClass())) {
-						return layoutInflater;
+					if (activity != null && LayoutInflater.class.isAssignableFrom(clazz)) {
+						LayoutInflater layoutInflater = activity.getLayoutInflater();
+						if (layoutInflater != null && clazz.isAssignableFrom(layoutInflater.getClass())) {
+							return layoutInflater;
+						}
 					}
 
-					ContentResolver contentResolver = activity == null ? null : activity.getContentResolver();
-					if (contentResolver != null && clazz.isAssignableFrom(contentResolver.getClass())) {
-						return contentResolver;
+					if (activity != null && ContentResolver.class.isAssignableFrom(clazz)) {
+						ContentResolver contentResolver = activity.getContentResolver();
+						if (contentResolver != null && clazz.isAssignableFrom(contentResolver.getClass())) {
+							return contentResolver;
+						}
 					}
 
 
-					SharedPreferences sharedPreferences = null;
-					if (context != null && clazz.isAssignableFrom(SharedPreferences.class)) {
+					if (context != null && SharedPreferences.class.isAssignableFrom(clazz)) {
 						String name = classArgs == null || classArgs.isEmpty()
 								? (activity != null ? activity.getLocalClassName() : context.getPackageName())
 								: TypeUtils.castToString(classArgs.get(0).getValue());
@@ -103,8 +109,8 @@ public class MethodUtil extends unitauto.MethodUtil {
 								? Context.MODE_PRIVATE
 								: TypeUtils.castToInt(classArgs.get(1).getValue());
 
-						sharedPreferences = context.getSharedPreferences(name, mode);
-						if (sharedPreferences != null) {  // && clazz.isAssignableFrom(sharedPreferences.getClass())) {
+						SharedPreferences sharedPreferences = context.getSharedPreferences(name, mode);
+						if (sharedPreferences != null && clazz.isAssignableFrom(sharedPreferences.getClass())) {  // && clazz.isAssignableFrom(sharedPreferences.getClass())) {
 							return sharedPreferences;
 						}
 					}
@@ -120,19 +126,25 @@ public class MethodUtil extends unitauto.MethodUtil {
 
 
 
-					Window window = activity == null ? null : activity.getWindow();
-					if (window != null && clazz.isAssignableFrom(window.getClass())) {
-						return window;
+					if (activity != null && Window.class.isAssignableFrom(clazz)) {
+						Window window = activity.getWindow();
+						if (window != null && clazz.isAssignableFrom(window.getClass())) {
+							return window;
+						}
 					}
 
-					WindowManager windowManager = activity == null ? null : activity.getWindowManager();
-					if (windowManager != null && clazz.isAssignableFrom(windowManager.getClass())) {
-						return windowManager;
+					if (activity != null && WindowManager.class.isAssignableFrom(clazz)) {
+						WindowManager windowManager = activity.getWindowManager();
+						if (windowManager != null && clazz.isAssignableFrom(windowManager.getClass())) {
+							return windowManager;
+						}
 					}
 
-					InputMethodService inputMethodService = context == null ? null : context.getSystemService(InputMethodService.class);
-					if (inputMethodService != null && clazz.isAssignableFrom(inputMethodService.getClass())) {
-						return inputMethodService;
+					if (context != null && InputMethodService.class.isAssignableFrom(clazz)) {
+						InputMethodService inputMethodService = context.getSystemService(InputMethodService.class);
+						if (inputMethodService != null && clazz.isAssignableFrom(inputMethodService.getClass())) {
+							return inputMethodService;
+						}
 					}
 
 
@@ -140,7 +152,7 @@ public class MethodUtil extends unitauto.MethodUtil {
 
 
 					//其它不能通过构造方法来构造的类 <<<<<<<<<<<<<<<<<<<<<<<<
-					if (clazz.isAssignableFrom(KeyEvent.class)) {
+					if (clazz == KeyEvent.class || clazz == InputEvent.class) { // 只能给这一种 KeyEvent.class.isAssignableFrom(clazz) && clazz.isAssignableFrom(KeyEvent.class)) {
 						int action = classArgs == null || classArgs.isEmpty()
 								? KeyEvent.ACTION_DOWN
 								: TypeUtils.castToInt(classArgs.get(0).getValue());

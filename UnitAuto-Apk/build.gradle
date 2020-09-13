@@ -26,4 +26,5 @@ dependencies {
     api fileTree(include: ['*.jar'], dir: 'libs')
     api 'com.alibaba:fastjson:1.2.61'
     api 'com.koushikdutta.async:androidasync:2.+'
+    api files('libs/unitauto-2.0.jar')
 }
