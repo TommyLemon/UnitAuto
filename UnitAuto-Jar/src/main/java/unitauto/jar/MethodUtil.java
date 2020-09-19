@@ -136,8 +136,8 @@ public class MethodUtil extends unitauto.MethodUtil {
 	public static JSONObject listMethod(String request) {
 		return unitauto.MethodUtil.listMethod(request);
 	}
-	public static JSONArray getMethodListGroupByClass(String pkgName, String clsName, String methodName, Class<?>[] argTypes) throws Exception {
-		return unitauto.MethodUtil.getMethodListGroupByClass(pkgName, clsName, methodName, argTypes);
+	public static JSONArray getMethodListGroupByClass(String pkgName, String clsName, String methodName, Class<?>[] argTypes, boolean mock) throws Exception {
+		return unitauto.MethodUtil.getMethodListGroupByClass(pkgName, clsName, methodName, argTypes, mock);
 	}
 
 	public static Class<?> findClass(String packageOrFileName, String className, boolean ignoreError) throws ClassNotFoundException, IOException {
@@ -169,5 +169,9 @@ public class MethodUtil extends unitauto.MethodUtil {
 		unitauto.MethodUtil.initTypesAndValues(methodArgs, types, args, defaultType, castValue2Type, listener);
 	}
 
+	public static JSONObject parseJSON(String type, Object value) {
+		return unitauto.MethodUtil.parseJSON(type, value);
+	}
+	
 
 }

@@ -66,6 +66,7 @@ public class MethodUtil {
 	public interface JSONCallback {
 		JSONObject newSuccessResult();
 		JSONObject newErrorResult(Throwable e);
+		JSONObject parseJSON(String type, Object value);
 	}
 
 
@@ -97,6 +98,7 @@ public class MethodUtil {
 	public static String KEY_STATIC = "static";
 	public static String KEY_NAME = "name";
 	public static String KEY_METHOD = "method";
+	public static String KEY_MOCK = "mock";
 	public static String KEY_RETURN = "return";
 	public static String KEY_CLASS_ARGS = "classArgs";
 	public static String KEY_METHOD_ARGS = "methodArgs";
@@ -138,19 +140,18 @@ public class MethodUtil {
 
 		@Override
 		public JSONObject newSuccessResult() {
-			JSONObject result = new JSONObject(true);
-			result.put(KEY_CODE, CODE_SUCCESS);
-			result.put(KEY_MSG, MSG_SUCCESS);
-			return result;
+			return MethodUtil.newSuccessResult();
 		}
 
 		@Override
 		public JSONObject newErrorResult(Throwable e) {
-			JSONObject result = new JSONObject(true);
-			result.put(KEY_CODE, CODE_SERVER_ERROR);
-			result.put(KEY_MSG, e.getMessage());
-			return result;
+			return MethodUtil.newErrorResult(e);
 		}
+
+		public JSONObject parseJSON(String type, Object value) {
+			return MethodUtil.parseJSON(type, value);
+		}
+
 	};
 
 
@@ -160,6 +161,7 @@ public class MethodUtil {
 	public static final Map<String, Class<?>> PRIMITIVE_CLASS_MAP;
 	public static final Map<String, Class<?>> BASE_CLASS_MAP;
 	public static final Map<String, Class<?>> CLASS_MAP;
+	public static final Map<Class<?>, Object> DEFAULT_TYPE_VALUE_MAP;
 	static {
 		INSTANCE_MAP = new HashMap<>();
 
@@ -211,6 +213,8 @@ public class MethodUtil {
 		CLASS_MAP.put(JSON.class.getSimpleName(), JSON.class);//必须有，Map中没有getLongValue等方法
 		CLASS_MAP.put(JSONObject.class.getSimpleName(), JSONObject.class);//必须有，Map中没有getLongValue等方法
 		CLASS_MAP.put(JSONArray.class.getSimpleName(), JSONArray.class);//必须有，Collection中没有getJSONObject等方法
+
+		DEFAULT_TYPE_VALUE_MAP = new HashMap<>();
 	}
 
 
@@ -237,6 +241,8 @@ public class MethodUtil {
 			String pkgName = req.getString(KEY_PACKAGE);
 			String clsName = req.getString(KEY_CLASS);
 			String methodName = req.getString(KEY_METHOD);
+			boolean mock = req.getBooleanValue(KEY_MOCK);
+			
 			JSONArray methodArgTypes = null;
 
 			boolean allMethod = isEmpty(methodName, true);
@@ -253,7 +259,7 @@ public class MethodUtil {
 				}
 			}
 
-			JSONArray list = getMethodListGroupByClass(pkgName, clsName, methodName, argTypes);
+			JSONArray list = getMethodListGroupByClass(pkgName, clsName, methodName, argTypes, mock);
 			result = JSON_CALLBACK.newSuccessResult();
 			result.put("classList", list);  //序列化 Class	只能拿到 name		result.put("Class[]", JSON.parseArray(JSON.toJSONString(classlist)));
 		}
@@ -348,7 +354,7 @@ public class MethodUtil {
 					}
 
 					if (finalInstance != null) {
-						result.put("instance", parseJSON(finalInstance.getClass(), finalInstance)); //TODO InterfaceProxy proxy 改成泛型 I instance ？
+						result.put("this", parseJSON(finalInstance.getClass(), finalInstance)); //TODO InterfaceProxy proxy 改成泛型 I instance ？
 					}
 
 					listener.complete(result);
@@ -651,7 +657,7 @@ public class MethodUtil {
 	 * @throws Exception
 	 */
 	public static JSONArray getMethodListGroupByClass(String pkgName, String clsName
-			, String methodName, Class<?>[] argTypes) throws Exception {
+			, String methodName, Class<?>[] argTypes, boolean mock) throws Exception {
 
 		boolean allMethod = isEmpty(methodName, true);
 
@@ -674,7 +680,7 @@ public class MethodUtil {
 
 					JSONArray methodList = null;
 					if (allMethod == false && argTypes != null && argTypes.length > 0) {
-						Object mObj = parseMethodObject(cls.getMethod(methodName, argTypes));
+						Object mObj = parseMethodObject(cls.getMethod(methodName, argTypes), mock);
 						if (mObj != null) {
 							methodList = new JSONArray(1);
 							methodList.add(mObj);
@@ -693,7 +699,7 @@ public class MethodUtil {
 
 								if (allMethod || methodName.equals(name)) {
 
-									Object mObj = parseMethodObject(m);
+									Object mObj = parseMethodObject(m, mock);
 									if (mObj != null) {
 										methodList.add(mObj);
 									}
@@ -817,7 +823,7 @@ public class MethodUtil {
 		}
 	}
 
-	public static JSONObject parseMethodObject(Method m) {
+	public static JSONObject parseMethodObject(Method m, boolean mock) {
 		if (m == null) {
 			return null;
 		}
@@ -836,17 +842,86 @@ public class MethodUtil {
 			return null;
 		}
 
+		Class<?>[] types = m.getParameterTypes();
+
 		JSONObject obj = new JSONObject(true);
 		obj.put("name", m.getName());
-		obj.put("parameterTypeList", trimTypes(m.getParameterTypes()));  //不能用泛型，会导致解析崩溃 m.getGenericParameterTypes()));
+		obj.put("parameterTypeList", trimTypes(types));  //不能用泛型，会导致解析崩溃 m.getGenericParameterTypes()));
 		obj.put("genericParameterTypeList", trimTypes(m.getGenericParameterTypes()));  //不能用泛型，会导致解析崩溃 m.getGenericParameterTypes()));
 		obj.put("returnType", trimType(m.getReturnType()));  //不能用泛型，会导致解析崩溃m.getGenericReturnType()));
 		obj.put("genericReturnType", trimType(m.getGenericReturnType()));  //不能用泛型，会导致解析崩溃m.getGenericReturnType()));
 		obj.put("static", Modifier.isStatic(m.getModifiers()));
 		obj.put("exceptionTypeList", trimTypes(m.getExceptionTypes()));  //不能用泛型，会导致解析崩溃m.getGenericExceptionTypes()));
 		obj.put("genericExceptionTypeList", trimTypes(m.getGenericExceptionTypes()));  //不能用泛型，会导致解析崩溃m.getGenericExceptionTypes()));
+
+		if (mock && types != null && types.length > 0) {
+			Object[] vs = new Object[types.length];
+			for (int i = 0; i < types.length; i++) {
+				vs[i] = mockValue(types[i]);
+			}
+
+			obj.put("parameterDefaultValueList", vs);
+		}
+
 		return obj;
 	}
+
+
+	public static Object mockValue(Class<?> t) {
+		//避免缓存穿透
+		//		Object v = DEFAULT_TYPE_VALUE_MAP.get(t);
+		//		if (v != null) {
+		//			return v;
+		//		}
+
+		if (DEFAULT_TYPE_VALUE_MAP.containsKey(t)) {
+			return DEFAULT_TYPE_VALUE_MAP.get(t);
+		}
+
+		if (t == null || t == Object.class || t.isPrimitive() || t.isEnum() || t.isAnnotation() || unitauto.JSON.isBooleanOrNumberOrString(t)) {
+			return null;
+		}
+
+		try {
+			if (t.isInterface()) {
+				Method[] ms = t.getMethods();
+				if (ms != null) {
+					JSONObject mo = new JSONObject(true);
+
+					for (int j = 0; j < ms.length; j++) {
+						String key = ms[j].getName() + "(" + StringUtil.getString(trimTypes(ms[j].getGenericParameterTypes())) + ")";
+
+						JSONObject val = new JSONObject(true);
+						Class<?> rt = ms[j].getReturnType();
+						if (rt == null || rt == void.class || rt == Void.class) {
+							val.put(KEY_CALLBACK, true);
+						}
+						else {
+							val.put(KEY_TYPE, trimType(rt));  //以下 isAssignableFrom 是为了及时中断，避免死循环
+							val.put(KEY_RETURN, rt.isInterface() ? new JSONObject() : mockValue(rt)); //仍然死循环  || t.isAssignableFrom(rt) || rt.isAssignableFrom(t) ? null : mockValue(rt));
+						}
+
+						mo.put(key, val);
+					}
+
+					DEFAULT_TYPE_VALUE_MAP.put(t, mo);
+					return mo;
+				}
+
+				return null;
+			}
+
+			Object v = JSON.parse(JSON.toJSONString(INSTANCE_GETTER.getInstance(t, null)));
+			DEFAULT_TYPE_VALUE_MAP.put(t, v);
+			return v;
+		}
+		catch (Throwable e) {
+			e.printStackTrace();
+		}
+
+		return null;
+	}
+
 
 
 	/**转为 JSONObject {"type": t, "value": v }
@@ -855,7 +930,7 @@ public class MethodUtil {
 	 * @return
 	 */
 	public static JSONObject parseJSON(Class<?> type, Object value) {
-		return parseJSON(type == null ? (value == null ? "Object" : value.getClass().toGenericString()) : type.toGenericString(), value);
+		return JSON_CALLBACK.parseJSON(type == null ? (value == null ? "Object" : value.getClass().toGenericString()) : type.toGenericString(), value);
 	}
 	/**转为 JSONObject {"type": t, "value": v }
 	 * @param type
@@ -865,7 +940,7 @@ public class MethodUtil {
 	public static JSONObject parseJSON(String type, Object value) {
 		JSONObject o = new JSONObject(true);
 		o.put(KEY_TYPE, type);
-		if (value == null || unitauto.JSON.isBooleanOrNumberOrString(value)) {
+		if (value == null || unitauto.JSON.isBooleanOrNumberOrString(value) || value instanceof Enum) {
 			o.put(KEY_VALUE, value);
 		}
 		else {
@@ -881,6 +956,19 @@ public class MethodUtil {
 		return o;
 	}
 
+	public static JSONObject newSuccessResult() {
+		JSONObject result = new JSONObject(true);
+		result.put(KEY_CODE, CODE_SUCCESS);
+		result.put(KEY_MSG, MSG_SUCCESS);
+		return result;
+	}
+
+	public static JSONObject newErrorResult(Throwable e) {
+		JSONObject result = new JSONObject(true);
+		result.put(KEY_CODE, CODE_SERVER_ERROR);
+		result.put(KEY_MSG, e.getMessage());
+		return result;
+	}
 
 
 	public static String[] trimTypes(Type[] types) {
@@ -1355,7 +1443,7 @@ public class MethodUtil {
 					Object v = args[i];
 					String t = v == null ? "Object" : v.getClass().toGenericString();
 
-					finalMethodArgs.add(parseJSON(t, v));
+					finalMethodArgs.add(JSON_CALLBACK.parseJSON(t, v));
 				}
 			}
 			methodObj.put(KEY_METHOD_ARGS, finalMethodArgs);

@@ -14,6 +14,7 @@ limitations under the License.*/
 
 package unitauto;
 
+import java.lang.reflect.Type;
 import java.util.List;
 
 import com.alibaba.fastjson.JSONArray;
@@ -298,6 +299,17 @@ public class JSON {
 	 */
 	public static boolean isBooleanOrNumberOrString(Object obj) {
 		return obj instanceof Boolean || obj instanceof Number || obj instanceof String;
+	}
+	
+	/**判断是否为 Boolean,Number,String 中的一种
+	 * @param obj
+	 * @return
+	 */
+	public static boolean isBooleanOrNumberOrString(Type t) {
+		if (t instanceof Class && ((Class<?>) t).isPrimitive()) {
+			return true;
+		}
+		return t == Boolean.class || t == Number.class || t == String.class;
 	}
 
 }
