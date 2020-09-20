@@ -222,6 +222,7 @@ public class MethodUtil {
 	/**获取方法列表
 	 * @param request :
 	 {
+	    "mock": true,
 		"package": "apijson.demo.server",
 		"class": "DemoFunction",
 		"method": "plus",
@@ -238,10 +239,10 @@ public class MethodUtil {
 			if (req  == null) {
 				req = new JSONObject(true);
 			}
+			boolean mock = req.getBooleanValue(KEY_MOCK);
 			String pkgName = req.getString(KEY_PACKAGE);
 			String clsName = req.getString(KEY_CLASS);
 			String methodName = req.getString(KEY_METHOD);
-			boolean mock = req.getBooleanValue(KEY_MOCK);
 			
 			JSONArray methodArgTypes = null;
 

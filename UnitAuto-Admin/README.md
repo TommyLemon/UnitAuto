@@ -1,7 +1,5 @@
-# APIAuto (原名 APIJSONAuto)
-机器学习测试、自动生成代码、自动静态检查、自动生成文档与注释等，做最先进的接口管理工具。<br />
-支持 HTTP POST 提交 JSON 参数的 API。针对 APIJSON 做了静态检查、生成代码、格式化等大量优化。
-
+# UnitAuto
+ 机器学习自动化单元测试平台，零代码、全方位、自动化 测试 方法/函数 的正确性和可用性
 ### 特点功能
 
 * 自动生成接口文档，清晰可读永远最新
@@ -34,17 +32,20 @@
 ### 部署方法
 
 可以直接下载源码解压后用浏览器打开 index.html，建议用 Chrome 或 火狐 (Safari、Edge、IE 等可能有兼容问题)。<br />
-也可以直接访问 http://apijson.org/auto ，把基地址改为你主机的地址(例如 http://localhost:8080 )即可。
-
-自动生成文档、自动管理测试用例 这两个功能 需要部署APIJSON后端，见 <br /> 
-[https://github.com/TommyLemon/APIJSON/tree/master/APIJSON-Java-Server](https://github.com/TommyLemon/APIJSON/tree/master/APIJSON-Java-Server) 
-
+也可以直接访问官网的线上环境 http://apijson.org/unit 或开发环境 http://apijson.org:8000/unit 。<br />
 <br />
-然后在 APIAuto 网页右上角 设置 下拉菜单内修改 数据库类型Database、数据库模式Schema。
+把左侧 URL 输入框内基地址改为你主机的地址(例如 http://localhost:8080 )，<br />
+然后在右上角 设置 下拉菜单内修改 数据库类型Database、数据库模式Schema。<br />
+<br />
+右上角登录的默认管理员账号为 13000082001 密码为 123456，<br />
+右侧上方中间 3 个标签是默认的测试用户账号，点击登录/退出，左侧 - 删除，右侧 + 新增。<br />
+<br />
+自动生成文档、自动管理测试用例 这两个功能 需要部署APIJSON后端，见 <br /> 
+[https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server](https://github.com/APIJSON-Demo/APIJSON/tree/master/APIJSON-Java-Server) 
 
 ### 使用登记
 <div style="float:left">
-  <a href="http://www.transsion.com"><img src="http://www.transsion.com/static/images/logo.jpg" height="90"></a>
+  <a href="http://www.transsion.com"><img src="http://apijson.org:8000/images/www.transsion.com.jpeg" height="90"></a>
   <a href="http://shebaochina.com"><img src="http://shebaochina.com/static/cn/img/index/logo.png" height="90"></a>
   <a href="http://www.xmfish.com"><img src="http://www.xmfish.com/images/chanel/www/f_logo.gif" height="90"></a>
   <a href="http://www.xxwolo.com"><img src="http://img.qichacha.com/Product/a917fcca-fbb1-44a2-a079-56985ebf8f9c.jpg" height="90"></a>
@@ -62,17 +63,23 @@
 * vue.js
 
 
-### 关于作者
-TommyLemon：[https://github.com/TommyLemon](https://github.com/TommyLemon)<br />
-QQ技术交流群：734652054（群2） 607020115（群1） 
+### 技术交流
+##### 关于作者
+[https://github.com/TommyLemon](https://github.com/TommyLemon)<br />
+
+##### QQ群聊
+734652054（免费）<a target="_blank" style="bottom:2px;padding-top:4px" href="https://qm.qq.com/cgi-bin/qm/qr?k=rJLwYzITdoQBfiGUOjMrM3eJDyks1tJP&jump_from=webapi"><img border="0" src="http://pub.idqqimg.com/wpa/images/group.png" alt="APIJSON-Free" title="APIJSON技术讨论群" style="bottom:2px;margin-top:4px" /></a>    
+607020115（付费）<a target="_blank" style="bottom:2px;padding-top:4px" href="https://qm.qq.com/cgi-bin/qm/qr?k=1wnUodOM6ngXnl0rubf06DuAUbOX-u44&jump_from=webapi"><img border="0" src="http://pub.idqqimg.com/wpa/images/group.png" alt="APIJSON-Fee" title="APIJSON付费解决群"  style="bottom:2px;margin-top:4px" /></a>    
 
 如果有什么问题或建议可以 [提ISSUE](https://github.com/TommyLemon/APIAuto/issues) 或 加群，交流技术，分享经验。<br >
 如果你解决了某些bug，或者新增了一些功能，欢迎 [贡献代码](https://github.com/TommyLemon/APIAuto/pulls)，感激不尽。
+<br />
+<br />
 
 
 
 ### 其它项目
-[APIJSON](https://github.com/APIJSON/APIJSON) 🏆码云最有价值开源项目 🚀后端接口和文档自动化，前端(客户端) 定制返回 JSON 的数据和结构！
+[APIJSON](https://github.com/APIJSON/APIJSON) �码云最有价值开源项目 �后端接口和文档自动化，前端(客户端) 定制返回 JSON 的数据和结构！
 
 [apijson-doc](https://github.com/vincentCheng/apijson-doc) APIJSON 官方文档，提供排版清晰、搜索方便的文档内容展示，包括设计规范、图文教程等
 
@@ -86,8 +93,6 @@ QQ技术交流群：734652054（群2） 607020115（群1）
 
 [apijson-node](https://github.com/kevinaskin/apijson-node) Node.ts 版 APIJSON，提供 nestjs 和 typeorm 的 Demo，支持 MySQL, PostgreSQL, SQL Server, Oracle
 
-[apijson](https://github.com/TEsTsLA/apijson) Node.ts 版 APIJSON，支持 MySQL, PostgreSQL, SQL Server, Oracle, SQLite, MariaDB, WebSQL
-
 [uliweb-apijson](https://github.com/zhangchunlin/uliweb-apijson) Python 版 APIJSON，支持 MySQL, PostgreSQL, SQL Server, Oracle, SQLite 等
 
 [APIJSON](https://github.com/crazytaxi824/APIJSON) Go 版 APIJSON，功能开发中...
@@ -100,11 +105,15 @@ QQ技术交流群：734652054（群2） 607020115（群1）
 
 [SpringServer1.2-APIJSON](https://github.com/Airforce-1/SpringServer1.2-APIJSON) 智慧党建服务器端，提供 上传 和 下载 文件的接口
 
+[APIAuto](https://github.com/TommyLemon/APIAuto) 机器学习自动化 HTTP API 测试平台，零代码、全方位、自动化 测试 方法/函数 的正确性和可用性
+
 感谢热心的作者们的贡献，点 ⭐Star 支持下他们吧。
 
+
 ### 持续更新
-https://github.com/TommyLemon/APIAuto/commits/master
+https://github.com/TommyLemon/UnitAuto/commits/master
+
 
 ### 我要赞赏
 创作不易，右上角点 ⭐Star 支持下本项目吧，谢谢 ^_^ <br />
-https://github.com/TommyLemon/APIAuto
+https://github.com/TommyLemon/UnitAuto
