@@ -22,9 +22,13 @@ import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -32,7 +36,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
-import java.util.Vector;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
@@ -244,7 +247,7 @@ public class MethodUtil {
 			String pkgName = req.getString(KEY_PACKAGE);
 			String clsName = req.getString(KEY_CLASS);
 			String methodName = req.getString(KEY_METHOD);
-			
+
 			JSONArray methodArgTypes = null;
 
 			boolean allMethod = isEmpty(methodName, true);
@@ -844,11 +847,11 @@ public class MethodUtil {
 			return null;
 		}
 
-		Class<?>[] types = m.getParameterTypes();
+		Type[] types = m.getGenericParameterTypes();
 
 		JSONObject obj = new JSONObject(true);
 		obj.put("name", m.getName());
-		obj.put("parameterTypeList", trimTypes(types));  //不能用泛型，会导致解析崩溃 m.getGenericParameterTypes()));
+		obj.put("parameterTypeList", trimTypes(m.getParameterTypes()));  //不能用泛型，会导致解析崩溃 m.getGenericParameterTypes()));
 		obj.put("genericParameterTypeList", trimTypes(m.getGenericParameterTypes()));  //不能用泛型，会导致解析崩溃 m.getGenericParameterTypes()));
 		obj.put("returnType", trimType(m.getReturnType()));  //不能用泛型，会导致解析崩溃m.getGenericReturnType()));
 		obj.put("genericReturnType", trimType(m.getGenericReturnType()));  //不能用泛型，会导致解析崩溃m.getGenericReturnType()));
@@ -859,7 +862,7 @@ public class MethodUtil {
 		if (mock && types != null && types.length > 0) {
 			Object[] vs = new Object[types.length];
 			for (int i = 0; i < types.length; i++) {
-				vs[i] = mockValue(types[i]);
+				vs[i] = mockValue(types[i]);  //FIXME 这里应该用 ParameterTypes 还是 GenericParameterTypes ?
 			}
 
 			obj.put("parameterDefaultValueList", vs);
@@ -869,7 +872,8 @@ public class MethodUtil {
 	}
 
 
-	public static Object mockValue(Class<?> t) {
+	@SuppressWarnings("rawtypes")
+	public static Object mockValue(Type t) {
 		//避免缓存穿透
 		//		Object v = DEFAULT_TYPE_VALUE_MAP.get(t);
 		//		if (v != null) {
@@ -879,50 +883,206 @@ public class MethodUtil {
 		if (DEFAULT_TYPE_VALUE_MAP.containsKey(t)) {
 			return DEFAULT_TYPE_VALUE_MAP.get(t);
 		}
-
-		if (t == null || t == Object.class || Collection.class.isAssignableFrom(t) || Map.class.isAssignableFrom(t) || Array.class.isAssignableFrom(t)
-				|| t.isPrimitive() || t.isEnum() || t.isAnnotation() || unitauto.JSON.isBooleanOrNumberOrString(t)) {
+		if (t == null || t == Object.class || t == void.class || t == Void.class) {
 			return null;
 		}
 
-		try {
-			if (t.isInterface()) {
-				Method[] ms = t.getMethods();
-				if (ms != null) {
-					JSONObject mo = new JSONObject(true);
+		if (t == boolean.class) {
+			return Math.random() >= 0.5;
+		}
+		if (t == Boolean.class) {
+			if (Math.random() < 0.3) {
+				return false;
+			}
+			if (Math.random() > 0.7) {
+				return true;
+			}
+			return null;
+		}
 
-					for (int j = 0; j < ms.length; j++) {
-						String key = ms[j].getName() + "(" + StringUtil.getString(trimTypes(ms[j].getGenericParameterTypes())) + ")";
+		double r = Math.random();
+		int sign = r > 0.1 ? 1 : -1;
 
-						JSONObject val = new JSONObject(true);
-						Class<?> rt = ms[j].getReturnType();
-						if (rt == null || rt == void.class || rt == Void.class) {
-							val.put(KEY_CALLBACK, true);
-						}
-						else {
-							val.put(KEY_TYPE, trimType(rt));  //以下 isAssignableFrom 是为了及时中断，避免死循环
-							val.put(KEY_RETURN, rt.isInterface() ? new JSONObject() : mockValue(rt)); //仍然死循环  || t.isAssignableFrom(rt) || rt.isAssignableFrom(t) ? null : mockValue(rt));
-						}
+		//常规业务不会用 int, long 之外的整型，一般是驱动、算法之类的才会用
+		if (t == char.class || t == Character.class) {
+			return Math.round(Character.MAX_VALUE * Math.random());
+		}
+		if (t == byte.class || t == Byte.class || t == char.class || t == Character.class) {
+			return Math.round(Byte.MAX_VALUE * Math.random());
+		}
+		if (t == short.class || t == Short.class) {
+			return Math.round(Short.MAX_VALUE * Math.random());
+		}
 
-						mo.put(key, val);
-					}
+		if (t == int.class || t == Integer.class) {
+			return sign * Math.round((sign < 0 ? 2 : 10) * Math.random());
+		}
+		if (t == long.class || t == Long.class) {
+			return sign * Math.round((sign < 0 ? 10 : 100) * Math.random());
+		}
+		if (t == float.class || t == Float.class || t == Number.class) {
+			return sign * (sign < 0 ? 10 : 100) * Math.random();
+		}
+		if (t == double.class || t == Double.class) {
+			return sign * (sign < 0 ? 10 : 100) * Math.random();
+		}
 
-					DEFAULT_TYPE_VALUE_MAP.put(t, mo);
-					return mo;
+		if (t instanceof Class) {
+			Class c = (Class) t;
+			if (CharSequence.class.isAssignableFrom(c)) {
+				int size = (int) (r*5);
+				char[] cs = new char[size];
+				for (int i = 0; i < size; i++) {
+					cs[i] = (char) ('A' + ('z' - 'A') * Math.random());
+				}
+				return String.valueOf(cs);
+			}
+
+			if (Date.class.isAssignableFrom(c) || java.sql.Date.class.isAssignableFrom(c)) {
+				return new Date((long) (System.currentTimeMillis() * r));
+			}
+			if (Timestamp.class.isAssignableFrom(c) || java.security.Timestamp.class.isAssignableFrom(c)) {
+				return new Timestamp((long) (System.currentTimeMillis() * r));
+			}
+
+			if (Map.class.isAssignableFrom(c)) {
+				JSONObject obj = new JSONObject(true);
+
+				Type[] ts = getTypeArguments(c);
+				if (ts == null || ts.length < 2 || ts[1] instanceof Class == false) {
+					return obj;
 				}
 
+				for (int i = 0; i < r*5; i++) {
+					Object v = mockValue((Class) ts[1]);
+					if (v != null) {
+						obj.put((String) mockValue(String.class), v);
+					}
+				}
+
+				return obj;
+			}
+
+			if (Collection.class.isAssignableFrom(c) || Array.class.isAssignableFrom(c) || c.isArray()) {
+				JSONArray arr = new JSONArray();
+
+				Type[] ts = getTypeArguments(c);
+				if (ts == null || ts.length < 1 || ts[0] instanceof Class == false) {
+					return arr;
+				}
+
+				for (int i = 0; i < r*10; i++) {
+					Object v = mockValue((Class) ts[0]);
+					if (v != null) {
+						arr.add(v);
+					}
+				}
+
+				return arr;
+			}
+
+			if (c.isPrimitive() || c.isEnum() || c.isAnnotation() || unitauto.JSON.isBooleanOrNumberOrString(t)) {
 				return null;
 			}
 
-			Object v = JSON.parse(JSON.toJSONString(INSTANCE_GETTER.getInstance(t, null)));
-			DEFAULT_TYPE_VALUE_MAP.put(t, v);
-			return v;
-		}
-		catch (Throwable e) {
-			e.printStackTrace();
+			try {
+				if (c.isInterface()) {
+					Method[] ms = c.getMethods();
+					if (ms != null) {
+						JSONObject mo = new JSONObject(true);
+
+						for (int j = 0; j < ms.length; j++) {
+							String name = ms[j].getName();
+							if (StringUtil.isEmpty(name, true) || "toString".equals(name) || "equals".equals(name) || "hashCode".equals(name)
+									|| "clone".equals(name) || "getClass".equals(name) || "wait".equals(name) || "notify".equals(name) || "notifyAll".equals(name)) {
+								continue;
+							}
+
+							String key = name  + "(" + StringUtil.getString(trimTypes(ms[j].getGenericParameterTypes())) + ")";
+							JSONObject val = new JSONObject(true);
+
+
+							Class<?> rt = ms[j].getReturnType();
+							if (rt == null || rt == void.class || rt == Void.class) {
+								if (name.startsWith("get") || name.startsWith("set") || name.startsWith("add")
+										|| name.startsWith("put") || name.startsWith("remove")) {  // 只留空对象
+								}
+								else {
+									val.put(KEY_CALLBACK, true);
+								}
+							}
+							else {
+								val.put(KEY_TYPE, trimType(rt));  //以下 isAssignableFrom 是为了及时中断，避免死循环
+								val.put(KEY_RETURN, rt.isInterface() ? new JSONObject() : mockValue(rt)); //仍然死循环  || t.isAssignableFrom(rt) || rt.isAssignableFrom(t) ? null : mockValue(rt));
+							}
+
+							mo.put(key, val);
+						}
+
+						DEFAULT_TYPE_VALUE_MAP.put(c, mo);
+						return mo;
+					}
+
+					return null;
+				}
+
+				Object v = JSON.parse(JSON.toJSONString(INSTANCE_GETTER.getInstance(c, null)));
+				DEFAULT_TYPE_VALUE_MAP.put(c, v);
+				return v;
+			}
+			catch (Throwable e) {
+				e.printStackTrace();
+			}
 		}
 
 		return null;
+	}
+
+
+
+	@SuppressWarnings("rawtypes")
+	public static Type[] getTypeArguments(Class clazz) {
+		if (clazz == null) {
+			return null;
+		}
+
+		Class<?> cp = clazz.getComponentType();
+		if (cp != null && cp instanceof Class) {
+			return new Type[]{cp};
+		}
+
+		//		TypeVariable<?>[] tps = clazz.getTypeParameters();
+		//		if (tps != null && tps.length > 0) {
+		//			return tps;
+		//		}
+
+		// Cannot cast from Class to ParameterizedType
+		//		if (ParameterizedType.class.isAssignableFrom(clazz)) {
+		//			return ((ParameterizedType) clazz).getActualTypeArguments();
+		//		}
+
+		ParameterizedType pType = null;
+		Type type = clazz.getGenericSuperclass();
+		if (type instanceof ParameterizedType){
+			pType = (ParameterizedType) type;
+
+			Type rt = pType.getRawType();
+			if (rt != null && rt != Object.class && rt != void.class && rt != Void.class) {
+				return new Type[]{rt};
+			}
+		} else {
+			Type[] ts = clazz.getGenericInterfaces();
+			if (ts != null && ts.length > 0 && ts[0] instanceof Class) {
+				return ts;
+			}
+		}
+
+		TypeVariable<?>[] tps = clazz.getTypeParameters();
+		if (tps != null && tps.length > 0) {
+			return tps;
+		}
+
+		return pType == null ? null : pType.getActualTypeArguments();
 	}
 
 
