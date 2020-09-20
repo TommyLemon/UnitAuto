@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
+import java.util.Vector;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
@@ -879,7 +880,8 @@ public class MethodUtil {
 			return DEFAULT_TYPE_VALUE_MAP.get(t);
 		}
 
-		if (t == null || t == Object.class || t.isPrimitive() || t.isEnum() || t.isAnnotation() || unitauto.JSON.isBooleanOrNumberOrString(t)) {
+		if (t == null || t == Object.class || Collection.class.isAssignableFrom(t) || Map.class.isAssignableFrom(t) || Array.class.isAssignableFrom(t)
+				|| t.isPrimitive() || t.isEnum() || t.isAnnotation() || unitauto.JSON.isBooleanOrNumberOrString(t)) {
 			return null;
 		}
 
@@ -1286,7 +1288,7 @@ public class MethodUtil {
 		public InterfaceProxy() {
 			super(true);
 		}
-		public InterfaceProxy(int initialCapacity){
+		public InterfaceProxy(int initialCapacity) {
 			super(initialCapacity, true);
 		}
 

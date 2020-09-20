@@ -1813,7 +1813,7 @@
         for (var l = 0; l < typeList.length; l++) {
 
           var type = typeList[l] == null ? null : typeList[l]  //保持用 . 分割  .replace(/[.]/g, '/')
-          var value = valueList[l] || App.mockValue4Type(type);
+          var value = valueList[l] == null ? App.mockValue4Type(type) : valueList[l];
 
           args.push({
             type: type,
