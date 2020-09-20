@@ -1756,18 +1756,18 @@
             'Method': {
               'userId': App.User.id,
               'testAccountId': currentAccount.isLoggedIn ? currentAccount.id : null,
-              'package': classItem.package == null ? null : classItem.package.replace(/[.]/g, '/'),
+              'package': classItem.package == null ? null : classItem.package,  // .replace(/[.]/g, '/'),
               'class': classItem.name,
               'method': methodItem.name,
               'classArgs': classArgs,
               'genericClassArgs': App.getArgs4Sync(classItem.genericParameterTypeList),
-              'methodArgs': App.getArgs4Sync(methodItem.parameterTypeList),
-              'genericMethodArgs': App.getArgs4Sync(methodItem.genericParameterTypeList),
-              'type': methodItem.returnType == null ? null : methodItem.returnType.replace(/[.]/g, '/'),
-              'genericType': methodItem.genericReturnType == null ? null : methodItem.genericReturnType.replace(/[.]/g, '/'),
+              'methodArgs': App.getArgs4Sync(methodItem.parameterTypeList, methodItem.parameterDefaultValueList),
+              'genericMethodArgs': App.getArgs4Sync(methodItem.genericParameterTypeList, methodItem.parameterDefaultValueList),
+              'type': methodItem.returnType == null ? null : methodItem.returnType,  // .replace(/[.]/g, '/'),
+              'genericType': methodItem.genericReturnType == null ? null : methodItem.genericReturnType,  // .replace(/[.]/g, '/'),
               'static': methodItem.static ? 1 : 0,
-              'exceptions': methodItem.exceptionTypeList == null ? null : methodItem.exceptionTypeList.replace(/[.]/g, '/').join(),
-              'genericExceptions': methodItem.genericExceptionTypeList == null ? null : methodItem.genericExceptionTypeList.replace(/[.]/g, '/').join(),
+              'exceptions': methodItem.exceptionTypeList == null ? null : methodItem.exceptionTypeList.join(),  // .replace(/[.]/g, '/').join(),
+              'genericExceptions': methodItem.genericExceptionTypeList == null ? null : methodItem.genericExceptionTypeList.join(), //  .replace(/[.]/g, '/').join(),
               'detail': methodItem.name
             },
             'TestRecord': {
@@ -1803,7 +1803,7 @@
 
       },
 
-      getArgs4Sync: function (typeList) {
+      getArgs4Sync: function (typeList, valueList) {
         if (typeList == null) {
           return null
         }
@@ -1812,8 +1812,8 @@
         var args = []
         for (var l = 0; l < typeList.length; l++) {
 
-          var type = typeList[l] == null ? null : typeList[l].replace(/[.]/g, '/')
-          var value = App.mockValue4Type(type);
+          var type = typeList[l] == null ? null : typeList[l]  //保持用 . 分割  .replace(/[.]/g, '/')
+          var value = valueList[l] || App.mockValue4Type(type);
 
           args.push({
             type: type,
@@ -2078,7 +2078,7 @@
             }
             return;
           }
-	  
+
           this.isTestCaseShow = false
 
           var search = StringUtil.isEmpty(this.testCaseSearch, true) ? null : StringUtil.trim(this.testCaseSearch)
