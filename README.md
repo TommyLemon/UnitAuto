@@ -1,6 +1,21 @@
-# UnitAuto
+<h1 align="center" style="text-align:center;">
+  APIAuto
+</h1>
+ 
+<p align="center">☀️ 机器学习零代码单元测试平台</p>
 
-### 简单介绍
+<p align="center" >
+  <a href="https://github.com/TommyLemon/UnitAuto#%E9%83%A8%E7%BD%B2%E6%96%B9%E6%B3%95">使用文档</a>
+  <a href="https://www.bilibili.com/video/BV1Tk4y1R7Yo">视频教程</a>
+  <a href="http://apijson.org/unit">在线体验</a>
+</p>
+
+<p align="center" >
+  <img src="https://raw.githubusercontent.com/TommyLemon/UnitAuto/master/logo.png" />
+</p>
+
+---
+
 机器学习自动化单元测试平台，零代码、全方位、自动化 测试 方法/函数 的正确性和可用性
 
 <p align="center" >
@@ -75,6 +90,25 @@ UnitAuto-异步回调方法的零代码单元测试 <br />
 https://www.bilibili.com/video/BV1kk4y1z7bW
 <br />
 <br />
+
+
+### 部署方法
+
+可以直接下载源码解压后用浏览器打开 index.html，建议用 Chrome 或 火狐 (Safari、Edge、IE 等可能有兼容问题)。<br />
+也可以直接访问官网的线上环境 http://apijson.org/unit 或开发环境 http://apijson.org:8000/unit 。<br />
+<br />
+点右上角设置项 "项目服务器地址 URL"，把输入框内基地址改为你主机的地址(例如 http://localhost:8080 )<br />
+<br />
+右上角登录的默认管理员账号为 13000082001 密码为 123456，<br />
+<br />
+然后点右上角设置项 "查看、同步方法文档"，确保被测项目已启动，然后一键导入项目中的方法。
+<br />
+等它完成后自动显示测试用例列表，点击列表项进去查看详情和手动测试，或者一键自动回归测试全部 方法/函数。
+<br />
+
+自动生成文档、自动管理测试用例 这两个功能 需要部署APIJSON后端，见 <br /> 
+[https://github.com/APIJSON/APIJSON/tree/master/APIJSON-Java-Server](https://github.com/APIJSON/APIJSON/tree/master/APIJSON-Java-Server) 
+
 
 ### 技术交流
 ##### 关于作者
