@@ -29,11 +29,14 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
+import com.alibaba.fastjson.JSONObject;
+
 import unitauto.MethodUtil.Argument;
 import unitauto.MethodUtil.InstanceGetter;
-import unitauto.NotNull;
+import unitauto.MethodUtil.JSONCallback;
 import unitauto.jar.MethodUtil;
 import zuo.biao.apijson.Log;
+import zuo.biao.apijson.NotNull;
 
 
 /**SpringBootApplication
@@ -61,6 +64,28 @@ public class APIJSONApplication implements ApplicationContextAware {
 
 				return MethodUtil.getInvokeInstance(clazz, classArgs, reuse);
 			}
+		};
+		
+		MethodUtil.JSON_CALLBACK = new JSONCallback() {
+
+			@Override
+			public JSONObject newSuccessResult() {
+				return MethodUtil.newSuccessResult();
+			}
+
+			@Override
+			public JSONObject newErrorResult(Throwable e) {
+				return MethodUtil.newErrorResult(e);
+			}
+			
+			@Override
+			public JSONObject parseJSON(String type, Object value) {
+				if (value instanceof ApplicationContext) {
+					value = value.toString();
+				}
+				return MethodUtil.parseJSON(type, value);
+			}
+			
 		};
 	}
 
