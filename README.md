@@ -16,7 +16,7 @@
 
 ---
 
-机器学习自动化单元测试平台，零代码、全方位、自动化 测试 方法/函数 的正确性和可用性
+机器学习单元测试平台，零代码、全方位、自动化 测试 方法/函数 的正确性和可用性
 
 <p align="center" >
   <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-Method-List-small.jpg"></a>
