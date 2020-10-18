@@ -1402,8 +1402,11 @@
           delete currentResponse.code; //code必须一致
           delete currentResponse.throw; //throw必须一致
 
+          var rsp = JSON.parse(JSON.stringify(currentResponse || {}))
+          rsp = JSONResponse.array2object(rsp, 'methodArgs', ['methodArgs'], true)
+
           var isML = App.isMLEnabled;
-          var stddObj = isML ? JSONResponse.updateStandard({}, currentResponse) : {};
+          var stddObj = isML ? JSONResponse.updateStandard({}, rsp) : {};
           stddObj.code = code;
           stddObj.throw = thrw;
           currentResponse.code = code;
@@ -1459,21 +1462,19 @@
             }
             else {
               if (rpObj.Method != null && rpObj.Method.code == CODE_SUCCESS) {
-                App.remotes = []
-                App.showTestCase(true, false)
-
 
                 //自动生成随机配置（遍历 JSON，对所有可变值生成配置，排除 @key, key@, key() 等固定值）
-                var req = App.getRequest(vInput.value, {})
-                var config = StringUtil.trim(App.newRandomConfig(null, '', req))
+                var config = StringUtil.trim(App.newRandomConfig(null, '', App.getRequest(vInput.value, {})))
                 if (config == '') {
+                  App.remotes = []
+                  App.showTestCase(true, false)
                   return;
                 }
 
                 App.request(true, REQUEST_TYPE_JSON, App.server + '/post', {
                   format: false,
                   'Random': {
-                    documentId: rpObj.Document.id,
+                    documentId: rpObj.Method.id,
                     count: App.requestCount,
                     name: '默认配置(上传测试用例时自动生成)',
                     config: config
@@ -1493,6 +1494,9 @@
                     vRandom.value = config
                   }
                   App.onResponse(url, res, err)
+
+                  App.remotes = []
+                  App.showTestCase(true, false)
                 })
               }
             }
@@ -3077,7 +3081,7 @@
             this.saveCache(this.server, 'randomCount', this.randomCount)
 
             this.randoms = null
-            this.showRandomList(true, (this.currentRemoteItem || {}).Document, false)
+            this.showRandomList(true, (this.currentRemoteItem || {}).Method, false)
             break
           case 'randomSub':
             this.saveCache(this.server, 'randomSubPage', this.randomSubPage)
@@ -4212,7 +4216,7 @@
           var standard = StringUtil.isEmpty(tr[standardKey], true) ? null : JSON.parse(tr[standardKey])
 
           var rsp = JSON.parse(JSON.stringify(App.removeDebugInfo(response) || {}))
-          rsp.methodArgs = JSONResponse.array2object(rsp.methodArgs, 'methodArgs', ['methodArgs'], true)
+          rsp = JSONResponse.array2object(rsp, 'methodArgs', ['methodArgs'], true)
 
           tr.compare = JSONResponse.compareResponse(standard, rsp, '', App.isMLEnabled, null, ['call()[]']) || {}
         }
@@ -4506,7 +4510,7 @@
             delete currentResponse.throw; //throw必须一致
 
             var rsp = JSON.parse(JSON.stringify(currentResponse || {}))
-            rsp.methodArgs = JSONResponse.array2object(rsp.methodArgs, 'methodArgs', ['methodArgs'], true)
+            rsp = JSONResponse.array2object(rsp, 'methodArgs', ['methodArgs'], true)
 
             var isML = this.isMLEnabled;
             var stddObj = isML ? JSONResponse.updateStandard(standard || {}, rsp, ['call()[]']) : {};
