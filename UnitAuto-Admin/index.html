@@ -165,8 +165,8 @@
               <li v-for="(item, index) in testCases" >
                   <div style="display: inline-table; height: 24px">
                       <div style="display: inline-flex; height: 100%">
-                          <a class="hint--rounded hint--no-animate" style="position: absolute; left: 10px; top: 6px; font-size: small; color: dimgray" ref="testCaseMethodTexts" @mouseover="setRequestHint(index, item)" href="javascript:void(0)" @click="restoreRemote(item)" > {{item.Method.defination}}</a>
-                          <a class="hint--rounded hint--no-animate" style="position: absolute; left: 10px; bottom: 4px; font-size: small" ref="testCaseClassTexts" @mouseover="setRequestHint(index, item, false, true)" href="javascript:void(0)" @click="restoreRemote(item)" > {{item.Method.package + '.' + item.Method.class}}</a>
+                          <a class="hint--rounded hint--no-animate" style="position: absolute; left: 10px; top: 6px; font-size: small; color: dimgray" ref="testCaseMethodTexts" @mouseover="setRequestHint(index, item)" href="javascript:void(0)" @click="restoreRemote(item)" >{{item.Method.defination + (StringUtil.isEmpty(item.Method.detail) || item.Method.detail == item.Method.method ? '' : '  // ' + StringUtil.trim(item.Method.detail))}}</a>
+                          <a class="hint--rounded hint--no-animate" style="position: absolute; left: 10px; bottom: 4px; font-size: small" ref="testCaseClassTexts" @mouseover="setRequestHint(index, item, false, true)" href="javascript:void(0)" @click="restoreRemote(item)" >{{item.Method.package + '.' + item.Method.class}}</a>
                       </div>
                       <div :style="{ background: item.compareColor }" v-show="item.compareType != null" style="position: absolute; top: 4px; bottom: 4px; right: 36px; display: inline-block;">
                           <button class="hint--left" ref="testResultButtons" @mouseover="setTestHint(index, item)" v-show="item.compareType != null" @click="handleTest(false, index, item)" style="position: relative; height: 100%">{{ item.compareMessage + (item.showType == 'before' ? '-前' : '-后') }}</button>

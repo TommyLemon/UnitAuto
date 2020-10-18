@@ -1437,6 +1437,8 @@
               'genericType': (currentResponse.type || App.type) || null,
               'class': App.getClass(),
               'package': App.getPackage(),
+              'methodArgs': JSON.stringify(currentResponse.methodArgs),
+              'genericMethodArgs': JSON.stringify(App.getRequest(vInput.value, {}).methodArgs),
               'request': App.toDoubleJSON(inputted)
             },
             'TestRecord': {
