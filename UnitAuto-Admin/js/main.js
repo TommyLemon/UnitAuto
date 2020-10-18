@@ -358,10 +358,10 @@
 
 // APIJSON <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-  var REQUEST_TYPE_PARAM = 'PARAM'
-  var REQUEST_TYPE_FORM = 'FORM'
+  var REQUEST_TYPE_PARAM = 'PARAM'  // GET ?a=1&b=c&key=value
+  var REQUEST_TYPE_FORM = 'FORM'  // POST x-www-form-urlencoded
   var REQUEST_TYPE_DATA = 'DATA'  // POST form-data
-  var REQUEST_TYPE_JSON = 'JSON'
+  var REQUEST_TYPE_JSON = 'JSON'  // POST application/json
   var REQUEST_TYPE_GRPC = 'GRPC'  // POST application/json
 
   var RANDOM_DB = 'RANDOM_DB'
@@ -396,7 +396,6 @@
 
     return + ((max - min)*Math.random() + min).toFixed(precision);
   }
-
   function randomStr(minLength, maxLength, availableChars) {
     return 'Ab_Cd' + randomNum();
   }
@@ -478,7 +477,7 @@
       error: {},
       requestVersion: 3,
       requestCount: 1,
-      urlComment: ': Integer  //计算数组长度',
+      urlComment: ': Integer  // 计算数组长度',
       historys: [],
       history: {name: '请求0'},
       remotes: [],
@@ -827,7 +826,7 @@
           var item
           for (var i = 0; i < hs.length; i++) {
             item = hs[i]
-            var index = item.indexOf('//')  //这里只支持单行注释，不用 removeComment 那种带多行的去注释方式
+            var index = item.indexOf('  //')  // 不加空格会导致 http:// 被截断  ('//')  //这里只支持单行注释，不用 removeComment 那种带多行的去注释方式
             var item2 = index < 0 ? item : item.substring(0, index)
             item2 = item2.trim()
             if (item2.length <= 0) {
@@ -1131,10 +1130,11 @@
           name: App.history.name,
           detail: App.history.name,
           type: App.type,
-          package: this.getPackage(),
-          class: this.getClass(),
-          method: this.getMethod(),
+          package: App.getPackage(),
+          class: App.getClass(),
+          method: App.getMethod(),
           request: inputted,
+          response: App.jsoncon,
           header: vHeader.value,
           random: vRandom.value
         }
@@ -1288,11 +1288,8 @@
             else if (clazz.endsWith('.kt')) {
               txt += CodeUtil.parseKotlinDataClass(docObj, clazz.substring(0, clazz.length - 3), App.database)
             }
-            else if  (clazz.endsWith('.h')) {
-              txt += CodeUtil.parseObjectiveCEntityH(docObj, clazz.substring(0, clazz.length - 2), App.database)
-            }
             else if  (clazz.endsWith('.m')) {
-              txt += CodeUtil.parseObjectiveCEntityM(docObj, clazz.substring(0, clazz.length - 2), App.database)
+              txt += CodeUtil.parseObjectiveCEntity(docObj, clazz.substring(0, clazz.length - 2), App.database)
             }
             else if  (clazz.endsWith('.cs')) {
               txt += CodeUtil.parseCSharpEntity(docObj, clazz.substring(0, clazz.length - 3), App.database)
@@ -1395,9 +1392,9 @@
             return
           }
 
-          App.isTestCaseShow = false;
+          App.isTestCaseShow = false
 
-          var currentAccount = App.accounts[App.currentAccountIndex];
+          var currentAccountId = App.getCurrentAccountId()
           var currentResponse = StringUtil.isEmpty(App.jsoncon, true) ? {} : App.removeDebugInfo(JSON.parse(App.jsoncon));
 
           var code = currentResponse.code;
@@ -1423,7 +1420,6 @@
               config: vRandom.value
             },
             'TestRecord': {
-              'userId': App.User.id,
               'response': JSON.stringify(currentResponse),
               'standard': isML ? JSON.stringify(stddObj) : null
             },
@@ -1431,8 +1427,7 @@
           } : {
             format: false,
             'Method': {
-              'userId': App.User.id,
-              'testAccountId': currentAccount.isLoggedIn ? currentAccount.id : null,
+              'testAccountId': currentAccountId,
               'method': App.getMethod(),
               'detail': App.exTxt.name,
               'type': (currentResponse.type || App.type) || null,
@@ -1443,7 +1438,8 @@
             },
             'TestRecord': {
               'randomId': 0,
-              'userId': App.User.id,
+              'host': App.getBaseUrl(),
+              'testAccountId': currentAccountId,
               'response': JSON.stringify(currentResponse),
               'standard': isML ? JSON.stringify(stddObj) : null
             },
@@ -1548,16 +1544,16 @@
 
               prefix = '\n' + (childPath == null || childPath == '' ? '' : childPath + '/') + k + '/'
               if (v.hasOwnProperty('page')) {
-                config += prefix + 'page : ' + 'ORDER_INT(0, 10)'
+                config += prefix + 'page: ' + 'ORDER_INT(0, 10)'
                 delete v.page
               }
               if (v.hasOwnProperty('count')) {
-                config += prefix + 'count : ' + 'ORDER_IN(undefined, null, 0, 1, 5, 10, 20'
+                config += prefix + 'count: ' + 'ORDER_IN(undefined, null, 0, 1, 5, 10, 20'
                   + ([0, 1, 5, 10, 20].indexOf(v.count) >= 0 ? ')' : ', ' + v.count + ')')
                 delete v.count
               }
               if (v.hasOwnProperty('query')) {
-                config += prefix + 'query : ' + 'ORDER_IN(undefined, null, 0, 1, 2)'
+                config += prefix + 'query: ' + 'ORDER_IN(undefined, null, 0, 1, 2)'
                 delete v.query
               }
             }
@@ -1751,11 +1747,12 @@
             continue
           }
 
+          var currentAccountId = App.getCurrentAccountId()
           App.request(true, REQUEST_TYPE_JSON, App.server + '/post', {
             format: false,
             'Method': {
               'userId': App.User.id,
-              'testAccountId': currentAccount.isLoggedIn ? currentAccount.id : null,
+              'testAccountId': currentAccountId,
               'package': classItem.package == null ? null : classItem.package,  // .replace(/[.]/g, '/'),
               'class': classItem.name,
               'method': methodItem.name,
@@ -1771,9 +1768,9 @@
               'detail': methodItem.name
             },
             'TestRecord': {
-              'documentId@': '/Method/id',
               'randomId': 0,
-              'userId': App.User.id,
+	      'host': App.getBaseUrl(),
+              'testAccountId': currentAccountId,
               'response': ''
             },
             'tag': 'Method'
@@ -1967,7 +1964,7 @@
                 App.saveCache(App.getBaseUrl(), 'accounts', App.accounts)
 
                 if (callback != null) {
-                  callback(false)
+                  callback(false, index, err)
                 }
               });
             }
@@ -2126,11 +2123,12 @@
               },
               'TestRecord': {
                 'documentId@': '/Method/id',
+		'userId': App.User.id,
+                'testAccountId': App.getCurrentAccountId(),
                 'randomId': 0,
                 '@order': 'date-',
                 '@column': 'id,userId,documentId,response' + (App.isMLEnabled ? ',standard' : ''),
-                'userId': App.User.id,
-                '@having': App.isMLEnabled ? 'json_length(standard)>0' : null
+                '@having': App.isMLEnabled ? 'length(standard)>2' : null  //用 MySQL 5.6   '@having': App.isMLEnabled ? 'json_length(standard)>0' : null
               }
             },
             '@role': 'LOGIN'
@@ -2189,6 +2187,8 @@
               },
               'TestRecord': {
                 'randomId@': '/Random/id',
+                'testAccountId': App.getCurrentAccountId(),
+                'host': App.getBaseUrl(),
                 '@order': 'date-'
               },
               '[]': isSub ? null : {
@@ -2202,6 +2202,8 @@
                 },
                 'TestRecord': {
                   'randomId@': '/Random/id',
+                  'testAccountId': App.getCurrentAccountId(),
+                  'host': App.getBaseUrl(),
                   '@order': 'date-'
                 }
               }
@@ -2279,7 +2281,7 @@
         }
       },
 
-      showLogin(show, isAdmin) {
+      showLogin: function (show, isAdmin) {
         this.isLoginShow = show
         this.isAdminOperation = isAdmin
 
@@ -2293,8 +2295,8 @@
 
         if (user == null || StringUtil.isEmpty(user.phone, true)) {
           user = {
-            phone: 13000082001,
-            password: 123456
+            phone: '13000082001',
+            password: '123456'
           }
         }
 
@@ -2864,7 +2866,7 @@
           data: (type == REQUEST_TYPE_JSON || type == REQUEST_TYPE_GRPC ? req : (type == REQUEST_TYPE_DATA ? toFormData(req) : null)),
           headers: header,  //Accept-Encoding（HTTP Header 大小写不敏感，SpringBoot 接收后自动转小写）可能导致 Response 乱码
           withCredentials: true, //Cookie 必须要  type == REQUEST_TYPE_JSON
-          crossDomain: true
+          // crossDomain: true
         })
           .then(function (res) {
             res = res || {}
@@ -3236,7 +3238,7 @@
         var count = this.count || 100  //超过就太卡了
         var page = this.page || 0
 
-        var search = StringUtil.isEmpty(this.search, true) ? null : StringUtil.trim(this.search)
+        var search = StringUtil.isEmpty(this.search, true) ? null : '%' + StringUtil.trim(this.search) + '%'
         App.request(false, REQUEST_TYPE_JSON, this.server + '/get', {
           format: false,
           '@database': App.database,
@@ -3255,9 +3257,9 @@
                 '@column': 'DISTINCT class',
                 '@order': 'class+',
                 '@having': 'length(class)>0',
-                'package*~': search,
-                'class*~': search,
-                '@combine': StringUtil.isEmpty(search) ? null : 'package*~,class*~'
+                'package$': search,
+                'class$': search,
+                '@combine': StringUtil.isEmpty(search) ? null : 'package$,class$'
               },
               'Method': {
                 'package@': '[]/Method/package',
@@ -3307,7 +3309,7 @@
 
               var pkg = table.package
 
-              doc += '### ' + (i + 1) + '. ' + pkg
+              doc += '\n### ' + (i + 1) + '. ' + pkg + '\n'
 
               columnList = item['Method[]'];
               if (columnList == null) {
@@ -3339,7 +3341,7 @@
 
           }
 
-          doc += '\n';
+          doc += '\n\n';
 
           //[] >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -3443,21 +3445,28 @@
               delete obj[k];
             }
           }
+
+          if (tag != null && obj[tag] == null) { //补全省略的Table
+            var isArrayKey = tag.endsWith(":[]");  //JSONObject.isArrayKey(tag);
+            var key = isArrayKey ? tag.substring(0, tag.length - 3) : tag;
+
+            if (this.isTableKey(key)) {
+              if (isArrayKey) { //自动为 tag = Comment:[] 的 { ... } 新增键值对 "Comment[]":[] 为 { "Comment[]":[], ... }
+                obj[key + "[]"] = [];
+              }
+              else { //自动为 tag = Comment 的 { ... } 包一层为 { "Comment": { ... } }
+                var realObj = {};
+                realObj[tag] = obj;
+                obj = realObj;
+              }
+            }
+          }
+
         }
+
+        obj.tag = tag; //补全tag
 
         log('getStructure  return obj; = \n' + format(JSON.stringify(obj)));
-
-        if (tag != null) {
-          //补全省略的Table
-          if (this.isTableKey(tag) && obj[tag] == null) {
-            log('getStructure  isTableKey(tag) && obj[tag] == null >>>>> ');
-            var realObj = {};
-            realObj[tag] = obj;
-            obj = realObj;
-            log('getStructure  realObj = \n' + JSON.stringify(realObj));
-          }
-          obj.tag = tag; //补全tag
-        }
 
         return obj;
       },
@@ -3768,7 +3777,7 @@
           const lineItem = lines[i] || '';
 
           // remove comment
-          const commentIndex = lineItem.indexOf('//');
+          const commentIndex = lineItem.indexOf('  //');
           const line = commentIndex < 0 ? lineItem : lineItem.substring(0, commentIndex).trim();
 
           if (line.length <= 0) {
@@ -4514,17 +4523,15 @@
             const req = {
               Random: isNewRandom != true ? null : {
                 toId: random.toId,
-                userId: App.User.id,
                 documentId: random.documentId,
                 name: random.name,
                 count: random.count,
                 config: random.config
               },
               TestRecord: {
-                userId: App.User.id, //TODO 权限问题？ item.userId,
                 documentId: isNewRandom ? null : (isRandom ? random.documentId : document.id),
                 randomId: isRandom && ! isNewRandom ? random.id : null,
-                'randomId@': isNewRandom ? '/Random/id' : null,
+                host: App.getBaseUrl(),
                 compare: JSON.stringify(testRecord.compare || {}),
                 response: JSON.stringify(currentResponse || {}),
                 standard: isML ? JSON.stringify(stddObj) : null
@@ -4608,6 +4615,8 @@
           TestRecord: {
             documentId: isRandom ? doc.documentId : doc.id,
             randomId: isRandom ? doc.id : null,
+            testAccountId: App.getCurrentAccountId(),
+            'host': App.getBaseUrl(),
             '@order': 'date-',
             '@column': 'id,userId,documentId,randomId,response' + (App.isMLEnabled ? ',standard' : ''),
             '@having': App.isMLEnabled ? 'length(standard)>2' : null  // '@having': App.isMLEnabled ? 'json_length(standard)>0' : null
