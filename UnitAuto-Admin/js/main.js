@@ -558,7 +558,7 @@
       },
       type: '',
       types: [ REQUEST_TYPE_JSON ],
-      host: 'apijson.demo.server.MathUtil.', // 'apijson.demo.server.DemoFunction.',
+      host: 'unitauto.test.TestUtil.', // 'apijson.demo.server.DemoFunction.',
       branch: 'countArray',
       database: 'MYSQL',// 'POSTGRESQL',
       schema: 'sys',
@@ -1762,6 +1762,7 @@
               'package': classItem.package == null ? null : classItem.package,  // .replace(/[.]/g, '/'),
               'class': classItem.name,
               'method': methodItem.name,
+              'this': null,
               'constructor': null,
               'classArgs': classArgs,
               'genericClassArgs': App.getArgs4Sync(classItem.genericParameterTypeList),
@@ -1798,7 +1799,9 @@
               var branch = vUrl.value
               vUrl.value = StringUtil.get(App.host) + branch
               App.host = ''
-              App.showUrl(false, branch)
+
+              vUrlComment.value = isSingle || StringUtil.isEmpty(App.urlComment, true) ? '' : vUrl.value + App.urlComment;  //导致重复加前缀 App.showUrl(false, branch)
+
               App.showTestCase(true, false)
             }
 
@@ -2642,8 +2645,7 @@
             }
           }
           vComment.value = c
-          vUrlComment.value = isSingle || StringUtil.isEmpty(App.urlComment, true)
-            ? '' : vUrl.value + App.urlComment;
+          vUrlComment.value = isSingle || StringUtil.isEmpty(App.urlComment, true) ? '' : vUrl.value + App.urlComment;
 
           onScrollChanged()
           onURLScrollChanged()
@@ -2817,6 +2819,7 @@
         var httpReq = {
           "package": req.package || App.getPackage(url),
           "class": req.class || App.getClass(url),
+          "this": req.this,
           "constructor": req.constructor,
           "classArgs": req.classArgs,
           "method": req.method || App.getMethod(url),
@@ -3676,6 +3679,7 @@
               var httpReq = {
                 "package": constJson.package || App.getPackage(url),
                 "class": constJson.class || App.getClass(url),
+                "this": constJson.this,
                 "constructor": constJson.constructor,
                 "classArgs": constJson.classArgs,
                 "method": constJson.method || App.getMethod(url),
@@ -4163,6 +4167,7 @@
             httpReq = {
               "package": document.package,
               "class": document.class,
+              "this": document.this,
               "constructor": document.constructor,
               "classArgs": App.getRequest(document.classArgs, []),
               "method": document.method,
@@ -4189,6 +4194,9 @@
             }
             if (httpReq.methodArgs == null) {
               httpReq.methodArgs = App.getRequest(document.methodArgs, [])
+            }
+            if (httpReq.this == null) {
+              httpReq.this = document.this
             }
           }
 

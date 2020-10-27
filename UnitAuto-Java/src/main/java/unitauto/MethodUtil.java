@@ -27,6 +27,7 @@ import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -96,6 +97,7 @@ public class MethodUtil {
 
 	public static String KEY_TIME = "time";
 	public static String KEY_PACKAGE = "package";
+	public static String KEY_THIS = "this";
 	public static String KEY_CLASS = "class";
 	public static String KEY_CONSTRUCTOR = "constructor";
 	public static String KEY_TYPE = "type";
@@ -332,7 +334,7 @@ public class MethodUtil {
 	 * @return
 	 * @throws Exception
 	 */
-	public static void invokeMethod(JSONObject req, Object instance, @NotNull Listener<JSONObject> listener) throws Exception {
+	public static void invokeMethod(JSONObject req, Object instance, Listener<JSONObject> listener) throws Exception {
 		if (req == null) {
 			req = new JSONObject(true);
 		}
@@ -347,6 +349,23 @@ public class MethodUtil {
 				throw new ClassNotFoundException("找不到 " + pkgName + "." + clsName + " 对应的类！");
 			}
 
+			Object this_ = req.get(KEY_THIS);
+			if (this_ != null) {
+				if (StringUtil.isNotEmpty(cttName, true) || req.get(KEY_CLASS_ARGS) != null) {
+					throw new IllegalArgumentException(KEY_THIS + " 与 " + KEY_CONSTRUCTOR + ", " + KEY_CLASS_ARGS + " 两个都不能同时传！");
+				}
+				
+				JSONObject obj = new JSONObject();
+				obj.put(KEY_METHOD_ARGS, Arrays.asList(this_));
+				List<Argument> methodArgs = getArgList(obj, KEY_METHOD_ARGS);
+				
+				Class<?>[] types = new Class<?>[1];
+				Object[] args = new Object[1];
+				
+				initTypesAndValues(methodArgs, types, args, true, true);
+				instance = args[0];
+			}
+			
 			if (instance == null && req.getBooleanValue(KEY_STATIC) == false) {
 				if (StringUtil.isEmpty(cttName, true)) {
 					instance = INSTANCE_GETTER.getInstance(clazz, getArgList(req, KEY_CLASS_ARGS), null);
@@ -368,7 +387,7 @@ public class MethodUtil {
 					}
 
 					if (finalInstance != null) {
-						result.put("this", parseJSON(finalInstance.getClass(), finalInstance)); //TODO InterfaceProxy proxy 改成泛型 I instance ？
+						result.put(KEY_THIS, parseJSON(finalInstance.getClass(), finalInstance)); //TODO InterfaceProxy proxy 改成泛型 I instance ？
 					}
 
 					listener.complete(result);
