@@ -436,7 +436,7 @@ public class MethodUtil {
 		return CLASS_LOADER_CALLBACK.loadClass(pkgName, clsName, false);
 	}
 
-	/**获取示例
+	/**获取实例
 	 * @param clazz
 	 * @param classArgs
 	 * @param reuse
@@ -458,6 +458,9 @@ public class MethodUtil {
 
 		if (instance == null) {
 			if (classArgs == null || classArgs.isEmpty()) {
+				if (clazz.isAnnotation()) {
+					return clazz;
+				}
 				instance = clazz.isEnum() ? getEnumInstance(clazz, null) : clazz.newInstance();
 			}
 			else if (clazz.isEnum()) {  //通过构造方法
@@ -474,6 +477,10 @@ public class MethodUtil {
 				return getEnumInstance(clazz, v == null ? null : v.toString());
 			}
 			else { //通过构造方法
+				if (clazz.isAnnotation()) {
+					throw new IllegalArgumentException("@interface " + clazz.getName() + " 没有构造参数，对应的 classArgs 数量只能是 0！");
+				}
+				
 				boolean exactContructor = false;  //指定某个构造方法，只要某一项 type 不为空就是
 				for (int i = 0; i < classArgs.size(); i++) {
 					Argument obj = classArgs.get(i);
@@ -528,11 +535,11 @@ public class MethodUtil {
 	}
 
 	@SuppressWarnings("rawtypes")
-	public static Object getEnumInstance(Enum em, String name) {
+	public static Object getEnumInstance(Enum em, String name) throws NoSuchFieldException {
 		return getEnumInstance(em == null ? null : em.getDeclaringClass(), name);
 	}
 	@SuppressWarnings("rawtypes")
-	public static Object getEnumInstance(Class clazz, String name) {
+	public static Object getEnumInstance(Class clazz, String name) throws NoSuchFieldException {
 		Object[] constants = clazz == null ? null : clazz.getEnumConstants();
 		if (constants == null || constants.length < 0) {
 			return null;
@@ -547,7 +554,7 @@ public class MethodUtil {
 			}
 		}
 
-		return null;
+		throw new NoSuchFieldException("enum " + clazz.getName() + " 不存在 " + name + " 这个值！");
 	}
 
 	@SuppressWarnings("rawtypes")
@@ -673,7 +680,7 @@ public class MethodUtil {
 				Class<?> type = types[i];
 				Object value = args[i];
 
-				if (value instanceof InterfaceProxy || (type != null && type.isInterface())) {  //如果这里不行，就 initTypesAndValues 给个回调
+				if (value instanceof InterfaceProxy || (type != null && type.isInterface())) {  // @interface 也必须代理  && type.isAnnotation() == false)) {  //如果这里不行，就 initTypesAndValues 给个回调
 					try {  //不能交给 initTypesAndValues 中 castValue2Type，否则会导致这里 TypeUtils.cast 抛异常 
 						InterfaceProxy proxy = value instanceof InterfaceProxy ? ((InterfaceProxy) value) : TypeUtils.cast(value, InterfaceProxy.class, new ParserConfig());
 						Set<Entry<String, Object>> set = proxy.entrySet();
@@ -870,11 +877,14 @@ public class MethodUtil {
 			if (value != null && type != null && value.getClass().equals(type) == false) {
 				try {  //解决只有 interface getter 方法才有对应字段返回
 					if (type.isArray() || Collection.class.isAssignableFrom(type) || GenericArrayType.class.isAssignableFrom(type)) {
-						if (type.getComponentType() != null && type.getComponentType().isInterface()) {
+						if (type.getComponentType() != null && type.getComponentType().isInterface()) {  // @interface 也必须代理&& type.getComponentType().isAnnotation() == false) {
 							List<InterfaceProxy> implList = JSON.parseArray(JSON.toJSONString(value), InterfaceProxy.class);
 							value = implList;
 						}
 					}
+					// @interface 也必须代理
+//					else if (type.isAnnotation()) {
+//					} 
 					else if (type.isInterface()) {
 						InterfaceProxy proxy = JSON.parseObject(JSON.toJSONString(value), InterfaceProxy.class);
 						proxy.$_setType(type);

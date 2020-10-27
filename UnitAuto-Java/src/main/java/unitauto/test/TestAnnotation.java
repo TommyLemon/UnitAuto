@@ -35,6 +35,8 @@ public @interface TestAnnotation {
 	
 	boolean required() default false;
 	
+	String alias() default "";
+	
 	@NotNull
 	TestEnum gender() default TestEnum.MAN;
 }
