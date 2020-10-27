@@ -13,21 +13,11 @@ See the License for the specific language governing permissions and
 limitations under the License.*/
 
 
-package apijson.demo.server;
-
-import java.io.Serializable;
-
-public interface TestInterface extends Serializable {    
-
-	void setData(Object data);
-	Object getData();
-
-	void setId(Long id);
-	Long getId();
-	
-	Boolean sort();
-
-	default void minusAsId(long a, long b) {
-		setId(a - b);
-	}
-}    
+/**
+ * 测试相关类所在包
+ */
+/**
+ * @author Lemon
+ *
+ */
+package unitauto.test;

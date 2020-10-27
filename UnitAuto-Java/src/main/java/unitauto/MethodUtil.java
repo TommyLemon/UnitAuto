@@ -1,4 +1,4 @@
-/*Copyright ©2020 TommyLemon(https://github.com/TommyLemon)
+/*Copyright ©2019 TommyLemon(https://github.com/TommyLemon/UnitAuto)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -457,7 +458,20 @@ public class MethodUtil {
 
 		if (instance == null) {
 			if (classArgs == null || classArgs.isEmpty()) {
-				instance = clazz.newInstance();
+				instance = clazz.isEnum() ? getEnumInstance(clazz, null) : clazz.newInstance();
+			}
+			else if (clazz.isEnum()) {  //通过构造方法
+				Argument arg = classArgs.get(0);
+				String t = arg == null ? null : arg.getType();
+				Object v = arg == null ? null : arg.getValue();
+				if (classArgs.size() != 1 
+						|| (v != null && v instanceof CharSequence != true)
+						|| (t != null && CharSequence.class.isAssignableFrom(getType(t, v, true)) == false)
+						) {
+					throw new IllegalArgumentException("enum " + clazz.getName() + " 对应的 classArgs 数量只能是 0 或 1 ！且选项类型必须为 String！");
+				}
+				
+				return getEnumInstance(clazz, v == null ? null : v.toString());
 			}
 			else { //通过构造方法
 				boolean exactContructor = false;  //指定某个构造方法，只要某一项 type 不为空就是
@@ -512,6 +526,47 @@ public class MethodUtil {
 
 		return instance;
 	}
+
+	@SuppressWarnings("rawtypes")
+	public static Object getEnumInstance(Enum em, String name) {
+		return getEnumInstance(em == null ? null : em.getDeclaringClass(), name);
+	}
+	@SuppressWarnings("rawtypes")
+	public static Object getEnumInstance(Class clazz, String name) {
+		Object[] constants = clazz == null ? null : clazz.getEnumConstants();
+		if (constants == null || constants.length < 0) {
+			return null;
+		}
+		if (StringUtil.isEmpty(name, false)) {
+			return constants[0];
+		}
+
+		for (int i = 0; i < constants.length; i++) {
+			if (name.equals(constants[i].toString())) {
+				return constants[i];
+			}
+		}
+
+		return null;
+	}
+
+	@SuppressWarnings("rawtypes")
+	public static LinkedHashMap<Integer, String> mapEnumConstants(Enum em) throws NoSuchMethodException, SecurityException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+		return mapEnumConstants(em.getDeclaringClass());
+	}
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public static LinkedHashMap<Integer, String> mapEnumConstants(Class clazz) throws NoSuchMethodException, SecurityException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+		LinkedHashMap<Integer, String> map = new LinkedHashMap<Integer, String>();
+		Method toName = clazz.getMethod("toName");
+		Method toCode = clazz.getMethod("toCode");
+		Object[] objs = clazz.getEnumConstants();
+		for (Object obj : objs) {
+			map.put((Integer) toCode.invoke(obj), (String) toName.invoke(obj));
+		}
+		return map;
+	}
+
+
 
 	/**获取方法
 	 * @param clazz
@@ -571,7 +626,7 @@ public class MethodUtil {
 				if (listener == null) {
 					return;
 				}
-				
+
 				JSONObject result = new JSONObject(true);
 				result.put(KEY_TYPE, trimType(method.getReturnType()));  //给 UnitAuto 共享用的 trimType(val.getClass()));
 				result.put(KEY_RETURN, data);

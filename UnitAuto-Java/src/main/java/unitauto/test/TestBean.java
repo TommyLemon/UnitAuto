@@ -13,44 +13,46 @@ See the License for the specific language governing permissions and
 limitations under the License.*/
 
 
-package apijson.demo.server;
+package unitauto.test;
 
-/**单例测试类
+import java.util.List;
+
+/**Java Bean 测试类
  * @author Lemon
  */
-public class Singleton {
+@TestAnnotation
+public class TestBean {
 	
-	private Singleton() {}
-
-	private static final Singleton INSTANCE;
-	static {
-		INSTANCE = new Singleton();
+	@TestAnnotation(required = true)
+	private Long id;
+	private String name;
+	private List<String> tagList;
+	
+	public TestBean() {
+	}
+	public TestBean(Long id) {
+		this();
+		setId(id);
 	}
 	
-	public static Singleton getInstance(boolean reuse) {
-		return reuse ? INSTANCE : new Singleton();
-	}
 	
-	public static Singleton getDefault() {
-		return INSTANCE;
+	public Long getId() {
+		return id;
 	}
-	
-	private String name = getClass().getSimpleName();
+	public void setId(Long id) {
+		this.id = id;
+	}
 	public String getName() {
 		return name;
 	}
 	public void setName(String name) {
 		this.name = name;
 	}
-	
-	public boolean test() {
-		System.out.println("Singleton.test >> return true;");
-		return true;
+	public List<String> getTagList() {
+		return tagList;
 	}
-	
-	public boolean test(String name) {
-		System.out.println("Singleton.test(" + name + ") >> return true;");
-		return true;
+	public void setTagList(List<String> tagList) {
+		this.tagList = tagList;
 	}
 	
 }
