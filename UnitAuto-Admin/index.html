@@ -165,8 +165,8 @@
               <li v-for="(item, index) in testCases" >
                   <div style="display: inline-table; height: 24px">
                       <div style="display: inline-flex; height: 100%">
-                          <a class="hint--rounded hint--no-animate" style="position: absolute; top: 6px; font-size: small; color: dimgray" ref="testCaseMethodTexts" @mouseover="setRequestHint(index, item)" href="javascript:void(0)" @click="restoreRemote(item)" > {{item.Method.defination}}</a>
-                          <a class="hint--rounded hint--no-animate" style="position: absolute; bottom: 4px; font-size: small" ref="testCaseClassTexts" @mouseover="setRequestHint(index, item, false, true)" href="javascript:void(0)" @click="restoreRemote(item)" > {{item.Method.package + '.' + item.Method.class}}</a>
+                          <a class="hint--rounded hint--no-animate" style="position: absolute; left: 10px; top: 6px; font-size: small; color: dimgray" ref="testCaseMethodTexts" @mouseover="setRequestHint(index, item)" href="javascript:void(0)" @click="restoreRemote(item)" >{{item.Method.defination + (StringUtil.isEmpty(item.Method.detail) || item.Method.detail == item.Method.method ? '' : '  // ' + StringUtil.trim(item.Method.detail))}}</a>
+                          <a class="hint--rounded hint--no-animate" style="position: absolute; left: 10px; bottom: 4px; font-size: small" ref="testCaseClassTexts" @mouseover="setRequestHint(index, item, false, true)" href="javascript:void(0)" @click="restoreRemote(item)" >{{item.Method.package + '.' + item.Method.class}}</a>
                       </div>
                       <div :style="{ background: item.compareColor }" v-show="item.compareType != null" style="position: absolute; top: 4px; bottom: 4px; right: 36px; display: inline-block;">
                           <button class="hint--left" ref="testResultButtons" @mouseover="setTestHint(index, item)" v-show="item.compareType != null" @click="handleTest(false, index, item)" style="position: relative; height: 100%">{{ item.compareMessage + (item.showType == 'before' ? '-前' : '-后') }}</button>
@@ -177,7 +177,7 @@
                           <!-- 仅用来占位，解决上面按钮隐藏后，下载图标纵向没对齐 -->
                           <button v-show="! ((item.showType != 'before' && item.compareType != 0) || (item.showType == 'before' && (item.TestRecord || {}).id != null))" style="color: white;background: white;border-color: white; height: 100%" disabled>对的，纠正</button>
                       </div>
-                      <svg v-show="isLocalShow || (item.Method != null && item.Method.userId == User.id)" class="icon" style="margin-right: 8px; margin-top: 6px" @click="remove(item, index, true)">
+                      <svg v-show="isLocalShow || (item.Method != null && item.Method.userId == User.id)" class="icon" style="margin-right: 5px; top: 13px" @click="remove(item, index, true)">
                           <use xlink:href="svg/icon.svg#trash"></use>
                       </svg>
                   </div>
@@ -237,10 +237,10 @@
           </div>
 
             <!-- 临时生成的配置子项 -->
-            <ul v-show="isRandomSubListShow" class="historys" style="width: 100%;height: 100%;overflow: hidden;overflow-y: scroll;padding-bottom: 50px">
+            <ul v-show="isRandomSubListShow" class="historys" style="width: 100%;height: 100%;overflow: hidden;overflow-y: scroll;padding-bottom: 100px">
                 <li style="width: 100%" v-for="(item, index) in randomSubs" >
                     <a v-show="! isRandomEditable" class="hint--rounded hint--no-animate" ref="randomSubTexts" @mouseover="setRequestHint(index, item, true)" href="javascript:void(0)" @click="restoreRandom(item)" >{{ (item.Random || {}).name }}</a>
-                    <input v-show="isRandomEditable" style="width: 96%" v-model="(item.Random || {}).name" @keyup="doOnKeyUp(event, item, true)" />
+                    <input v-show="isRandomEditable" style="width: 96%" v-model="(item.Random || {}).name" @keyup="doOnKeyUp(event, 'randomSub', false, item)" />
 
                     <div :style="{ background: item.compareColor }" v-show="! isRandomEditable && item.compareType != null" style="position: absolute;top: 8px;right: 36px;display: inline-block;">
                         <button class="hint--left" ref="testRandomSubResultButtons" @mouseover="setTestHint(index, item, true)" v-show="item.compareType != null" @click="handleTest(false, index, item, true)" style="position: relative;">{{ item.compareMessage + (item.showType == 'before' ? '-前' : '-后') }}</button>
@@ -251,7 +251,7 @@
                         <!-- 仅用来占位，解决上面按钮隐藏后，下载图标纵向没对齐 -->
                         <button v-show="! ((item.showType != 'before' && item.compareType != 0) || (item.showType == 'before' && (item.TestRecord || {}).id != null))" style="color: white;background: white;border-color: white;" disabled>对的，纠正</button>
                     </div>
-                    <svg v-show="item.Random != null && item.Random.userId == User.id" class="icon" style="margin-right: 8px; top: 12px;" @click="remove(item, index, true, true)">
+                    <svg v-show="item.Random != null && item.Random.userId == User.id" class="icon" style="margin-right: 5px; top: 13px" @click="remove(item, index, true, true)">
                         <use xlink:href="svg/icon.svg#trash"></use>
                     </svg>
                 </li>
@@ -268,12 +268,12 @@
                             <a >条</a>
                         </div>
             <!-- 持久化存储的配置项 -->
-            <ul v-show="isRandomListShow" class="historys" style="width: 100%;height: 100%;overflow: hidden;overflow-y: scroll;padding-bottom: 50px">
+            <ul v-show="isRandomListShow" class="historys" style="width: 100%;height: 100%;overflow: hidden;overflow-y: scroll;padding-bottom: 100px">
                 <li style="width: 100%; display: inline-table" v-for="(item, index) in randoms" >
-                    <input v-model="(item.Random || {}).count" style="min-width: 12px; max-width: 30px; width: auto; text-align: center" type="number" @keyup="doOnKeyUp(event, item, true)" />
+                    <input v-model="(item.Random || {}).count" style="min-width: 12px; max-width: 30px; width: auto; text-align: center" type="number" @keyup="doOnKeyUp(event, 'random', false, item)" />
                     <a style="margin-left: 4px; ">次</a>
                     <a v-show="! isRandomEditable" style="top: 13px; left: 68px; position: absolute" class="hint--rounded hint--no-animate" ref="randomTexts" @mouseover="setRequestHint(index, item, true)" href="javascript:void(0)" @click="restoreRandom(item)" >{{ (item.Random || {}).name }}</a>
-                    <input v-show="isRandomEditable" style="top: 10px; left: 68px; position: absolute; display: inline-flex; width: 64%" v-model="(item.Random || {}).name" @keyup="doOnKeyUp(event, item, true)" />
+                    <input v-show="isRandomEditable" style="top: 10px; left: 68px; position: absolute; display: inline-flex; width: 64%" v-model="(item.Random || {}).name" @keyup="doOnKeyUp(event, 'random', false, item)" />
 
                     <button v-show="((item.Random || {}).count || 0) > 1 && (item.totalCount || 0) <= 0" style="position: absolute;top: 10px;right: 36px;display: inline-block;" @click="handleTest(true, index, item, true)">{{ '查看 ' + ((item.subs || item['[]']) || []).length + ' 个子项' }}</button>
                     <div v-show="((item.Random || {}).count || 0) > 1 && (item.totalCount || 0) > 0" style="background: lightgray; position: absolute; padding: 1px; top: 10px;right: 36px;display: inline-block" @click="handleTest(true, index, item, true)">
@@ -293,7 +293,7 @@
                         </div>
                     </div>
 
-                    <svg v-show="item.Random != null && item.Random.userId == User.id" class="icon" style="margin-right: 8px; top: 14px;" @click="remove(item, index, true, true)">
+                    <svg v-show="item.Random != null && item.Random.userId == User.id" class="icon" style="margin-right: 5px; top: 13px" @click="remove(item, index, true, true)">
                         <use xlink:href="svg/icon.svg#trash"></use>
                     </svg>
                 </li>
@@ -331,7 +331,7 @@ methodArgs/0/value: RANDOM_IN(1, 0.1, -10, 9.99, null)  // 随机取值
 methodArgs/1/type: ORDER_IN('long', 'double', 'Number', 'int', 'Float')  // 顺序取值
 methodArgs/1/value: ORDER_INT(-10, 100)  // 顺序整数
 
-//  注释可省略；清空文本内容可查看规则。</textarea>
+  // 注释可省略，但如果未省略则前面两个空格必须；清空文本内容可查看规则。</textarea>
                     </div>
 
 

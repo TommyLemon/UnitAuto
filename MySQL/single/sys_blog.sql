@@ -16,32 +16,27 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `Response`
+-- Table structure for table `blog`
 --
 
-DROP TABLE IF EXISTS `Response`;
+DROP TABLE IF EXISTS `blog`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `Response` (
-  `id` bigint(15) NOT NULL COMMENT '唯一标识',
-  `method` varchar(10) DEFAULT 'GET' COMMENT '方法',
-  `model` varchar(20) NOT NULL COMMENT '表名，table是SQL关键词不能用',
-  `structure` json NOT NULL COMMENT '结构',
-  `detail` varchar(10000) DEFAULT NULL COMMENT '详细说明',
-  `date` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建日期',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id_UNIQUE` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='每次启动服务器时加载整个表到内存。';
+CREATE TABLE `blog` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `title` varchar(200) NOT NULL,
+  `content` mediumtext NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `Response`
+-- Dumping data for table `blog`
 --
 
-LOCK TABLES `Response` WRITE;
-/*!40000 ALTER TABLE `Response` DISABLE KEYS */;
-INSERT INTO `Response` VALUES (1,'GET','User','{\"put\": {\"extra\": \"Response works! Test:He(She) is lazy and wrote nothing here\"}, \"remove\": \"phone\"}',NULL,'2017-05-22 12:36:47'),(2,'DELETE','Comment','{\"remove\": \"Comment:child\"}',NULL,'2017-05-03 17:51:26'),(3,'DELETE','Moment','{\"remove\": \"Comment\"}',NULL,'2017-05-03 17:51:26');
-/*!40000 ALTER TABLE `Response` ENABLE KEYS */;
+LOCK TABLES `blog` WRITE;
+/*!40000 ALTER TABLE `blog` DISABLE KEYS */;
+/*!40000 ALTER TABLE `blog` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -53,4 +48,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2020-10-28  1:58:21
+-- Dump completed on 2020-10-28  1:58:17

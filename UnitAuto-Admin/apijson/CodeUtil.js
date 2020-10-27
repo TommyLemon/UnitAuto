@@ -2651,7 +2651,7 @@ var CodeUtil = {
 
           s += nextPadding + '}';
 
-          s += padding + '}' + blockBlank + '//' + key + ' >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n';
+          s += padding + '}' + blockBlank + '  //' + key + ' >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n';
 
           return s;
         },
@@ -2682,7 +2682,7 @@ var CodeUtil = {
 
           s += CodeUtil.parseJavaResponse(k, value, depth + 1, isTableKey, isSmart);
 
-          s += padding + '}' + blockBlank + '//' + key + ' >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n';
+          s += padding + '}' + blockBlank + '  //' + key + ' >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n';
 
           return s;
         }
@@ -2846,7 +2846,7 @@ var CodeUtil = {
       }
     }
 
-    return '? = null' + (isSmart ? '' : '  //' + CodeUtil.initEmptyValue4Type(type, true, isKotlin));
+    return '? = null' + (isSmart ? '' : '  // ' + CodeUtil.initEmptyValue4Type(type, true, isKotlin));
   },
 
   getCode4JavaArgValues: function (reqObj, useVar4ComplexValue) {
@@ -5696,7 +5696,9 @@ var CodeUtil = {
       case 'class':
         return CodeUtil.getType4Request(value) != 'string' ? ' ! value必须是String类型！且必须符合 DemoFunction 这种类名格式！' : CodeUtil.getComment('类名', false, '  ');
       case 'method':
-        return CodeUtil.getType4Request(value) != 'string' ? ' ! value必须是String类型！且必须符合 countArray 这种方法名格式！' : CodeUtil.getComment('方法名', false, '  ');
+        return CodeUtil.getType4Request(value) != 'string' ? ' ! value必须是String类型！且必须符合 countArray 这种方法名格式！' : CodeUtil.getComment('被调用方法名', false, '  ');
+      case 'constructor':
+        return CodeUtil.getType4Request(value) != 'string' ? ' ! value必须是String类型！且必须符合 getInstance 这种方法名格式！' : CodeUtil.getComment('获取类实例的方法名，一般用于单例模式类', false, '  ');
       case 'methodArgs':
       case 'classArgs':
         if (value == null || value instanceof Array) {
@@ -5992,7 +5994,11 @@ var CodeUtil = {
         }
       case 'method':
         if (CodeUtil.getType4Request(value) == 'string') {
-          return '方法名';
+          return '被调用方法名';
+        }
+      case 'constructor':
+        if (CodeUtil.getType4Request(value) == 'string') {
+          return '获取类实例的方法名，一般用于单例模式类';
         }
       case 'methodArgs':
       case 'classArgs':

@@ -1,4 +1,4 @@
-/*Copyright ©2020 TommyLemon(https://github.com/TommyLemon)
+/*Copyright ©2019 TommyLemon(https://github.com/TommyLemon/UnitAuto)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -27,10 +27,12 @@ import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -95,7 +97,9 @@ public class MethodUtil {
 
 	public static String KEY_TIME = "time";
 	public static String KEY_PACKAGE = "package";
+	public static String KEY_THIS = "this";
 	public static String KEY_CLASS = "class";
+	public static String KEY_CONSTRUCTOR = "constructor";
 	public static String KEY_TYPE = "type";
 	public static String KEY_VALUE = "value";
 	public static String KEY_WARN = "warn";
@@ -292,6 +296,7 @@ public class MethodUtil {
 	 {
 		"package": "apijson.demo.server",
 		"class": "DemoFunction",
+		"constructor": "getInstance",  //如果是类似单例模式的类，不能用默认构造方法，可以自定义获取实例的方法，传参仍用 classArgs
 		"classArgs": [
 			null,
 			null,
@@ -329,12 +334,13 @@ public class MethodUtil {
 	 * @return
 	 * @throws Exception
 	 */
-	public static void invokeMethod(JSONObject req, Object instance, @NotNull Listener<JSONObject> listener) throws Exception {
+	public static void invokeMethod(JSONObject req, Object instance, Listener<JSONObject> listener) throws Exception {
 		if (req == null) {
 			req = new JSONObject(true);
 		}
 		String pkgName = req.getString(KEY_PACKAGE);
 		String clsName = req.getString(KEY_CLASS);
+		String cttName = req.getString(KEY_CONSTRUCTOR);
 		String methodName = req.getString(KEY_METHOD);
 
 		try {
@@ -343,8 +349,30 @@ public class MethodUtil {
 				throw new ClassNotFoundException("找不到 " + pkgName + "." + clsName + " 对应的类！");
 			}
 
+			Object this_ = req.get(KEY_THIS);
+			if (this_ != null) {
+				if (StringUtil.isNotEmpty(cttName, true) || req.get(KEY_CLASS_ARGS) != null) {
+					throw new IllegalArgumentException(KEY_THIS + " 与 " + KEY_CONSTRUCTOR + ", " + KEY_CLASS_ARGS + " 两个都不能同时传！");
+				}
+				
+				JSONObject obj = new JSONObject();
+				obj.put(KEY_METHOD_ARGS, Arrays.asList(this_));
+				List<Argument> methodArgs = getArgList(obj, KEY_METHOD_ARGS);
+				
+				Class<?>[] types = new Class<?>[1];
+				Object[] args = new Object[1];
+				
+				initTypesAndValues(methodArgs, types, args, true, true);
+				instance = args[0];
+			}
+			
 			if (instance == null && req.getBooleanValue(KEY_STATIC) == false) {
-				instance = INSTANCE_GETTER.getInstance(clazz, getArgList(req, KEY_CLASS_ARGS), null);
+				if (StringUtil.isEmpty(cttName, true)) {
+					instance = INSTANCE_GETTER.getInstance(clazz, getArgList(req, KEY_CLASS_ARGS), null);
+				}
+				else {
+					instance = getInvokeResult(clazz, null, cttName, getArgList(req, KEY_CLASS_ARGS), null);
+				}
 			}
 
 			Object finalInstance = instance;
@@ -359,7 +387,7 @@ public class MethodUtil {
 					}
 
 					if (finalInstance != null) {
-						result.put("this", parseJSON(finalInstance.getClass(), finalInstance)); //TODO InterfaceProxy proxy 改成泛型 I instance ？
+						result.put(KEY_THIS, parseJSON(finalInstance.getClass(), finalInstance)); //TODO InterfaceProxy proxy 改成泛型 I instance ？
 					}
 
 					listener.complete(result);
@@ -418,8 +446,8 @@ public class MethodUtil {
 
 
 	/**获取类
-	 * @param pkgName
-	 * @param clsName
+	 * @param pkgName  包名
+	 * @param clsName  类名
 	 * @return
 	 * @throws Exception
 	 */
@@ -427,7 +455,7 @@ public class MethodUtil {
 		return CLASS_LOADER_CALLBACK.loadClass(pkgName, clsName, false);
 	}
 
-	/**获取示例
+	/**获取实例
 	 * @param clazz
 	 * @param classArgs
 	 * @param reuse
@@ -449,9 +477,29 @@ public class MethodUtil {
 
 		if (instance == null) {
 			if (classArgs == null || classArgs.isEmpty()) {
-				instance = clazz.newInstance();
+				if (clazz.isAnnotation()) {
+					return clazz;
+				}
+				instance = clazz.isEnum() ? getEnumInstance(clazz, null) : clazz.newInstance();
+			}
+			else if (clazz.isEnum()) {  //通过构造方法
+				Argument arg = classArgs.get(0);
+				String t = arg == null ? null : arg.getType();
+				Object v = arg == null ? null : arg.getValue();
+				if (classArgs.size() != 1 
+						|| (v != null && v instanceof CharSequence != true)
+						|| (t != null && CharSequence.class.isAssignableFrom(getType(t, v, true)) == false)
+						) {
+					throw new IllegalArgumentException("enum " + clazz.getName() + " 对应的 classArgs 数量只能是 0 或 1 ！且选项类型必须为 String！");
+				}
+				
+				return getEnumInstance(clazz, v == null ? null : v.toString());
 			}
 			else { //通过构造方法
+				if (clazz.isAnnotation()) {
+					throw new IllegalArgumentException("@interface " + clazz.getName() + " 没有构造参数，对应的 classArgs 数量只能是 0！");
+				}
+				
 				boolean exactContructor = false;  //指定某个构造方法，只要某一项 type 不为空就是
 				for (int i = 0; i < classArgs.size(); i++) {
 					Argument obj = classArgs.get(i);
@@ -505,6 +553,47 @@ public class MethodUtil {
 		return instance;
 	}
 
+	@SuppressWarnings("rawtypes")
+	public static Object getEnumInstance(Enum em, String name) throws NoSuchFieldException {
+		return getEnumInstance(em == null ? null : em.getDeclaringClass(), name);
+	}
+	@SuppressWarnings("rawtypes")
+	public static Object getEnumInstance(Class clazz, String name) throws NoSuchFieldException {
+		Object[] constants = clazz == null ? null : clazz.getEnumConstants();
+		if (constants == null || constants.length < 0) {
+			return null;
+		}
+		if (StringUtil.isEmpty(name, false)) {
+			return constants[0];
+		}
+
+		for (int i = 0; i < constants.length; i++) {
+			if (name.equals(constants[i].toString())) {
+				return constants[i];
+			}
+		}
+
+		throw new NoSuchFieldException("enum " + clazz.getName() + " 不存在 " + name + " 这个值！");
+	}
+
+	@SuppressWarnings("rawtypes")
+	public static LinkedHashMap<Integer, String> mapEnumConstants(Enum em) throws NoSuchMethodException, SecurityException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+		return mapEnumConstants(em.getDeclaringClass());
+	}
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public static LinkedHashMap<Integer, String> mapEnumConstants(Class clazz) throws NoSuchMethodException, SecurityException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+		LinkedHashMap<Integer, String> map = new LinkedHashMap<Integer, String>();
+		Method toName = clazz.getMethod("toName");
+		Method toCode = clazz.getMethod("toCode");
+		Object[] objs = clazz.getEnumConstants();
+		for (Object obj : objs) {
+			map.put((Integer) toCode.invoke(obj), (String) toName.invoke(obj));
+		}
+		return map;
+	}
+
+
+
 	/**获取方法
 	 * @param clazz
 	 * @param methodName
@@ -533,16 +622,15 @@ public class MethodUtil {
 	 * @param instance
 	 * @param methodName
 	 * @param methodArgs
-	 * @param listener
-	 * @return
+	 * @param listener  如果确定是同步的，则传 null
+	 * @return  同步可能 return null，异步一定 return null
 	 * @throws Exception
 	 */
-	public static void getInvokeResult(@NotNull Class<?> clazz, Object instance, @NotNull String methodName
-			, List<Argument> methodArgs, @NotNull Listener<JSONObject> listener) throws Exception {
+	public static Object getInvokeResult(@NotNull Class<?> clazz, Object instance, @NotNull String methodName
+			, List<Argument> methodArgs, Listener<JSONObject> listener) throws Exception {
 
 		Objects.requireNonNull(clazz);
 		Objects.requireNonNull(methodName);
-		Objects.requireNonNull(listener);
 
 		int size = methodArgs == null ? 0 : methodArgs.size();
 		boolean isEmpty = size <= 0;
@@ -561,6 +649,10 @@ public class MethodUtil {
 
 			@Override
 			public void complete(Object data, Method m, InterfaceProxy proxy, Object... extra) throws Exception {
+				if (listener == null) {
+					return;
+				}
+
 				JSONObject result = new JSONObject(true);
 				result.put(KEY_TYPE, trimType(method.getReturnType()));  //给 UnitAuto 共享用的 trimType(val.getClass()));
 				result.put(KEY_RETURN, data);
@@ -594,7 +686,9 @@ public class MethodUtil {
 
 				result.put(KEY_METHOD_ARGS, finalMethodArgs);
 
-				listener.complete(result);
+				if (listener != null) {
+					listener.complete(result);
+				}
 			}
 		};
 
@@ -605,7 +699,7 @@ public class MethodUtil {
 				Class<?> type = types[i];
 				Object value = args[i];
 
-				if (value instanceof InterfaceProxy || (type != null && type.isInterface())) {  //如果这里不行，就 initTypesAndValues 给个回调
+				if (value instanceof InterfaceProxy || (type != null && type.isInterface())) {  // @interface 也必须代理  && type.isAnnotation() == false)) {  //如果这里不行，就 initTypesAndValues 给个回调
 					try {  //不能交给 initTypesAndValues 中 castValue2Type，否则会导致这里 TypeUtils.cast 抛异常 
 						InterfaceProxy proxy = value instanceof InterfaceProxy ? ((InterfaceProxy) value) : TypeUtils.cast(value, InterfaceProxy.class, new ParserConfig());
 						Set<Entry<String, Object>> set = proxy.entrySet();
@@ -647,9 +741,13 @@ public class MethodUtil {
 		Object val = method.invoke(instance, args);
 
 		if (isSync) {
-			itemListener.complete(val);
+			if (listener != null) {
+				itemListener.complete(val);
+			}
+			return val;
 		}
 
+		return null;
 	}
 
 
@@ -798,11 +896,14 @@ public class MethodUtil {
 			if (value != null && type != null && value.getClass().equals(type) == false) {
 				try {  //解决只有 interface getter 方法才有对应字段返回
 					if (type.isArray() || Collection.class.isAssignableFrom(type) || GenericArrayType.class.isAssignableFrom(type)) {
-						if (type.getComponentType() != null && type.getComponentType().isInterface()) {
+						if (type.getComponentType() != null && type.getComponentType().isInterface()) {  // @interface 也必须代理&& type.getComponentType().isAnnotation() == false) {
 							List<InterfaceProxy> implList = JSON.parseArray(JSON.toJSONString(value), InterfaceProxy.class);
 							value = implList;
 						}
 					}
+					// @interface 也必须代理
+//					else if (type.isAnnotation()) {
+//					} 
 					else if (type.isInterface()) {
 						InterfaceProxy proxy = JSON.parseObject(JSON.toJSONString(value), InterfaceProxy.class);
 						proxy.$_setType(type);

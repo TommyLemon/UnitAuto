@@ -11,7 +11,7 @@
 </p>
 
 <p align="center" >
-  <img src="https://raw.githubusercontent.com/TommyLemon/UnitAuto/master/logo.png" />
+  <img src="https://raw.githubusercontent.com/TommyLemon/UnitAuto/master/UnitAuto-Admin/img/logo.png" />
 </p>
 
 ---
