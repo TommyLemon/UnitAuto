@@ -96,6 +96,7 @@ public class MethodUtil {
 	public static String KEY_TIME = "time";
 	public static String KEY_PACKAGE = "package";
 	public static String KEY_CLASS = "class";
+	public static String KEY_CONSTRUCTOR = "constructor";
 	public static String KEY_TYPE = "type";
 	public static String KEY_VALUE = "value";
 	public static String KEY_WARN = "warn";
@@ -292,6 +293,7 @@ public class MethodUtil {
 	 {
 		"package": "apijson.demo.server",
 		"class": "DemoFunction",
+		"constructor": "getInstance",  //如果是类似单例模式的类，不能用默认构造方法，可以自定义获取实例的方法，传参仍用 classArgs
 		"classArgs": [
 			null,
 			null,
@@ -335,6 +337,7 @@ public class MethodUtil {
 		}
 		String pkgName = req.getString(KEY_PACKAGE);
 		String clsName = req.getString(KEY_CLASS);
+		String cttName = req.getString(KEY_CONSTRUCTOR);
 		String methodName = req.getString(KEY_METHOD);
 
 		try {
@@ -344,7 +347,12 @@ public class MethodUtil {
 			}
 
 			if (instance == null && req.getBooleanValue(KEY_STATIC) == false) {
-				instance = INSTANCE_GETTER.getInstance(clazz, getArgList(req, KEY_CLASS_ARGS), null);
+				if (StringUtil.isEmpty(cttName, true)) {
+					instance = INSTANCE_GETTER.getInstance(clazz, getArgList(req, KEY_CLASS_ARGS), null);
+				}
+				else {
+					instance = getInvokeResult(clazz, null, cttName, getArgList(req, KEY_CLASS_ARGS), null);
+				}
 			}
 
 			Object finalInstance = instance;
@@ -418,8 +426,8 @@ public class MethodUtil {
 
 
 	/**获取类
-	 * @param pkgName
-	 * @param clsName
+	 * @param pkgName  包名
+	 * @param clsName  类名
 	 * @return
 	 * @throws Exception
 	 */
@@ -533,16 +541,15 @@ public class MethodUtil {
 	 * @param instance
 	 * @param methodName
 	 * @param methodArgs
-	 * @param listener
-	 * @return
+	 * @param listener  如果确定是同步的，则传 null
+	 * @return  同步可能 return null，异步一定 return null
 	 * @throws Exception
 	 */
-	public static void getInvokeResult(@NotNull Class<?> clazz, Object instance, @NotNull String methodName
-			, List<Argument> methodArgs, @NotNull Listener<JSONObject> listener) throws Exception {
+	public static Object getInvokeResult(@NotNull Class<?> clazz, Object instance, @NotNull String methodName
+			, List<Argument> methodArgs, Listener<JSONObject> listener) throws Exception {
 
 		Objects.requireNonNull(clazz);
 		Objects.requireNonNull(methodName);
-		Objects.requireNonNull(listener);
 
 		int size = methodArgs == null ? 0 : methodArgs.size();
 		boolean isEmpty = size <= 0;
@@ -561,6 +568,10 @@ public class MethodUtil {
 
 			@Override
 			public void complete(Object data, Method m, InterfaceProxy proxy, Object... extra) throws Exception {
+				if (listener == null) {
+					return;
+				}
+				
 				JSONObject result = new JSONObject(true);
 				result.put(KEY_TYPE, trimType(method.getReturnType()));  //给 UnitAuto 共享用的 trimType(val.getClass()));
 				result.put(KEY_RETURN, data);
@@ -594,7 +605,9 @@ public class MethodUtil {
 
 				result.put(KEY_METHOD_ARGS, finalMethodArgs);
 
-				listener.complete(result);
+				if (listener != null) {
+					listener.complete(result);
+				}
 			}
 		};
 
@@ -647,9 +660,13 @@ public class MethodUtil {
 		Object val = method.invoke(instance, args);
 
 		if (isSync) {
-			itemListener.complete(val);
+			if (listener != null) {
+				itemListener.complete(val);
+			}
+			return val;
 		}
 
+		return null;
 	}
 
 

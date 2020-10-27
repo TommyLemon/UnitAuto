@@ -44,12 +44,13 @@ public class MethodUtil extends unitauto.MethodUtil {
 	 * 一般在 Application 中全局调用一次即可。
 	 */
 	public static void init() {
+		final ClassLoaderCallback callback = CLASS_LOADER_CALLBACK;
 		CLASS_LOADER_CALLBACK = new ClassLoaderCallback() {
 
 			@Override
 			public Class<?> loadClass(String packageOrFileName, String className, boolean ignoreError)
 					throws ClassNotFoundException, IOException {
-				return findClass(packageOrFileName, className, ignoreError);
+				return callback.loadClass(packageOrFileName, className, ignoreError);
 			}
 
 			@Override

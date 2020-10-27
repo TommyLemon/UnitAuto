@@ -1762,6 +1762,7 @@
               'package': classItem.package == null ? null : classItem.package,  // .replace(/[.]/g, '/'),
               'class': classItem.name,
               'method': methodItem.name,
+              'constructor': null,
               'classArgs': classArgs,
               'genericClassArgs': App.getArgs4Sync(classItem.genericParameterTypeList),
               'methodArgs': App.getArgs4Sync(methodItem.parameterTypeList, methodItem.parameterDefaultValueList),
@@ -1775,7 +1776,7 @@
             },
             'TestRecord': {
               'randomId': 0,
-	      'host': App.getBaseUrl(),
+              'host': App.getBaseUrl(),
               'testAccountId': currentAccountId,
               'response': ''
             },
@@ -2816,6 +2817,7 @@
         var httpReq = {
           "package": req.package || App.getPackage(url),
           "class": req.class || App.getClass(url),
+          "constructor": req.constructor,
           "classArgs": req.classArgs,
           "method": req.method || App.getMethod(url),
           "methodArgs": req.methodArgs,
@@ -3270,7 +3272,7 @@
               'Method': {
                 'package@': '[]/Method/package',
                 'class@': '/Method:group/class',
-                '@column': 'class,genericClassArgs',
+                '@column': 'class,constructor,genericClassArgs',
                 '@order': 'class+',
                 'arguments()': "getMethodArguments(genericClassArgs)",
               }
@@ -3674,6 +3676,7 @@
               var httpReq = {
                 "package": constJson.package || App.getPackage(url),
                 "class": constJson.class || App.getClass(url),
+                "constructor": constJson.constructor,
                 "classArgs": constJson.classArgs,
                 "method": constJson.method || App.getMethod(url),
                 "methodArgs": constJson.methodArgs,
@@ -4160,6 +4163,7 @@
             httpReq = {
               "package": document.package,
               "class": document.class,
+              "constructor": document.constructor,
               "classArgs": App.getRequest(document.classArgs, []),
               "method": document.method,
               "methodArgs": App.getRequest(document.methodArgs, []),
@@ -4176,6 +4180,9 @@
             }
             if (httpReq.method == null) {
               httpReq.method = document.method
+            }
+            if (httpReq.constructor == null) {
+              httpReq.constructor = document.constructor
             }
             if (httpReq.classArgs == null) {
               httpReq.classArgs = App.getRequest(document.classArgs, [])
