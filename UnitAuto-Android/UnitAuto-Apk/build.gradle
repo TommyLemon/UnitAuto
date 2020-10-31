@@ -25,7 +25,7 @@ android {
 dependencies {
     api fileTree(include: ['*.jar'], dir: 'libs')
     api 'com.android.support:support-v4:27.1.1'
-    api 'com.alibaba:fastjson:1.2.61'
+    api 'com.alibaba:fastjson:1.2.74'
     api 'com.koushikdutta.async:androidasync:2.+'
     implementation files('libs/unitauto-2.4.0.jar')
 }

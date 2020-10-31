@@ -16,6 +16,7 @@ limitations under the License.*/
 package unitauto.apk;
 
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.app.Application;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -23,6 +24,7 @@ import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.inputmethodservice.InputMethodService;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
@@ -35,10 +37,15 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.serializer.PropertyFilter;
 import com.alibaba.fastjson.util.TypeUtils;
 
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.LinkedList;
@@ -198,6 +205,65 @@ public class UnitAutoApp extends Application {
 		};
 
 
+		MethodUtil.JSONCallback jc = MethodUtil.JSON_CALLBACK;
+		MethodUtil.JSON_CALLBACK = new MethodUtil.JSONCallback() {
+			@Override
+			public JSONObject newSuccessResult() {
+				return jc.newSuccessResult();
+			}
+
+			@Override
+			public JSONObject newErrorResult(Throwable t) {
+				return jc.newErrorResult(t);
+			}
+
+			@Override
+			public JSONObject parseJSON(String type, Object value) {
+				if (value == null || unitauto.JSON.isBooleanOrNumberOrString(value) || value instanceof JSON || value instanceof Enum) {
+					return jc.parseJSON(type, value);
+				}
+
+				if (value instanceof Context
+						|| value instanceof Fragment
+						|| value instanceof android.app.Fragment
+						|| value instanceof Annotation  // Android 客户端中 fastjon 怎么都不支持 Annotation
+						|| value instanceof WindowManager
+						|| value instanceof PowerManager
+						) {
+					value = value.toString();
+				}
+				else {
+					try {
+						value = JSON.parse(JSON.toJSONString(value, new PropertyFilter() {
+							@Override
+							public boolean apply(Object object, String name, Object value) {
+								if (value == null) {
+									return true;
+								}
+
+								if (value instanceof Context
+										|| value instanceof Fragment
+										|| value instanceof android.app.Fragment
+										|| value instanceof Annotation  // Android 客户端中 fastjon 怎么都不支持 Annotation
+										|| value instanceof WindowManager
+										|| value instanceof PowerManager
+										) {
+									return false;
+								}
+
+								return Modifier.isPublic(value.getClass().getModifiers());
+							}
+						}));
+					} catch (Exception e) {
+						Log.e(TAG, "toJSONString  catch \n" + e.getMessage());
+					}
+				}
+
+				return jc.parseJSON(type, value);
+			}
+		};
+
+
 
 		final MethodUtil.InstanceGetter ig = MethodUtil.INSTANCE_GETTER;
 		MethodUtil.INSTANCE_GETTER = new MethodUtil.InstanceGetter() {
@@ -313,25 +379,49 @@ public class UnitAutoApp extends Application {
 
 
 						if (Window.class.isAssignableFrom(clazz)) {
-							Window window = activity == null ? null : activity.getWindow();
-							if (window != null && clazz.isAssignableFrom(window.getClass())) {
-								return window;
+							Window w = activity == null ? null : activity.getWindow();
+							if (w != null && clazz.isAssignableFrom(w.getClass())) {
+								return w;
 							}
 							throw new ClassNotFoundException("Did not find available " + clazz.getName() + "!");
 						}
 
 						if (WindowManager.class.isAssignableFrom(clazz)) {
-							WindowManager windowManager = activity == null ? null : activity.getWindowManager();
-							if (windowManager != null && clazz.isAssignableFrom(windowManager.getClass())) {
-								return windowManager;
+							WindowManager wm = activity == null ? null : activity.getWindowManager();
+							if (wm != null && clazz.isAssignableFrom(wm.getClass())) {
+								return wm;
+							}
+							throw new ClassNotFoundException("Did not find available " + clazz.getName() + "!");
+						}
+
+						if (ActivityManager.class.isAssignableFrom(clazz)) {
+							ActivityManager am = context == null ? null : (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+							if (am != null && clazz.isAssignableFrom(am.getClass())) {
+								return am;
+							}
+							throw new ClassNotFoundException("Did not find available " + clazz.getName() + "!");
+						}
+
+						if (FragmentManager.class.isAssignableFrom(clazz)) {
+							FragmentManager fm = activity == null || activity instanceof FragmentActivity == false
+									? null : ((FragmentActivity) activity).getSupportFragmentManager();
+							if (fm != null && clazz.isAssignableFrom(fm.getClass())) {
+								return fm;
+							}
+							throw new ClassNotFoundException("Did not find available " + clazz.getName() + "!");
+						}
+						if (android.app.FragmentManager.class.isAssignableFrom(clazz)) {
+							android.app.FragmentManager fm = activity == null ? null : activity.getFragmentManager();
+							if (fm != null && clazz.isAssignableFrom(fm.getClass())) {
+								return fm;
 							}
 							throw new ClassNotFoundException("Did not find available " + clazz.getName() + "!");
 						}
 
 						if (InputMethodService.class.isAssignableFrom(clazz)) {
-							InputMethodService inputMethodService = context == null ? null : context.getSystemService(InputMethodService.class);
-							if (inputMethodService != null && clazz.isAssignableFrom(inputMethodService.getClass())) {
-								return inputMethodService;
+							InputMethodService ims = context == null ? null : context.getSystemService(InputMethodService.class);
+							if (ims != null && clazz.isAssignableFrom(ims.getClass())) {
+								return ims;
 							}
 							throw new ClassNotFoundException("Did not find available " + clazz.getName() + "!");
 						}

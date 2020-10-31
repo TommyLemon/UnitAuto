@@ -62,7 +62,7 @@ public class MainFragment extends Fragment implements View.OnClickListener, View
     public boolean onLongClick(View v) {
         Toast.makeText(
                 getActivity(),
-                getString(R.string.app_name) + " - " + getString(R.string.unit_testing_tool_for_coding_free)
+                getString(R.string.app_name) + " - " + getString(R.string.unit_testing_platform_for_coding_free)
                 , Toast.LENGTH_LONG
         ).show();
         return true;
@@ -73,11 +73,11 @@ public class MainFragment extends Fragment implements View.OnClickListener, View
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.tvName:
-                Toast.makeText(getActivity(), getString(R.string.unit_testing_tool_for_coding_free), Toast.LENGTH_SHORT).show();
+                Toast.makeText(getActivity(), getString(R.string.unit_testing_platform_for_coding_free), Toast.LENGTH_SHORT).show();
                 break;
             case R.id.tvTitle:
                 isML = ! isML;
-                tvTitle.setText(isML ? R.string.auto_assert_with_machine_learning : R.string.unit_testing_tool_for_coding_free);
+                tvTitle.setText(isML ? R.string.auto_assert_with_machine_learning : R.string.unit_testing_platform_for_coding_free);
                 break;
         }
     }

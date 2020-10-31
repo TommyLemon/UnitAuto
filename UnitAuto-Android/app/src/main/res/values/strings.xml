@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">UnitAuto</string>
-    <string name="unit_testing_tool_for_coding_free">零代码单元测试工具</string>
+    <string name="unit_testing_platform_for_coding_free">零代码单元测试平台</string>
     <string name="auto_assert_with_machine_learning">机器学习自动断言</string>
     <string name="unit_auto_project_link">https://gitee.com/TommyLemon/UnitAuto</string>
 </resources>
