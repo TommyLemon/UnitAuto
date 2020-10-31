@@ -30,6 +30,8 @@ import android.util.Log;
 import android.view.InputEvent;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 
@@ -212,58 +214,32 @@ public class UnitAutoApp extends Application {
 								return activity;
 							}
 
-							List<Activity> list = getActivityList();
-							if (list != null) {
-								for (int i = list.size() - 1; i >= 0; i --) {  // 尽可能使用正在运行的最新 Activity
-									Activity a = list.get(i);
-									if (a != null && a.isFinishing() == false && a.isDestroyed() == false
-											&& clazz.isAssignableFrom(a.getClass())) {
-										return a;
-									}
-								}
+							Activity a = findActivity(clazz);
+							if (a != null) {
+								return a;
 							}
-
 							throw new ClassNotFoundException("Did not find alive " + clazz.getName() + "!");
 						}
 
 						if (Fragment.class.isAssignableFrom(clazz) || android.app.Fragment.class.isAssignableFrom(clazz)) {
-							List<Activity> list = getActivityList();
-							if (list != null) {
-								for (int i = list.size() - 1; i >= 0; i --) {  // 倒序排列，尽可能使用正在运行的最新 Activity
-									Activity a = list.get(i);
-									if (a == null || a.isFinishing() || a.isDestroyed()) {
-										continue;
-									}
-
-									if (a instanceof FragmentActivity && Fragment.class.isAssignableFrom(clazz)) {
-										FragmentManager m = ((FragmentActivity) a).getSupportFragmentManager();
-										List<Fragment> fl = m == null ? null : m.getFragments();
-
-										if (fl != null) {
-											for (Fragment f : fl) {  // 顺序排列，因为默认显示第 0 个 tab 对应的 Fragment
-												if (f != null && clazz.isAssignableFrom(f.getClass())) {
-													return f;
-												}
-											}
-										}
-									}
-
-									android.app.FragmentManager m = a.getFragmentManager();
-									List<android.app.Fragment> fl = m == null ? null : m.getFragments();
-
-									if (fl != null) {
-										for (android.app.Fragment f : fl) {  // 顺序排列，因为默认显示第 0 个 tab 对应的 Fragment
-											if (f != null && clazz.isAssignableFrom(f.getClass())) {
-												return f;
-											}
-										}
-									}
-								}
+							Object f = findFragment(clazz);
+							if (f != null) {
+								return f;
 							}
-
 							throw new ClassNotFoundException("Did not find alive " + clazz.getName() + "!");
 						}
 
+						if (View.class.isAssignableFrom(clazz)) {  // 性能是大问题，所以只查找当前界面的
+							if (activity != null && activity.isFinishing() == false && activity.isDestroyed() == false
+									&& activity.getWindow() != null) {
+
+								View v = findView(clazz, activity.getWindow().getDecorView());
+								if (v != null) {
+									return v;
+								}
+							}
+							throw new ClassNotFoundException("Did not find available " + clazz.getName() + "!");
+						}
 
 						Application app = getApp();
 						if (Application.class.isAssignableFrom(clazz)) {
@@ -401,10 +377,92 @@ public class UnitAutoApp extends Application {
 			}
 		};
 
-
-
 	}
 
+
+	public static Activity findActivity(Class<?> clazz) {
+		List<Activity> list = getActivityList();
+		if (list != null) {
+			for (int i = list.size() - 1; i >= 0; i --) {  // 尽可能使用正在运行的最新 Activity
+				Activity a = list.get(i);
+				if (a != null && a.isFinishing() == false && a.isDestroyed() == false
+						&& clazz.isAssignableFrom(a.getClass())) {
+					return a;
+				}
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * @param clazz
+	 * @return android.support.v4.app.Fragment 或 android.app.Fragment
+	 */
+	public static Object findFragment(Class<?> clazz) {
+		List<Activity> list = getActivityList();
+		if (list != null) {
+			for (int i = list.size() - 1; i >= 0; i --) {  // 倒序，尽可能使用正在运行的最新 Activity
+				Activity a = list.get(i);
+				if (a == null || a.isFinishing() || a.isDestroyed()) {
+					continue;
+				}
+
+				if (a instanceof FragmentActivity && Fragment.class.isAssignableFrom(clazz)) {
+					FragmentManager m = ((FragmentActivity) a).getSupportFragmentManager();
+					List<Fragment> fl = m == null ? null : m.getFragments();
+
+					if (fl != null) {
+						for (Fragment f : fl) {  // 顺序排列，因为默认显示第 0 个 tab 对应的 Fragment
+							if (f != null && clazz.isAssignableFrom(f.getClass())) {
+								return f;
+							}
+						}
+					}
+				}
+
+				android.app.FragmentManager m = a.getFragmentManager();
+				List<android.app.Fragment> fl = m == null ? null : m.getFragments();
+
+				if (fl != null) {
+					for (android.app.Fragment f : fl) {  // 顺序，因为默认显示第 0 个 tab 对应的 Fragment
+						if (f != null && clazz.isAssignableFrom(f.getClass())) {
+							return f;
+						}
+					}
+				}
+			}
+		}
+
+		return null;
+	}
+
+	public static View findView(Class<?> clazz, View v) {
+		if (v == null) {
+			return null;
+		}
+
+		if (clazz.isAssignableFrom(v.getClass())) {
+			return v;
+		}
+
+		if (v instanceof ViewGroup) {
+
+			ViewGroup vg = (ViewGroup) v;
+			int count = vg.getChildCount();
+
+			// for (int i = count - 1; i >= 0; i --) {  // 倒序，从屏幕最外层缩小 z-index 往内找
+			for (int i = 0; i < count; i ++) {  // 还是顺序好，倒序可能都挤出屏幕了
+
+				View c = findView(clazz, vg.getChildAt(i));
+				if (c != null) {
+					return c;
+				}
+			}
+		}
+
+		return null;
+	}
 
 
 }

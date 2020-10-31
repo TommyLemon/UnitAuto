@@ -1,13 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     tools:context=".MainActivity"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:gravity="center"
     >
+
+    <FrameLayout
+        android:id="@+id/flMain"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        />
+
 
     <TextView
         android:id="@+id/tvMain"
@@ -16,6 +22,7 @@
         android:text="Hello World!"
         android:onClick="onClickHello"
         android:layout_margin="6dp"
+        android:layout_centerInParent="true"
         />
 
     <Button
@@ -24,6 +31,8 @@
         android:onClick="onClickUnit"
         android:text="UnitAutoActivity"
         android:textAllCaps="false"
+        android:layout_below="@id/tvMain"
+        android:layout_centerHorizontal="true"
         />
 
-</LinearLayout>
+</RelativeLayout>

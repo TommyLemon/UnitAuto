@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="unit_testing_tool_for_coding_free">An unit testing tool for coding free</string>
+    <string name="auto_assert_with_machine_learning">Assert result with machine learning</string>
+    <string name="unit_auto_project_link">https://github.com/TommyLemon/UnitAuto</string>
+</resources>
