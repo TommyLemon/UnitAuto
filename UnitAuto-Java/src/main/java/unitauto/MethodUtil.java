@@ -62,6 +62,13 @@ public class MethodUtil {
 	}
 
 	public interface InstanceGetter {
+		/**
+		 * @param clazz
+		 * @param classArgs
+		 * @param reuse  true - 复用现有的实例；false - new 出实例；null - 环境相关类都默认 true，其它类都默认 false
+		 * @return
+		 * @throws Exception
+		 */
 		Object getInstance(@NotNull Class<?> clazz, List<Argument> classArgs, Boolean reuse) throws Exception;
 
 		default Object getInstance(@NotNull Class<?> clazz, List<Argument> classArgs) throws Exception {
