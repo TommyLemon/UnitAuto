@@ -9,7 +9,7 @@
 	<packaging>jar</packaging>
 
 	<name>UnitAuto-Java-Demo</name>
-	<description>Demo Java server project for UnitAuto based on SpringBoot and Mybatis</description>
+	<description>Demo Java server project for UnitAuto based on SpringBoot</description>
 
 	<parent>
 		<groupId>org.springframework.boot</groupId>
