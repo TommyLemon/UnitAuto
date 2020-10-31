@@ -15,7 +15,12 @@ limitations under the License.*/
 
 package unitauto.demo.service;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.stereotype.Component;
+
+import unitauto.demo.domain.User;
 
 /**
  * @author Lemon
@@ -31,6 +36,28 @@ public class DemoService {
 	
 	public String hello(String name) {
 		return "Hello, " + (name == null ? "World" : name) + "!";
+	}
+	
+	public User getUser(long id) {
+		User user = new User();
+		user.setId(id);
+		user.setName("UnitAuto");
+		return user;
+	}
+	
+	public List<User> listUser(int count) {
+		List<User> list = new ArrayList<>();
+		
+		for (int i = 0; i < count; i++) {
+			User user = new User();
+			user.setId(Long.valueOf(i + 1));
+			user.setSex(i % 2);
+			user.setName("UnitAuto " + (i + 1));
+			
+			list.add(user);
+		}
+		
+		return list;
 	}
 	
 }

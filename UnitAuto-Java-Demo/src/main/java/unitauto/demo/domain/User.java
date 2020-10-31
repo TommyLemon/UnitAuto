@@ -12,25 +12,40 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.*/
 
-package unitauto.demo.mapper;
 
-import java.util.List;
+package unitauto.demo.domain;
 
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import java.io.Serializable;
 
-
-/**
+/**用户
  * @author Lemon
  */
-@Mapper
-public interface DemoMapper {
+public class User implements Serializable {
+	private static final long serialVersionUID = 1L;
 
-	@Select("select table_name, table_type from information_schema.tables limit 10")
-	List<Object> listTables();
-	
-	@Select("select column_name as `name`, column_type as `type` from information_schema.columns where table_name = ${table} limit 10")
-	List<Object> listColumns(@Param("table") String table);
+	private Long id; //主键
+	private Integer sex; //性别
+	private String name; //姓名
+
+	public Long getId() {
+		return id;
+	}
+	public void setId(Long id) {
+		this.id = id;
+	}
+
+	public Integer getSex() {
+		return sex;
+	}
+	public void setSex(Integer sex) {
+		this.sex = sex;
+	}
+	public String getName() {
+		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
+	}
+
 
 }
