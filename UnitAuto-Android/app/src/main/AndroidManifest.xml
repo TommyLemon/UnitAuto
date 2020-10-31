@@ -20,7 +20,9 @@
         </activity>
 
         <!-- 注册 UnitAutoActivity -->
-        <activity android:name="unitauto.apk.UnitAutoActivity">
+        <activity
+            android:name="unitauto.apk.UnitAutoActivity"
+            android:launchMode="singleInstance">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
 

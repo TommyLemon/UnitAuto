@@ -45,7 +45,7 @@ public class MainActivity extends Activity {
         Toast.makeText(this, ((TextView) v).getText(), Toast.LENGTH_SHORT).show();
     }
 
-    public void onClickUnitAuto(View v) {
+    public void onClickUnit(View v) {
         startActivity(UnitAutoActivity.createIntent(this));
     }
 

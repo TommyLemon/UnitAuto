@@ -214,7 +214,7 @@ public class UnitAutoApp extends Application {
 
 							List<Activity> list = getActivityList();
 							if (list != null) {
-								for (int i = list.size() - 1; i > 0; i--) {  // 尽可能使用正在运行的最新 Activity
+								for (int i = list.size() - 1; i >= 0; i --) {  // 尽可能使用正在运行的最新 Activity
 									Activity a = list.get(i);
 									if (a != null && a.isFinishing() == false && a.isDestroyed() == false
 											&& clazz.isAssignableFrom(a.getClass())) {
@@ -229,7 +229,7 @@ public class UnitAutoApp extends Application {
 						if (Fragment.class.isAssignableFrom(clazz) || android.app.Fragment.class.isAssignableFrom(clazz)) {
 							List<Activity> list = getActivityList();
 							if (list != null) {
-								for (int i = list.size() - 1; i > 0; i --) {  // 倒序排列，尽可能使用正在运行的最新 Activity
+								for (int i = list.size() - 1; i >= 0; i --) {  // 倒序排列，尽可能使用正在运行的最新 Activity
 									Activity a = list.get(i);
 									if (a == null || a.isFinishing() || a.isDestroyed()) {
 										continue;
