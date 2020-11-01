@@ -31,11 +31,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.alibaba.fastjson.JSONObject;
 
-import unitauto.JSON;
 import unitauto.Log;
 import unitauto.MethodUtil;
 import unitauto.MethodUtil.InterfaceProxy;
-import unitauto.demo.DemoApplication;
 import unitauto.demo.service.DemoService;
 
 /**
@@ -89,19 +87,7 @@ public class DemoController {
 		};
 
 		try {
-			JSONObject req = JSON.parseObject(request);
-
-			Object instance = null;
-			try {
-				String pkgName = req.getString("package");
-				String clsName = req.getString("class");
-				instance = DemoApplication.getApp().getBean(Class.forName(pkgName.replaceAll("/", ".") + "." + clsName));
-			}
-			catch (Exception e) {
-				Log.e(TAG, "invokeMethod  try { instance = APIJSONApplication.APPLICATION_CONTEXT.getBean(Class.forName(pkgName ... } catch (Exception e) { \n" + e.getMessage());
-			}
-
-			MethodUtil.invokeMethod(req, instance, listener);
+			MethodUtil.invokeMethod(request, null, listener);
 		}
 		catch (Exception e) {
 			Log.e(TAG, "invokeMethod  try { JSONObject req = JSON.parseObject(request); ... } catch (Exception e) { \n" + e.getMessage());
@@ -114,7 +100,6 @@ public class DemoController {
 			}
 		}
 	}
-
 
 
 }
