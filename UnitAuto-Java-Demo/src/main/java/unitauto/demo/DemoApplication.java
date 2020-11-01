@@ -154,7 +154,7 @@ public class DemoApplication implements ApplicationContextAware {
 
 			@Override
 			public void customize(ConfigurableEmbeddedServletContainer container) {
-				container.setPort(8080); //自定义端口号，如果和 TiDB 等其它程序端口有冲突，可改为 8081, 9090, 9091 等未被占用的端口 	
+				container.setPort(8081); //自定义端口号，如果和 TiDB 等其它程序端口有冲突，可改为 8081, 9090, 9091 等未被占用的端口 	
 			}
 		};
 	}

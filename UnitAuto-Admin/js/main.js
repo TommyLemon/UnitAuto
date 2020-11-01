@@ -477,7 +477,7 @@
       error: {},
       requestVersion: 3,
       requestCount: 1,
-      urlComment: ': Integer  // 计算数组长度',
+      urlComment: ': Integer  // 除法运算',
       historys: [],
       history: {name: '请求0'},
       remotes: [],
