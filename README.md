@@ -18,39 +18,14 @@
 
 机器学习单元测试平台，零代码、全方位、自动化 测试 方法/函数 的正确性和可用性
 
-<p align="center" >
-  <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-Method-List-small.jpg"></a>
-</p>
-<p align="center" >
-  <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-RandomTest-Parent-small.jpg"></a>
-</p>
-<p align="center" >
-  <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-RandomTest-Child-small.jpg"></a>
-</p>
-<p align="center" >
-  <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-Test-removeKey-small.jpg"></a>
-</p>
-<p align="center" >
-  <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-Test-interface-small.jpg"></a>
-</p>
 
+### 特点优势
+相比 JUnit, JTest, Mockito, Mockk 等一堆 Compiling testing 工具：<br />
+1.其它工具需要每个方法都写一大堆测试代码，需要开发成本、需要解决测试代码的 bug、业务代码更改后需要同步修改测试代码等；<br />
+UnitAuto 不需要写任何代码，直接读取方法的属性，自动注入参数，拿到返回值和类成员变量，机器学习自动化校验。<br />
 <br />
-
-后端不再需要像以下示例一样编写和维护大量单元测试用例代码（逻辑代码、注解代码等）：
-<p align="center" >
-  <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-Compare-Code-small.jpg"></a>
-</p>
-
-<br />
-<br />
-客户端可作为 HTTP Server 来为 UnitAuto 网页工具 提供远程调用的接口，效果同样：
-<p align="center" >
-  <a ><img src="https://user-images.githubusercontent.com/5738175/87251324-6b759900-c49d-11ea-8468-aaf26124b7e0.png"></a>
-</p>
-<p align="center" >
-  <a ><img src="https://user-images.githubusercontent.com/5738175/87251395-f5bdfd00-c49d-11ea-809f-3c7330d7b6e1.png"></a>
-</p>
-
+2.UnitAuto 这种 Runtime testing 工具无需 Mock 环境(Application, Context 等)，<br />
+更不用为 Mock 出来的环境满足不了需求导致测试用例无法通过而头疼。<br />
 <br />
 <br />
 
@@ -62,22 +37,55 @@
 前端是类似 APIAuto 的机器学习自动化测试工具（查看、上传、执行、测试 后端项目中的方法等），<br />
 后端提供扫描所有方法、执行某个方法两个 API （主要引入 MethodUtil.java 这个类，里面已实现）。<br />
 <br />
+
+##### 通过扫描项目中的可访问的 package, class, method 来生成和导入测试用例  
+<p align="center" >
+  <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-Method-List-small.jpg"></a>
+</p>
 <br />
 
-### 特点优势
-相比 JUnit, JTest 等一堆 Compiling testing 工具：<br />
-1.其它工具需要每个方法都写一大堆测试代码，需要开发成本、需要解决测试代码的 bug、业务代码更改后需要同步修改测试代码等；<br />
-UnitAuto 不需要写任何代码，直接读取方法的属性，自动注入参数，拿到返回值和类成员变量，机器学习自动化校验。<br />
+##### HTTP 远程调用被测服务/App，转至内部 构造/获取 实例来 invoke 动态执行方法
+<p align="center" >
+  <a ><img src="https://user-images.githubusercontent.com/5738175/87251324-6b759900-c49d-11ea-8468-aaf26124b7e0.png"></a>
+</p>
 <br />
-2.UnitAuto 这种 Runtime testing 工具无需 Mock 环境(Application, Context 等)，<br />
-更不用为 Mock 出来的环境满足不了需求导致测试用例无法通过而头疼。<br />
+
+##### 获取参数、成员变量等前后状态，拦截方法被调用过程并可视化展示
+<p align="center" >
+  <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-Test-interface-small.jpg"></a>
+</p>
+<br />
+
+##### 通过简单配置自动调整参数组合，拿到返回结果后通过 前后结果对比 或 机器学习校验模型 来自动断言
+<p align="center" >
+  <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-RandomTest-Parent-small.jpg"></a>
+</p>
+<p align="center" >
+  <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-RandomTest-Child-small.jpg"></a>
+</p>
+<br />
+
+##### 后端不再需要像以下示例一样编写和维护大量单元测试用例代码（逻辑代码、注解代码等）：
+<p align="center" >
+  <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-Compare-Code-small.jpg"></a>
+</p>
+<br />
+
+##### 客户端可作为 HTTP Server 来为 UnitAuto 网页工具 提供远程调用的接口，效果同样：
+<p align="center" >
+  <a ><img src="https://user-images.githubusercontent.com/5738175/87251324-6b759900-c49d-11ea-8468-aaf26124b7e0.png"></a>
+</p>
+<p align="center" >
+  <a ><img src="https://user-images.githubusercontent.com/5738175/87251395-f5bdfd00-c49d-11ea-809f-3c7330d7b6e1.png"></a>
+</p>
 <br />
 <br />
 
 ### 示例项目
-[UnitAuto Java 后端服务](https://github.com/TommyLemon/UnitAuto/blob/master/Demo/UnitAuto-Java-SpringBoot/src/main/java/apijson/demo/server/Controller.java) <br />
-[APIJSON Java 后端服务](https://github.com/APIJSON/APIJSON/blob/master/APIJSON-Java-Server/APIJSONBoot/src/main/java/apijson/boot/DemoController.java) <br />
-[APIJSON Android 客户端](https://github.com/APIJSON/APIJSON/blob/master/APIJSON-Android/APIJSONTest)
+[UnitAuto Java 后端 Server](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo) <br />
+[APIJSON Java 后端 Server](https://github.com/APIJSON/APIJSON-Demo/blob/master/APIJSON-Java-Server/APIJSONBoot) <br />
+[UnitAuto Android 客户端 App](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android)    直接[下载](https://files.cnblogs.com/files/tommylemon/UnitAutoDemo.apk) <br />
+[APIJSON Android 客户端 App](https://github.com/APIJSON/APIJSON-Demo/blob/master/APIJSON-Android/APIJSONTest)    直接[下载](http://files.cnblogs.com/files/tommylemon/APIJSONTest.apk)
 <br />
 <br />
 
@@ -91,10 +99,71 @@ https://www.bilibili.com/video/BV1kk4y1z7bW
 <br />
 <br />
 
+### 集成到被测项目
+#### Java 后端 Server
+##### 1.依赖 unitauto.jar 
+放到你 [启动 Application 所在项目的 libs 目录](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo/libs)，然后 Eclipse Add to Build Path 或 Idae Add as Library <br />
+https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo/libs <br />
+<br />
 
-### 部署方法
+##### 2.依赖 unitauto-jar.jar
+如果不打 jar/war 包，则可以跳过这个步骤。<br />
+依赖方式同步骤 1。<br />
+https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo/libs <br />
+依赖后需要在 [Application static 代码块](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java-Demo/src/main/java/unitauto/demo/DemoApplication.java) 中初始化
+```java
+    static {
+        UnitAutoApp.init();
+    }
+```
+<br />
 
-可以直接下载源码解压后用浏览器打开 index.html，建议用 Chrome 或 火狐 (Safari、Edge、IE 等可能有兼容问题)。<br />
+##### 3.提供接口给 UnitAuto 后台管理工具
+Controller 提供两个 POST application/json 格式的 HTTP API，分别是
+```
+/method/list    动态扫描方法，可以单纯接收入参并转到发 MethodUtil.listMethod(String request)
+/method/invoke  动态执行方法，可以单纯接收入参并转到发 MethodUtil.invokeMethod(String request, Object instance, Listener<JSONObject> listener)
+```
+参考 [DemoController](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java-Demo/src/main/java/unitauto/demo/controller/DemoController.java) <br />
+<br />
+
+##### 4.配置环境相关类及自定义处理逻辑
+拦截 [MethodUtil](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java/src/main/java/unitauto/MethodUtil.java) 类中的 INSTANCE_GETTER, JSON_CALLBACK, CLASS_LOADER_CALLBACK 等 interface 的回调方法，<br />
+可以支持获取 Context 等环境相关类的实例、转 JSON 对象时过滤特定类、其它自定义逻辑处理，参考 [DemoApplication](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java-Demo/src/main/java/unitauto/demo/DemoApplication.java)<br />
+<br /><br />
+
+#### Android 客户端 App
+##### 1.依赖 UnitAuto-Apk
+把 [UnitAuto-Apk](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android/UnitAuto-Apk) 导入到你项目 [app moudule 所在目录](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android)，settings.gradle 中
+```groovy
+include ':UnitAuto-Apk'
+```
+[app moudule 所在目录](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android)，build.gradle 中
+```groovy
+dependencies {
+    api project(':UnitAuto-Apk')
+}
+```
+<br />
+
+##### 2.初始化 UnitAuto
+在 [Application onCreate 方法](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Android/app/src/main/java/unitauto/demo/DemoApp.java) 中初始化
+```java
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        UnitAutoApp.init(this);
+    }
+```
+<br />
+
+##### 3.配置环境相关类及自定义处理逻辑
+在 [Application onCreate 方法](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Android/app/src/main/java/unitauto/demo/DemoApp.java) 中配置，参考 [Java 后端 Server 中 4.配置环境相关类及自定义处理逻辑](https://github.com/TommyLemon/UnitAuto#4%E9%85%8D%E7%BD%AE%E7%8E%AF%E5%A2%83%E7%9B%B8%E5%85%B3%E7%B1%BB%E5%8F%8A%E8%87%AA%E5%AE%9A%E4%B9%89%E5%A4%84%E7%90%86%E9%80%BB%E8%BE%91)
+<br />
+<br />
+
+### 部署后台管理工具
+可以直接[下载源码](https://github.com/TommyLemon/UnitAuto/archive/master.zip)解压后用浏览器打开 [UnitAuto-Admin](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Admin)/index.html，建议用 Chrome 或 火狐 (Safari、Edge、IE 等可能有兼容问题)。<br />
 也可以直接访问官网的线上环境 http://apijson.org/unit 或开发环境 http://apijson.org:8000/unit 。<br />
 <br />
 点右上角设置项 "项目服务器地址 URL"，把输入框内基地址改为你主机的地址(例如 http://localhost:8080 )<br />
@@ -107,7 +176,7 @@ https://www.bilibili.com/video/BV1kk4y1z7bW
 <br />
 
 自动生成文档、自动管理测试用例 这两个功能 需要部署APIJSON后端，见 <br /> 
-[https://github.com/APIJSON/APIJSON/tree/master/APIJSON-Java-Server](https://github.com/APIJSON/APIJSON/tree/master/APIJSON-Java-Server) 
+https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server
 <br />
 <br />
 
