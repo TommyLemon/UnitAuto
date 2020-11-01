@@ -20,7 +20,7 @@
 
 
 ### 特点优势
-相比 JUnit, JTest 等一堆 Compiling testing 工具：<br />
+相比 JUnit, JTest, Mockito, Mockk 等一堆 Compiling testing 工具：<br />
 1.其它工具需要每个方法都写一大堆测试代码，需要开发成本、需要解决测试代码的 bug、业务代码更改后需要同步修改测试代码等；<br />
 UnitAuto 不需要写任何代码，直接读取方法的属性，自动注入参数，拿到返回值和类成员变量，机器学习自动化校验。<br />
 <br />
