@@ -328,7 +328,7 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
 
     }
 
-    private void send(AsyncHttpServerRequest asyncHttpServerRequest, AsyncHttpServerResponse asyncHttpServerResponse, String request, String response) {
+    private void send(final AsyncHttpServerRequest asyncHttpServerRequest, final AsyncHttpServerResponse asyncHttpServerResponse, final String request, final String response) {
         asyncHttpServerResponse.send("application/json; charset=utf-8", response);
 
         runOnUiThread(new Runnable() {

@@ -205,7 +205,7 @@ public class UnitAutoApp extends Application {
 		};
 
 
-		MethodUtil.JSONCallback jc = MethodUtil.JSON_CALLBACK;
+		final MethodUtil.JSONCallback jc = MethodUtil.JSON_CALLBACK;
 		MethodUtil.JSON_CALLBACK = new MethodUtil.JSONCallback() {
 			@Override
 			public JSONObject newSuccessResult() {

@@ -15,10 +15,11 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
-    compileOptions {
-        targetCompatibility JavaVersion.VERSION_1_8
-        sourceCompatibility JavaVersion.VERSION_1_8
-    }
+    // 可能导致集成到某些项目中 gradle 编译报错
+//    compileOptions {
+//        targetCompatibility JavaVersion.VERSION_1_8
+//        sourceCompatibility JavaVersion.VERSION_1_8
+//    }
     buildToolsVersion '29.0.0'
 }
 
@@ -27,5 +28,5 @@ dependencies {
     api 'com.android.support:support-v4:27.1.1'
     api 'com.alibaba:fastjson:1.2.74'
     api 'com.koushikdutta.async:androidasync:2.+'
-    implementation files('libs/unitauto-2.4.0.jar')
+    api files('libs/unitauto-2.5.0.jar')
 }
