@@ -84,8 +84,8 @@ UnitAuto 不需要写任何代码，直接读取方法的属性，自动注入�
 ### 示例项目
 [UnitAuto Java 后端 Server](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo) <br />
 [APIJSON Java 后端 Server](https://github.com/APIJSON/APIJSON-Demo/blob/master/APIJSON-Java-Server/APIJSONBoot) <br />
-[UnitAuto Android 客户端 App](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android) <br />
-[APIJSON Android 客户端 App](https://github.com/APIJSON/APIJSON-Demo/blob/master/APIJSON-Android/APIJSONTest)
+[UnitAuto Android 客户端 App](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android)    [点击下载](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android/UnitAutoDemo.apk) <br />
+[APIJSON Android 客户端 App](https://github.com/APIJSON/APIJSON-Demo/blob/master/APIJSON-Android/APIJSONTest)    [点击下载](http://files.cnblogs.com/files/tommylemon/APIJSONTest.apk)
 <br />
 <br />
 
@@ -136,7 +136,7 @@ Controller 提供两个 POST application/json 格式的 HTTP API，分别是
 ##### 1.依赖 UnitAuto-Apk
 把 [UnitAuto-Apk](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android/UnitAuto-Apk) 导入到你项目 [app moudule 所在目录](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android)，settings.gradle 中
 ```groovy
-include 'UnitAuto-Apk'
+include ':UnitAuto-Apk'
 ```
 [app moudule 所在目录](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android)，build.gradle 中
 ```groovy
