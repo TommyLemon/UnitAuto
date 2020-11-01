@@ -18,39 +18,46 @@
 
 机器学习单元测试平台，零代码、全方位、自动化 测试 方法/函数 的正确性和可用性
 
+##### 通过扫描项目中的可访问的 package, class, method 来生成和导入测试用例  
 <p align="center" >
   <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-Method-List-small.jpg"></a>
 </p>
+<br />
+
+##### HTTP 远程调用被测服务/App，转至内部 构造/获取 实例来 invoke 动态执行方法
+<p align="center" >
+  <a ><img src="https://user-images.githubusercontent.com/5738175/87251324-6b759900-c49d-11ea-8468-aaf26124b7e0.png"></a>
+</p>
+<br />
+
+##### 获取参数、成员变量等前后状态，拦截方法被调用过程并可视化展示
+<p align="center" >
+  <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-Test-interface-small.jpg"></a>
+</p>
+<br />
+
+##### 通过简单配置自动调整参数组合，拿到返回结果后通过 前后结果对比 或 机器学习校验模型 来自动断言
 <p align="center" >
   <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-RandomTest-Parent-small.jpg"></a>
 </p>
 <p align="center" >
   <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-RandomTest-Child-small.jpg"></a>
 </p>
-<p align="center" >
-  <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-Test-removeKey-small.jpg"></a>
-</p>
-<p align="center" >
-  <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-Test-interface-small.jpg"></a>
-</p>
-
 <br />
 
-后端不再需要像以下示例一样编写和维护大量单元测试用例代码（逻辑代码、注解代码等）：
+##### 后端不再需要像以下示例一样编写和维护大量单元测试用例代码（逻辑代码、注解代码等）：
 <p align="center" >
   <a ><img src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-Compare-Code-small.jpg"></a>
 </p>
+<br />
 
-<br />
-<br />
-客户端可作为 HTTP Server 来为 UnitAuto 网页工具 提供远程调用的接口，效果同样：
+##### 客户端可作为 HTTP Server 来为 UnitAuto 网页工具 提供远程调用的接口，效果同样：
 <p align="center" >
   <a ><img src="https://user-images.githubusercontent.com/5738175/87251324-6b759900-c49d-11ea-8468-aaf26124b7e0.png"></a>
 </p>
 <p align="center" >
   <a ><img src="https://user-images.githubusercontent.com/5738175/87251395-f5bdfd00-c49d-11ea-809f-3c7330d7b6e1.png"></a>
 </p>
-
 <br />
 <br />
 
@@ -152,9 +159,8 @@ dependencies {
 
 ##### 3.配置环境相关类及自定义处理逻辑
 在 [Application onCreate 方法](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Android/app/src/main/java/unitauto/demo/DemoApp.java) 中配置，参考 [Java 后端 Server 中 4.配置环境相关类及自定义处理逻辑](https://github.com/TommyLemon/UnitAuto#4%E9%85%8D%E7%BD%AE%E7%8E%AF%E5%A2%83%E7%9B%B8%E5%85%B3%E7%B1%BB%E5%8F%8A%E8%87%AA%E5%AE%9A%E4%B9%89%E5%A4%84%E7%90%86%E9%80%BB%E8%BE%91)
-
-<br /><br />
-
+<br />
+<br />
 
 ### 部署后台管理工具
 可以直接[下载源码](https://github.com/TommyLemon/UnitAuto/archive/master.zip)解压后用浏览器打开 [UnitAuto-Admin](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Admin)/index.html，建议用 Chrome 或 火狐 (Safari、Edge、IE 等可能有兼容问题)。<br />
@@ -170,7 +176,7 @@ dependencies {
 <br />
 
 自动生成文档、自动管理测试用例 这两个功能 需要部署APIJSON后端，见 <br /> 
-[https://github.com/APIJSON/APIJSON/tree/master/APIJSON-Java-Server](https://github.com/APIJSON/APIJSON/tree/master/APIJSON-Java-Server) 
+https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server
 <br />
 <br />
 
