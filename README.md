@@ -93,29 +93,34 @@ https://www.bilibili.com/video/BV1kk4y1z7bW
 
 ### 项目集成
 #### Java 后端 Server
-1.引入 unitauto.jar 
-放到你启动 Application 所在项目的 libs 目录，然后 Eclipse Add to build path 或 Idae Add as Library
-https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo/libs
+##### 1.引入 unitauto.jar 
+放到你 [启动 Application 所在项目的 libs 目录](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo/libs)，然后 Eclipse Add to Build Path 或 Idae Add as Library <br />
+https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo/libs <br />
 
-2.依赖 unitauto-jar.jar
-如果不打 jar/war 包，则可以不依赖。依赖方式同步骤 1。
-https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo/libs
-依赖后需要在 Application static 代码块中调用
+<br />
+##### 2.依赖 unitauto-jar.jar
+如果不打 jar/war 包，则可以不依赖。依赖方式同步骤 1。<br />
+https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo/libs <br />
+依赖后需要在 [Application static 代码块](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java-Demo/src/main/java/unitauto/demo/DemoApplication.java) 中初始化
 ```java
-UnitAutoApp.init();
+static {
+    UnitAutoApp.init();
+}
 ```
 
-3.提供 HTTP API 给 UnitAuto 后台管理工具
-Controller 提供两个 POST application/json 格式的 API，分别是
+<br />
+##### 3.提供接口给 UnitAuto 后台管理工具
+Controller 提供两个 POST application/json 格式的 HTTP API，分别是
 ```
 /method/list    动态扫描方法，可以单纯接收入参并转到发 MethodUtil.listMethod(String request)
 /method/invoke  动态执行方法，可以单纯接收入参并转到发 MethodUtil.invokeMethod(String request, Object instance, Listener<JSONObject> listener)
 ```
+参考 [DemoController](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java-Demo/src/main/java/unitauto/demo/controller/DemoController.java)
 
-/method/invoke  动态执行方法
-4.配置环境相关类及自定义处理逻辑
-拦截 MethodUtil 类中的 INSTANCE_GETTER, JSON_CALLBACK, CLASS_LOADER_CALLBACK 等 interface 的回调方法，
-可以支持获取 Context 等环境相关类的实例、转 JSON 对象时过滤特定类、其它自定义逻辑处理，参考 APIJSONBoot。
+<br />
+##### 4.配置环境相关类及自定义处理逻辑
+拦截 MethodUtil 类中的 INSTANCE_GETTER, JSON_CALLBACK, CLASS_LOADER_CALLBACK 等 interface 的回调方法，<br />
+可以支持获取 Context 等环境相关类的实例、转 JSON 对象时过滤特定类、其它自定义逻辑处理，参考 [DemoApplication](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java-Demo/src/main/java/unitauto/demo/DemoApplication.java)。<br />
 
 <br /><br />
 
