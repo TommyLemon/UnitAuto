@@ -561,8 +561,8 @@
       host: 'unitauto.test.TestUtil.', // 'apijson.demo.server.DemoFunction.',
       branch: 'countArray',
       database: 'MYSQL',// 'POSTGRESQL',
-      schema: 'sys',
-      server: 'http://apijson.cn:8081',  //apijson.org:8000
+      schema: '', //后端决定 'admin',  // 'sys'
+      server: 'http://apijson.org:9090',  //apijson.org:8000
       // server: 'http://47.74.39.68:9090',  // apijson.org
       project: 'http://apijson.cn:8081',  //apijson.org:8000
       language: CodeUtil.LANGUAGE_KOTLIN,
@@ -2339,10 +2339,11 @@
           version: 1, // 全局默认版本号，非必须
           remember: vRemember.checked,
           format: false,
-          defaults: {
-            '@database': App.database,
-            '@schema': App.schema
-          }
+          // 后端决定
+          // defaults: {
+          //   '@database': App.database,
+          //   '@schema': App.schema
+          // }
         }
 
         if (isAdminOperation) {
