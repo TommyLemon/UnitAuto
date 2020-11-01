@@ -100,7 +100,8 @@ https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo/libs <br /
 <br />
 
 ##### 2.依赖 unitauto-jar.jar
-如果不打 jar/war 包，则可以不依赖。依赖方式同步骤 1。<br />
+如果不打 jar/war 包，则可以跳过这个步骤。<br />
+依赖方式同步骤 1。<br />
 https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo/libs <br />
 依赖后需要在 [Application static 代码块](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java-Demo/src/main/java/unitauto/demo/DemoApplication.java) 中初始化
 ```java
