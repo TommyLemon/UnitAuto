@@ -103,9 +103,9 @@ https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo/libs <br /
 https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo/libs <br />
 依赖后需要在 [Application static 代码块](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java-Demo/src/main/java/unitauto/demo/DemoApplication.java) 中初始化
 ```java
-static {
-    UnitAutoApp.init();
-}
+    static {
+        UnitAutoApp.init();
+    }
 ```
 <br />
 
@@ -115,16 +115,43 @@ Controller 提供两个 POST application/json 格式的 HTTP API，分别是
 /method/list    动态扫描方法，可以单纯接收入参并转到发 MethodUtil.listMethod(String request)
 /method/invoke  动态执行方法，可以单纯接收入参并转到发 MethodUtil.invokeMethod(String request, Object instance, Listener<JSONObject> listener)
 ```
-参考 [DemoController](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java-Demo/src/main/java/unitauto/demo/controller/DemoController.java)
+参考 [DemoController](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java-Demo/src/main/java/unitauto/demo/controller/DemoController.java) <br />
 <br />
 
 ##### 4.配置环境相关类及自定义处理逻辑
-拦截 MethodUtil 类中的 INSTANCE_GETTER, JSON_CALLBACK, CLASS_LOADER_CALLBACK 等 interface 的回调方法，<br />
-可以支持获取 Context 等环境相关类的实例、转 JSON 对象时过滤特定类、其它自定义逻辑处理，参考 [DemoApplication](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java-Demo/src/main/java/unitauto/demo/DemoApplication.java)。<br />
+拦截 [MethodUtil](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java/src/main/java/unitauto/MethodUtil.java) 类中的 INSTANCE_GETTER, JSON_CALLBACK, CLASS_LOADER_CALLBACK 等 interface 的回调方法，<br />
+可以支持获取 Context 等环境相关类的实例、转 JSON 对象时过滤特定类、其它自定义逻辑处理，参考 [DemoApplication](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java-Demo/src/main/java/unitauto/demo/DemoApplication.java)<br />
 <br /><br />
 
 #### Android 客户端 App
+##### 1.引入 UnitAuto-Apk
+把 [UnitAuto-Apk](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android/UnitAuto-Apk) 导入到你项目 [app moudule 所在目录](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android)，settings.gradle 中
+```groovy
+include 'UnitAuto-Apk'
+```
+[app moudule 所在目录](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android)，build.gradle 中
+```groovy
+dependencies {
+    api project(':UnitAuto-Apk')
+}
+```
+<br />
 
+##### 2.初始化 UnitAuto
+在 [Application onCreate 方法](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Android/app/src/main/java/unitauto/demo/DemoApp.java) 中初始化
+```java
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        UnitAutoApp.init(this);
+    }
+```
+<br />
+
+##### 3.配置环境相关类及自定义处理逻辑
+在 [Application onCreate 方法](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Android/app/src/main/java/unitauto/demo/DemoApp.java) 中配置，参考 [Java 后端 Server 中 4.配置环境相关类及自定义处理逻辑](https://github.com/TommyLemon/UnitAuto#4%E9%85%8D%E7%BD%AE%E7%8E%AF%E5%A2%83%E7%9B%B8%E5%85%B3%E7%B1%BB%E5%8F%8A%E8%87%AA%E5%AE%9A%E4%B9%89%E5%A4%84%E7%90%86%E9%80%BB%E8%BE%91)
+
+<br /><br />
 
 
 ### 部署方法
