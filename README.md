@@ -91,7 +91,7 @@ https://www.bilibili.com/video/BV1kk4y1z7bW
 <br />
 <br />
 
-### 项目集成
+### 集成到被测项目
 #### Java 后端 Server
 ##### 1.引入 unitauto.jar 
 放到你 [启动 Application 所在项目的 libs 目录](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo/libs)，然后 Eclipse Add to Build Path 或 Idae Add as Library <br />
