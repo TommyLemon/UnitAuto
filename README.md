@@ -157,7 +157,45 @@ dependencies {
 ```
 <br />
 
-##### 3.配置环境相关类及自定义处理逻辑
+##### 3.提供 UnitAuto 管理界面入口
+在 [AndroidManifest.xml](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Android/app/src/main/AndroidManifest.xml) 中注册 [UnitAutoActivity](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Android/UnitAuto-Apk/src/main/java/unitauto/apk/UnitAutoActivity.java)
+```xml
+<manifest ... >
+    <application ... >
+      
+        <activity
+            android:name="unitauto.apk.UnitAutoActivity"
+            android:launchMode="singleInstance">
+        </activity>
+      
+     </application>
+</manifest>
+```
+
+可在你项目的任何界面新增一个按钮或其它形式的入口，仅 DEBUG 模式下展示
+```xml
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="onClickUnit"
+        android:text="UnitAutoActivity"
+        android:textAllCaps="false"
+        android:layout_below="@id/tvMain"
+        android:layout_centerHorizontal="true"
+        />
+```
+参考 [layout/activity_main](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Android/app/src/main/res/layout/activity_main.xml) <br />
+<br />
+点击这个入口跳转到 [UnitAutoActivity](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Android/UnitAuto-Apk/src/main/java/unitauto/apk/UnitAutoActivity.java)
+```java
+    public void onClickUnit(View v) {
+        startActivity(UnitAutoActivity.createIntent(this));
+    }
+```
+参考 [MainActivity](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Android/app/src/main/java/unitauto/demo/MainActivity.java) <br />
+<br />
+
+##### 4.配置环境相关类及自定义处理逻辑
 在 [Application onCreate 方法](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Android/app/src/main/java/unitauto/demo/DemoApp.java) 中配置，参考 [Java 后端 Server 中 4.配置环境相关类及自定义处理逻辑](https://github.com/TommyLemon/UnitAuto#4%E9%85%8D%E7%BD%AE%E7%8E%AF%E5%A2%83%E7%9B%B8%E5%85%B3%E7%B1%BB%E5%8F%8A%E8%87%AA%E5%AE%9A%E4%B9%89%E5%A4%84%E7%90%86%E9%80%BB%E8%BE%91)
 <br />
 <br />
