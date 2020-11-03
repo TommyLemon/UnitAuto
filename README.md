@@ -138,7 +138,7 @@ Controller 提供两个 POST application/json 格式的 HTTP API，分别是
 ```groovy
 include ':UnitAuto-Apk'
 ```
-[app moudule 所在目录](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android/app)，[build.gradle](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android/app/build.gradle) 中
+[app moudule 目录](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android/app)，[build.gradle](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android/app/build.gradle) 中
 ```groovy
 dependencies {
     api project(':UnitAuto-Apk')
