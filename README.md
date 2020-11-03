@@ -102,7 +102,7 @@ https://www.bilibili.com/video/BV1kk4y1z7bW
 ### 集成到被测项目
 #### Java 后端 Server
 ##### 1.依赖 unitauto.jar 
-放到你 [启动 Application 所在项目的 libs 目录](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo/libs)，然后 Eclipse Add to Build Path 或 Idae Add as Library <br />
+放到你 [启动 Application 所在项目的 libs 目录](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo/libs)，然后 Eclipse Add to Build Path 或 Idea Add as Library <br />
 https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo/libs <br />
 <br />
 
@@ -134,11 +134,11 @@ Controller 提供两个 POST application/json 格式的 HTTP API，分别是
 
 #### Android 客户端 App
 ##### 1.依赖 UnitAuto-Apk
-把 [UnitAuto-Apk](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android/UnitAuto-Apk) 导入到你项目 [app moudule 所在目录](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android)，settings.gradle 中
+把 [UnitAuto-Apk](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android/UnitAuto-Apk) 导入到你项目 [app moudule 所在目录](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android)，[settings.gradle](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android/settings.gradle) 中
 ```groovy
 include ':UnitAuto-Apk'
 ```
-[app moudule 所在目录](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android)，build.gradle 中
+[app moudule 所在目录](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android/app)，[build.gradle](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android/app/build.gradle) 中
 ```groovy
 dependencies {
     api project(':UnitAuto-Apk')
@@ -180,8 +180,6 @@ dependencies {
         android:onClick="onClickUnit"
         android:text="UnitAutoActivity"
         android:textAllCaps="false"
-        android:layout_below="@id/tvMain"
-        android:layout_centerHorizontal="true"
         />
 ```
 参考 [layout/activity_main](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Android/app/src/main/res/layout/activity_main.xml) <br />
