@@ -564,7 +564,7 @@
       schema: '', //后端决定 'admin',  // 'sys'
       server: 'http://apijson.org:9090',  //apijson.org:8000
       // server: 'http://47.74.39.68:9090',  // apijson.org
-      project: 'http://apijson.cn:8081',  //apijson.org:8000
+      project: 'http://apijson.cn:8080',  //apijson.org:8000
       language: CodeUtil.LANGUAGE_KOTLIN,
       header: {},
       page: 0,
@@ -3205,7 +3205,7 @@
           + '\nAPIJSON 接口工具: https://github.com/TommyLemon/UnitAuto '
           + '\nAPIJSON 官方文档: https://github.com/vincentCheng/apijson-doc '
           + '\nAPIJSON 英文文档: https://github.com/ruoranw/APIJSONdocs '
-          + '\nAPIJSON 官方网站: https://github.com/Tencent/APIJSON.org '
+          + '\nAPIJSON 官方网站: https://github.com/APIJSON/APIJSON.org '
           + '\nAPIJSON -Java版: https://github.com/Tencent/APIJSON '
           + '\nAPIJSON - C# 版: https://github.com/liaozb/APIJSON.NET '
           + '\nAPIJSON - PHP版: https://github.com/qq547057827/apijson-php '
