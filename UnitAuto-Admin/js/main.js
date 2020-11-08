@@ -2630,7 +2630,7 @@
 
           vInput.value = before;
           vSend.disabled = false;
-          vOutput.value = output = 'OK，请点击 [运行方法] 按钮来测试。[点击这里查看视频教程](http://i.youku.com/apijson)' + code;
+          vOutput.value = output = 'OK，请点击 [运行方法] 按钮来测试。[点击这里查看视频教程](https://www.bilibili.com/video/BV1Tk4y1R7Yo)' + code;
 
 
           App.showDoc()
