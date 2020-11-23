@@ -30,37 +30,39 @@
 
 <body>
 <style type="text/css">
-  .url {
-    height: 100%;
-    border: none;
-    display: flex;
-    align-items: center;
-    flex-grow: 1
-    /* justify-content: center */
-  }
-  .transfer {
-    width: 50px;
-    height: 100%;
-    margin: 0;
-    padding: 0;
-  }
-  .send {
-    width: 16%;
-    height: 100%;
-    margin: 0;
-    padding: 0;
-  }
-  .statement {
-    position: absolute;
-    bottom: 0px;
-    width: 100%;
-    text-align: center;
-    font-size: small;
-    z-index: 100;
-    background-color: white;
-    color: #bbb;
-    border-top: #fafafa 1px solid;
-  }
+    .url {
+        height: 100%;
+        border: none;
+        display: flex;
+        align-items: center;
+        flex-grow: 1
+        /* justify-content: center */
+    }
+    .transfer {
+        width: 50px;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+    }
+    .send {
+        width: 16%;
+        min-width: 30px;
+        max-width: 100px;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+    }
+    .statement {
+        position: absolute;
+        bottom: 0px;
+        width: 100%;
+        text-align: center;
+        font-size: small;
+        z-index: 100;
+        background-color: white;
+        color: #bbb;
+        border-top: #fafafa 1px solid;
+    }
 </style>
 <div id="app" style="background-color: white">
   <div class="side-top">
@@ -82,6 +84,10 @@
     </div>
 
     <div class="top-right">
+
+      <a v-show="User.id == null || User.id <= 0" href="https://git.code.tencent.com/Tencent_Open_Source/APIJSON" target="_blank" >
+        <img class="ui inline black image" height="24" src="http://apijson.org:8000/images/tencent_open_logo.png">
+      </a>
 
       <a v-show="User.id == null || User.id <= 0" href="https://gitee.com/TommyLemon/APIJSON" target="_blank">
         <img class="ui inline black image" height="24" src="https://gitee.com/logo-black.svg?20171024" width="60">
