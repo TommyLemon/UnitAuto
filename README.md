@@ -25,7 +25,7 @@
 UnitAuto 不需要写任何代码，直接读取方法的属性，自动注入参数，拿到返回值和类成员变量，机器学习自动化校验。<br />
 <br />
 2.UnitAuto 这种 Runtime testing 工具无需 Mock 环境(Application, Context 等)，<br />
-更不用为 Mock 出来的环境满足不了需求导致测试用例无法通过而头疼。<br />
+更不用为 无法有效地 Mock Context 等环境相关类、第三方登录未提供 Mock 支持 等而头疼。<br />
 <br />
 <br />
 
@@ -82,10 +82,10 @@ UnitAuto 不需要写任何代码，直接读取方法的属性，自动注入�
 <br />
 
 ### 示例项目
-[UnitAuto Java 后端 Server](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo)    在线[测试](http://apijson.org:8000/unit/) <br />
-[APIJSON Java 后端 Server](https://github.com/APIJSON/APIJSON-Demo/blob/master/APIJSON-Java-Server/APIJSONBoot)    在线[测试](http://apijson.org/unit/) <br />
-[UnitAuto Android 客户端 App](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android)    直接[下载](https://files.cnblogs.com/files/tommylemon/UnitAutoDemo.apk) <br />
-[APIJSON Android 客户端 App](https://github.com/APIJSON/APIJSON-Demo/blob/master/APIJSON-Android/APIJSONTest)    直接[下载](http://files.cnblogs.com/files/tommylemon/APIJSONTest.apk)
+[UnitAuto Java 后端 Server](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo)    在线 [测试](http://apijson.org:8000/unit/) <br />
+[APIJSON Java 后端 Server](https://github.com/APIJSON/APIJSON-Demo/blob/master/APIJSON-Java-Server/APIJSONBoot)    在线 [测试](http://apijson.org/unit/) <br />
+[UnitAuto Android 客户端 App](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android)    直接 [下载](https://files.cnblogs.com/files/tommylemon/UnitAutoDemo.apk) （第一次可能失败，返回报错 JSON，一般重试一次就可以）<br />
+[APIJSON Android 客户端 App](https://github.com/APIJSON/APIJSON-Demo/blob/master/APIJSON-Android/APIJSONTest)    直接 [下载](http://files.cnblogs.com/files/tommylemon/APIJSONTest.apk) （第一次可能失败，返回报错 JSON，一般重试一次就可以）
 <br />
 <br />
 
