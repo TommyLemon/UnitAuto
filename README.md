@@ -25,7 +25,7 @@
 UnitAuto 不需要写任何代码，直接读取方法的属性，自动注入参数，拿到返回值和类成员变量，机器学习自动化校验。<br />
 <br />
 2.UnitAuto 这种 Runtime testing 工具无需 Mock 环境(Application, Context 等)，<br />
-更不用为 Mock 出来的环境满足不了需求导致测试用例无法通过而头疼。<br />
+更不用为 无法有效地 Mock 环境相关类、第三方登录未提供 Mock 支持 等而头疼。<br />
 <br />
 <br />
 
@@ -82,10 +82,10 @@ UnitAuto 不需要写任何代码，直接读取方法的属性，自动注入�
 <br />
 
 ### 示例项目
-[UnitAuto Java 后端 Server](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo)    在线[测试](http://apijson.org:8000/unit/) <br />
-[APIJSON Java 后端 Server](https://github.com/APIJSON/APIJSON-Demo/blob/master/APIJSON-Java-Server/APIJSONBoot)    在线[测试](http://apijson.org/unit/) <br />
-[UnitAuto Android 客户端 App](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android)    直接[下载](https://files.cnblogs.com/files/tommylemon/UnitAutoDemo.apk) <br />
-[APIJSON Android 客户端 App](https://github.com/APIJSON/APIJSON-Demo/blob/master/APIJSON-Android/APIJSONTest)    直接[下载](http://files.cnblogs.com/files/tommylemon/APIJSONTest.apk)
+[UnitAuto Java 后端 Server](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo)    在线 [测试](http://apijson.org:8000/unit/) <br />
+[APIJSON Java 后端 Server](https://github.com/APIJSON/APIJSON-Demo/blob/master/APIJSON-Java-Server/APIJSONBoot)    在线 [测试](http://apijson.org/unit/) <br />
+[UnitAuto Android 客户端 App](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android)    直接 [下载](https://files.cnblogs.com/files/tommylemon/UnitAutoDemo.apk) （第一次可能失败，返回报错 JSON，一般重试一次就可以）<br />
+[APIJSON Android 客户端 App](https://github.com/APIJSON/APIJSON-Demo/blob/master/APIJSON-Android/APIJSONTest)    直接 [下载](http://files.cnblogs.com/files/tommylemon/APIJSONTest.apk) （第一次可能失败，返回报错 JSON，一般重试一次就可以）
 <br />
 <br />
 
@@ -102,7 +102,7 @@ https://www.bilibili.com/video/BV1kk4y1z7bW
 ### 集成到被测项目
 #### Java 后端 Server
 ##### 1.依赖 unitauto.jar 
-放到你 [启动 Application 所在项目的 libs 目录](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo/libs)，然后 Eclipse Add to Build Path 或 Idae Add as Library <br />
+放到你 [启动 Application 所在项目的 libs 目录](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo/libs)，然后 Eclipse Add to Build Path 或 Idea Add as Library <br />
 https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo/libs <br />
 <br />
 
@@ -134,11 +134,11 @@ Controller 提供两个 POST application/json 格式的 HTTP API，分别是
 
 #### Android 客户端 App
 ##### 1.依赖 UnitAuto-Apk
-把 [UnitAuto-Apk](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android/UnitAuto-Apk) 导入到你项目 [app moudule 所在目录](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android)，settings.gradle 中
+把 [UnitAuto-Apk](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android/UnitAuto-Apk) 导入到你项目 [app moudule 所在目录](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android)，[settings.gradle](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android/settings.gradle) 中
 ```groovy
 include ':UnitAuto-Apk'
 ```
-[app moudule 所在目录](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android)，build.gradle 中
+[app moudule 目录](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android/app)，[build.gradle](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android/app/build.gradle) 中
 ```groovy
 dependencies {
     api project(':UnitAuto-Apk')
@@ -180,8 +180,6 @@ dependencies {
         android:onClick="onClickUnit"
         android:text="UnitAutoActivity"
         android:textAllCaps="false"
-        android:layout_below="@id/tvMain"
-        android:layout_centerHorizontal="true"
         />
 ```
 参考 [layout/activity_main](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Android/app/src/main/res/layout/activity_main.xml) <br />
@@ -223,8 +221,8 @@ https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server
 [https://github.com/TommyLemon](https://github.com/TommyLemon)<br />
 
 ##### QQ群聊
-734652054（免费）<a target="_blank" style="bottom:2px;padding-top:4px" href="https://qm.qq.com/cgi-bin/qm/qr?k=rJLwYzITdoQBfiGUOjMrM3eJDyks1tJP&jump_from=webapi"><img border="0" src="http://pub.idqqimg.com/wpa/images/group.png" alt="APIJSON-Free" title="APIJSON技术讨论群" style="bottom:2px;margin-top:4px" /></a>    
-607020115（付费）<a target="_blank" style="bottom:2px;padding-top:4px" href="https://qm.qq.com/cgi-bin/qm/qr?k=1wnUodOM6ngXnl0rubf06DuAUbOX-u44&jump_from=webapi"><img border="0" src="http://pub.idqqimg.com/wpa/images/group.png" alt="APIJSON-Fee" title="APIJSON付费解决群"  style="bottom:2px;margin-top:4px" /></a>    
+734652054（新）<a target="_blank" style="bottom:2px;padding-top:4px" href="https://qm.qq.com/cgi-bin/qm/qr?k=rJLwYzITdoQBfiGUOjMrM3eJDyks1tJP&jump_from=webapi"><img border="0" src="http://pub.idqqimg.com/wpa/images/group.png" alt="APIJSON-Free" title="APIJSON技术讨论群" style="bottom:2px;margin-top:4px" /></a>    
+607020115（旧）<a target="_blank" style="bottom:2px;padding-top:4px" href="https://qm.qq.com/cgi-bin/qm/qr?k=1wnUodOM6ngXnl0rubf06DuAUbOX-u44&jump_from=webapi"><img border="0" src="http://pub.idqqimg.com/wpa/images/group.png" alt="APIJSON-Fee" title="APIJSON付费解决群"  style="bottom:2px;margin-top:4px" /></a>    
 
 如果有什么问题或建议可以 [提ISSUE](https://github.com/TommyLemon/UnitAuto/issues) 或 加群，交流技术，分享经验。<br >
 如果你解决了某些bug，或者新增了一些功能，欢迎 [贡献代码](https://github.com/TommyLemon/UnitAuto/pulls)，感激不尽。
