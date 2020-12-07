@@ -25,7 +25,8 @@
 UnitAuto 不需要写任何代码，直接读取方法的属性，自动注入参数，拿到返回值和类成员变量，机器学习自动化校验。<br />
 <br />
 2.UnitAuto 这种 Runtime testing 工具无需 Mock 环境(Application, Context 等)，<br />
-更不用为 无法有效地 Mock 环境相关类、第三方登录未提供 Mock 支持 等而头疼。<br />
+更不用为 无法有效地 Mock 环境相关类、第三方登录未提供 Mock 支持 等而头疼，<br />
+只要被测方法满足 有 return 值、有 interface 回调、改变所在类的成员变量 field 中至少一点就能测。
 <br />
 <br />
 
@@ -202,7 +203,7 @@ dependencies {
 可以直接[下载源码](https://github.com/TommyLemon/UnitAuto/archive/master.zip)解压后用浏览器打开 [UnitAuto-Admin](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Admin)/index.html，建议用 Chrome 或 火狐 (Safari、Edge、IE 等可能有兼容问题)。<br />
 也可以直接访问官网的线上环境 http://apijson.org/unit 或开发环境 http://apijson.org:8000/unit 。<br />
 <br />
-点右上角设置项 "项目服务器地址 URL"，把输入框内基地址改为你主机的地址(例如 http://localhost:8080 )<br />
+点右上角设置项 "项目服务器地址 URL"，把输入框内基地址改为你主机的地址(例如 http://192.168.0.102:8080 )<br />
 <br />
 右上角登录的默认管理员账号为 13000082001 密码为 123456，<br />
 <br />
@@ -211,7 +212,13 @@ dependencies {
 等它完成后自动显示测试用例列表，点击列表项进去查看详情和手动测试，或者一键自动回归测试全部 方法/函数。
 <br />
 
-自动生成文档、自动管理测试用例 这两个功能 需要部署APIJSON后端，见 <br /> 
+如果测试 Android/iOS App，需要保证 手机/平板 与 使用 UnitAuto-Admin 网页的电脑 连接同一个局域网，<br />
+如果使用 Android/iOS 模拟器，则一定都是在同一个局域网，并且可以用 http://localhost:端口 进行访问。<br />
+![](https://user-images.githubusercontent.com/5738175/87251395-f5bdfd00-c49d-11ea-809f-3c7330d7b6e1.png)
+<br />
+<br />
+<br />
+自动管理测试用例 这个功能 需要部署APIJSON后端，见 <br /> 
 https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server
 <br />
 <br />
