@@ -213,7 +213,8 @@ dependencies {
 <br />
 
 如果测试 Android/iOS App，需要保证和使用 UnitAuto-Admin 网页的电脑与手机/平板连接同一个局域网，<br />
-如果是 Android/iOS 模拟器，则一定都是在同一个局域网，并且可以用 http://localhost:端口 进行访问。<br />
+如果使用 Android/iOS 模拟器，则一定都是在同一个局域网，并且可以用 http://localhost:端口 进行访问。<br />
+![](https://user-images.githubusercontent.com/5738175/87251395-f5bdfd00-c49d-11ea-809f-3c7330d7b6e1.png)
 <br />
 自动生成文档、自动管理测试用例 这两个功能 需要部署APIJSON后端，见 <br /> 
 https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server
