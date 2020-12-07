@@ -122,8 +122,8 @@ https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo/libs <br /
 ##### 3.提供接口给 UnitAuto 后台管理工具
 Controller 提供两个 POST application/json 格式的 HTTP API，分别是
 ```
-/method/list    动态扫描方法，可以单纯接收入参并转到发 MethodUtil.listMethod(String request)
-/method/invoke  动态执行方法，可以单纯接收入参并转到发 MethodUtil.invokeMethod(String request, Object instance, Listener<JSONObject> listener)
+/method/list    动态扫描方法，可以单纯接收入参并转发到 MethodUtil.listMethod(String request)
+/method/invoke  动态执行方法，可以单纯接收入参并转发到 MethodUtil.invokeMethod(String request, Object instance, Listener<JSONObject> listener)
 ```
 参考 [DemoController](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java-Demo/src/main/java/unitauto/demo/controller/DemoController.java) <br />
 <br />
