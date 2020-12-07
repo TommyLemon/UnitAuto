@@ -32,7 +32,7 @@ UnitAuto 不需要写任何代码，直接读取方法的属性，自动注入�
 
 ### 原理说明
 被测项目不需要写任何单元测试代码（逻辑代码、注解代码等全都不要），<br />
-UnitAuto 会自动生成测试参数，并执行方法，拿到返回值进行校验。<br />
+UnitAuto 会自动生成测试参数，并执行方法，拿到返回值等信息进行校验。<br />
 泛型、接口等自动模拟，异步执行方法自动记录回调过程，都是零代码。<br />
 <br />
 [UnitAuto-Admin](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Admin) 是类似 APIAuto 的机器学习自动化测试工具（查看、上传、执行、测试 后端项目中的方法等），<br />
