@@ -212,7 +212,7 @@ dependencies {
 等它完成后自动显示测试用例列表，点击列表项进去查看详情和手动测试，或者一键自动回归测试全部 方法/函数。
 <br />
 
-如果测试 Android/iOS App，需要保证和使用 UnitAuto-Admin 网页的电脑与手机/平板连接同一个局域网，<br />
+如果测试 Android/iOS App，需要保证 手机/平板 与 使用 UnitAuto-Admin 网页的电脑 连接同一个局域网，<br />
 如果使用 Android/iOS 模拟器，则一定都是在同一个局域网，并且可以用 http://localhost:端口 进行访问。<br />
 ![](https://user-images.githubusercontent.com/5738175/87251395-f5bdfd00-c49d-11ea-809f-3c7330d7b6e1.png)
 <br />
