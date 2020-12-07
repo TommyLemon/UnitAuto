@@ -25,7 +25,8 @@
 UnitAuto 不需要写任何代码，直接读取方法的属性，自动注入参数，拿到返回值和类成员变量，机器学习自动化校验。<br />
 <br />
 2.UnitAuto 这种 Runtime testing 工具无需 Mock 环境(Application, Context 等)，<br />
-更不用为 无法有效地 Mock 环境相关类、第三方登录未提供 Mock 支持 等而头疼。<br />
+更不用为 无法有效地 Mock 环境相关类、第三方登录未提供 Mock 支持 等而头疼，<br />
+只要被测方法满足 有返回值、有 interface 回调、改变所在类的成员变量至少一个就能测。
 <br />
 <br />
 
@@ -211,6 +212,9 @@ dependencies {
 等它完成后自动显示测试用例列表，点击列表项进去查看详情和手动测试，或者一键自动回归测试全部 方法/函数。
 <br />
 
+如果测试 Android/iOS App，需要保证和使用 UnitAuto-Admin 网页的电脑与手机/平板连接同一个局域网，<br />
+如果是 Android/iOS 模拟器，则一定都是在同一个局域网，并且可以用 http://localhost:port(端口) 进行访问。<br />
+<br />
 自动生成文档、自动管理测试用例 这两个功能 需要部署APIJSON后端，见 <br /> 
 https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server
 <br />
