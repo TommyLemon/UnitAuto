@@ -26,17 +26,17 @@ UnitAuto 不需要写任何代码，直接读取方法的属性，自动注入�
 <br />
 2.UnitAuto 这种 Runtime testing 工具无需 Mock 环境(Application, Context 等)，<br />
 更不用为 无法有效地 Mock 环境相关类、第三方登录未提供 Mock 支持 等而头疼，<br />
-只要被测方法满足 有 return 值、有 interface 回调、改变所在类的成员变量 field 这 3 点中至少一点就能测。
+只要被测方法满足 有 return 值、有 interface 回调、改变成员变量 field 这 3 点中至少一点就能测。
 <br />
 <br />
 
 ### 原理说明
 被测项目不需要写任何单元测试代码（逻辑代码、注解代码等全都不要），<br />
-UnitAuto 会自动生成测试参数，并执行方法，拿到返回值等信息进行校验。<br />
+UnitAuto 会自动生成测试参数，并执行方法，拿到返回值等进行校验。<br />
 泛型、接口等自动模拟，异步执行方法自动记录回调过程，都是零代码。<br />
 <br />
-[UnitAuto-Admin](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Admin) 是类似 APIAuto 的机器学习自动化测试工具（查看、上传、执行、测试 后端项目中的方法等），<br />
-[UnitAuto-Java](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java) 提供扫描所有方法、执行某个方法两个 API （主要引入 MethodUtil.java 这个类，里面已实现）。<br />
+[UnitAuto-Admin](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Admin) 是类似 [APIAuto](https://github.com/TommyLemon/APIAuto) 的机器学习自动化测试工具（查看、上传、执行、测试 后端项目中的方法等），<br />
+[UnitAuto-Java](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java) 提供扫描所有方法、执行某个方法两个 API （主要引入 [MethodUtil.java](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java/src/main/java/unitauto/MethodUtil.java) 这个类，里面已实现）。<br />
 <br />
 
 ##### 通过扫描项目中的可访问的 package, class, method 来生成和导入测试用例  
@@ -249,7 +249,7 @@ https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server
 <br />
 
 ### 我要赞赏
-创作不易，右上角点 ⭐Star 支持下吧，谢谢 ^_^ <br />
+创作不易，右上角点 ⭐ Star 支持下吧，谢谢 ^_^ <br />
 [https://gitee.com/TommyLemon/UnitAuto](https://gitee.com/TommyLemon/UnitAuto)
 <br />
 <br />
