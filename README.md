@@ -218,7 +218,7 @@ dependencies {
 <br />
 <br />
 <br />
-自动管理测试用例 这两个功能 需要部署APIJSON后端，见 <br /> 
+自动管理测试用例 这个功能 需要部署APIJSON后端，见 <br /> 
 https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server
 <br />
 <br />
