@@ -3228,12 +3228,14 @@
         doc = d;
         vOutput.value += (
           '\n\n\n## 包和类文档\n自动查数据库表和字段属性来生成 \n\n' + d
-          + '<h3 align="center">简介</h3>'
-          + '<p align="center">本站为 UnitAuto-自动化单元测试平台'
-          + '<br>提供 用例和文档托管、机器学习自动化测试、自动生成用例和文档 等服务'
+          + '<h3 align="center">关于</h3>'
+          + '<p align="center">UnitAuto-零代码单元测试'
+          + '<br>机器学习自动化测试、一键导入单元测试用例、自动生成复杂参数组合'
           + '<br>由 <a href="https://github.com/TommyLemon/UnitAuto" target="_blank">UnitAuto(前端网页工具)</a>, <a href="https://github.com/Tencent/APIJSON" target="_blank">APIJSON(后端接口服务)</a> 等提供技术支持'
           + '<br>遵循 <a href="http://www.apache.org/licenses/LICENSE-2.0" target="_blank">Apache-2.0 开源协议</a>'
-          + '<br>Copyright &copy; 2019-' + new Date().getFullYear() + ' Tommy Lemon<br><br></p>'
+          + '<br>Copyright &copy; 2019-' + new Date().getFullYear() + ' Tommy Lemon'
+          + '<br><a href="https://beian.miit.gov.cn/" target="_blank"><span >粤ICP备18005508号-1</span></a>'
+          + '</p><br><br>'
         );
 
         App.view = 'markdown';
