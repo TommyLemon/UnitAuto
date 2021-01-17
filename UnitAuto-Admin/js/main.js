@@ -2377,6 +2377,10 @@
               var item = App.accounts[App.currentAccountIndex]
               item.isLoggedIn = false
               App.onClickAccount(App.currentAccountIndex, item) //自动登录测试账号
+
+              if (user.id > 0) {
+                App.showTestCase(true, false)
+              }
             }
 
           })
@@ -3201,18 +3205,20 @@
             break;
         }
 
-        s += '\n\n#### 开放源码 '
-          + '\nAPIJSON 接口工具: https://github.com/TommyLemon/UnitAuto '
-          + '\nAPIJSON 官方文档: https://github.com/vincentCheng/apijson-doc '
-          + '\nAPIJSON 英文文档: https://github.com/ruoranw/APIJSONdocs '
-          + '\nAPIJSON 官方网站: https://github.com/APIJSON/APIJSON.org '
-          + '\nAPIJSON -Java版: https://github.com/Tencent/APIJSON '
-          + '\nAPIJSON - C# 版: https://github.com/liaozb/APIJSON.NET '
-          + '\nAPIJSON - PHP版: https://github.com/qq547057827/apijson-php '
-          + '\nAPIJSON -Node版: https://github.com/kevinaskin/apijson-node '
-          + '\nAPIJSON - Go 版: https://github.com/crazytaxi824/APIJSON '
-          + '\nAPIJSON -Python: https://github.com/zhangchunlin/uliweb-apijson '
-          + '\n感谢热心的作者们的贡献，GitHub 右上角点 ⭐Star 支持下他们吧 ^_^';
+        if (((App.User || {}).id || 0) > 0) {
+          s += '\n\n#### 开放源码 '
+            + '\nAPIJSON 接口测试: https://github.com/TommyLemon/APIAuto '
+            + '\nAPIJSON 单元测试: https://github.com/TommyLemon/UnitAuto '
+            + '\nAPIJSON 官方文档: https://github.com/vincentCheng/apijson-doc '
+            + '\nAPIJSON 英文文档: https://github.com/ruoranw/APIJSONdocs '
+            + '\nAPIJSON 官方网站: https://github.com/APIJSON/apijson.org '
+            + '\nAPIJSON -Java版: https://github.com/Tencent/APIJSON '
+            + '\nAPIJSON - C# 版: https://github.com/liaozb/APIJSON.NET '
+            + '\nAPIJSON - PHP版: https://github.com/qq547057827/apijson-php '
+            + '\nAPIJSON -Node版: https://github.com/kevinaskin/apijson-node '
+            + '\nAPIJSON -Python: https://github.com/zhangchunlin/uliweb-apijson '
+            + '\n感谢热心的作者们的贡献，GitHub 右上角点 ⭐Star 支持下他们吧 ^_^';
+        }
 
         return s;
       },
@@ -3234,7 +3240,7 @@
           + '<br>由 <a href="https://github.com/TommyLemon/UnitAuto" target="_blank">UnitAuto(前端网页工具)</a>, <a href="https://github.com/Tencent/APIJSON" target="_blank">APIJSON(后端接口服务)</a> 等提供技术支持'
           + '<br>遵循 <a href="http://www.apache.org/licenses/LICENSE-2.0" target="_blank">Apache-2.0 开源协议</a>'
           + '<br>Copyright &copy; 2019-' + new Date().getFullYear() + ' Tommy Lemon'
-          + '<br><a href="https://beian.miit.gov.cn/" target="_blank"><span >粤ICP备18005508号-1</span></a>'
+          // + '<br><a href="https://beian.miit.gov.cn/" target="_blank"><span >粤ICP备18005508号-1</span></a>'
           + '</p><br><br>'
         );
 
@@ -3852,10 +3858,11 @@
               if (generateName) {
                 var valStr;
                 if (val instanceof Array) {
-                  valStr = '[' + val.length + ']';
+                  valStr = val.length <= 0 ? '[]' : '[..' + val.length + '..]';
                 }
                 else if (val instanceof Object) {
-                  valStr = '{...}';
+                  var kl = Object.keys(val).length
+                  valStr = kl <= 0 ? '{}' : '{..' + kl + '..}';
                 }
                 else if (typeof val == 'boolean') {
                   valStr = '' + val;
@@ -4262,19 +4269,19 @@
             break;
           case JSONResponse.COMPARE_KEY_MORE:
             it.compareColor = 'green'
-            it.compareMessage = '新增字段/新增值'
+            it.compareMessage = '新增字段/新增值 等'
             break;
           case JSONResponse.COMPARE_VALUE_CHANGE:
             it.compareColor = 'blue'
-            it.compareMessage = '值改变'
+            it.compareMessage = '值改变 等'
             break;
           case JSONResponse.COMPARE_KEY_LESS:
             it.compareColor = 'orange'
-            it.compareMessage = '缺少字段/整数变小数'
+            it.compareMessage = '缺少字段/整数变小数 等'
             break;
           case JSONResponse.COMPARE_TYPE_CHANGE:
             it.compareColor = 'red'
-            it.compareMessage = '状态码/异常/值类型 改变'
+            it.compareMessage = '状态码/异常/值类型 改变等'
             break;
           default:
             it.compareColor = 'white'
@@ -4523,21 +4530,67 @@
             // }
 
 
-            var standard = StringUtil.isEmpty(testRecord.standard, true) ? null : JSON.parse(testRecord.standard);
+            var standard = (StringUtil.isEmpty(testRecord.standard, true) ? null : JSON.parse(testRecord.standard)) || {};
+
             var code = currentResponse.code;
             var thrw = currentResponse.throw;
+            var msg = currentResponse.msg;
+
+            var hasCode = standard.code != null;
+            var isCodeChange = standard.code != code;
+            var exceptions = standard.exceptions || [];
+
             delete currentResponse.code; //code必须一致
             delete currentResponse.throw; //throw必须一致
 
             var rsp = JSON.parse(JSON.stringify(currentResponse || {}))
             rsp = JSONResponse.array2object(rsp, 'methodArgs', ['methodArgs'], true)
+            
+            var find = false;
+            if (isCodeChange && hasCode) {  // 走异常分支
+              for (var i = 0; i < exceptions.length; i++) {
+                var ei = exceptions[i];
+                if (ei != null && ei.code == code && ei.throw == thrw) {
+                  find = true;
+                  ei.repeat = (ei.repeat || 0) + 1;  // 统计重复出现次数
+                  break;
+                }
+              }
+
+              if (find) {
+                delete currentResponse.msg;
+              }
+            }
+
 
             var isML = this.isMLEnabled;
-            var stddObj = isML ? JSONResponse.updateStandard(standard || {}, rsp, ['call()[]']) : {};
-            stddObj.code = code;
+            var stddObj = isML ? (isCodeChange && hasCode ? standard : JSONResponse.updateStandard(standard, rsp, ['call()[]'])) : {};
+
             currentResponse.code = code;
-            stddObj.throw = thrw;
             currentResponse.throw = thrw;
+
+            if (isCodeChange) {
+              if (hasCode != true) {  // 走正常分支
+                stddObj.code = code;
+                stddObj.throw = thrw;
+              }
+              else {  // 走异常分支
+                currentResponse.msg = msg;
+
+                if (find != true) {
+                  exceptions.push({
+                    code: code,
+                    'throw': thrw,
+                    msg: msg
+                  })
+
+                  stddObj.exceptions = exceptions;
+                }
+              }
+            }
+            else {
+              stddObj.repeat = (stddObj.repeat || 0) + 1;  // 统计重复出现次数
+            }
 
             const isNewRandom = isRandom && random.id <= 0
 
@@ -4797,6 +4850,11 @@
       this.listHistory()
       this.transfer()
 
+      if (this.User != null && this.User.id != null && this.User.id > 0) {
+        setTimeout(function () {
+          App.showTestCase(true, false)  // 本地历史仍然要求登录  App.User == null || App.User.id == null)
+        }, 1000)
+      }
     }
   })
 })()

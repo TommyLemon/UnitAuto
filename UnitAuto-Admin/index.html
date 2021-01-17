@@ -107,16 +107,12 @@
                 </a>
                 <ul class="themes pop" style="z-index: 200;padding: 0px;margin-top: 10px;width: 300px">
                   <a style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(StringUtil.isEmpty(host, true), 3)">{{ StringUtil.isEmpty(host, true) ? '隐藏(固定)方法路径: 可用空格隔开' : '显示(编辑)方法路径: \n' + host }}</a>
-                  <a style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(! isDelegateEnabled, 9)">服务器代理: {{ isDelegateEnabled ? '已开启，点击关闭' : '已关闭，点击开启' }}</a>
+                  <a style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(! isDelegateEnabled, 9)">托管服务器代理: {{ isDelegateEnabled ? '已开启，点击关闭' : '已关闭，点击开启' }}</a>
                   <a style="border-bottom: #DDD 1px solid;width: 100%;display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden;" href="javascript:void(0)" @click="showConfig(! isRandomShow, 5)">{{ isRandomShow ? '隐藏(固定)随机测试 Random Test' : '显示(编辑)随机测试 Random Test' }}</a>
                   <a style="border-bottom: #DDD 1px solid;width: 100%;display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden;" href="javascript:void(0)" @click="showConfig(! isHeaderShow, 4)">{{ isHeaderShow ? '隐藏(固定)请求头 Request Header' : '显示(编辑)请求头 Request Header' }}</a>
                   <a v-show="User.id != null && User.id > 0" style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(true, 10)">查看、同步方法文档: 可先编辑再上传</a>
                   <a style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(true, 8)">项目服务器地址URL: {{ project || '点击设置' }}</a>
                   <a v-show="User.id == null || User.id <= 0" style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(true, 6)">托管服务器地址URL: {{ server || '点击设置' }}</a>
-                  <li v-show="User.id != null && User.id > 0" style="padding: 0px;margin: 0px; border-bottom: #DDD 1px solid;width: 100%; display: inline-block;text-align: center;" >
-                    <img style="padding: 0px;margin: 0px" src="img/wechat_collect.jpg" />
-                    <div style="padding: 0px;margin: 0px">微信扫码，请作者喝咖啡~</div>
-                  </li>
                 </ul>
       </span>
 
@@ -316,7 +312,7 @@
                             <a >条</a>
                         </div>
           <textarea id="vRandom" style="width: 100%;height: 100%;" wrap="off"
-                    placeholder="常用：
+                    placeholder="# 常用：
 RANDOM_IN(val0:Any, val1:Any ...)  // 从选项内随机取值
 RANDOM_INT(min:Integer, max:Integer)  // 从范围内随机取整数
 RANDOM_DB(min:Integer, max:Integer)  // 从数据库随机取值
@@ -326,7 +322,7 @@ ORDER_IN(val0:Any, val1:Any ...)  // 从选项内顺序取值
 ORDER_INT(min:Integer, max:Integer)  // 从范围内顺序取整数
 ORDER_DB(min:Integer, max:Integer)  // 从数据库顺序取值
 其中 RANDOM 开头的是随机函数；ORDER 开头的是顺序函数，可以使用 + - 升降序 和 step 跨步，例如 ORDER_IN-(1, 2, 3) 降序取值，ORDER_INT+3(0, 100) 间隔 step = 3 位来升序取整数。
-模板：
+# 模板：
 format: ORDER_IN(true, false, null, undefined)  // 从选项中顺序取值
 User/id id>: RANDOM_DB()  // 用 id> 替换 User 内的 id，从数据库随机取值
 []/page: Math.round(100*Math.random())  // 通过 JavaScript 代码来自定义 [] 内的 page
