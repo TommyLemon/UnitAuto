@@ -1105,7 +1105,7 @@ var JSONResponse = {
       level = 0;
     }
 
-    if (type == 'array' || type == 'number' || type == 'string') {
+    // 似乎无论怎样都要把 real 加进 values  if (isLength || (type != 'object' || type != 'array')) {
 
       var levelName = isLength != true ? 'valueLevel' : 'lengthLevel';
       target[levelName] = level;
@@ -1265,7 +1265,7 @@ var JSONResponse = {
           //   + ('<=' + vals[0] + (vals.length <= 1 ? '' : ',>=' + vals[vals.length - 1]));
           break;
       }
-    }
+    // }
 
     return target;
   },
