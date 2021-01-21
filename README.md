@@ -7,7 +7,7 @@
 <p align="center" >
   <a href="https://github.com/TommyLemon/UnitAuto#%E9%83%A8%E7%BD%B2%E6%96%B9%E6%B3%95">使用文档</a>
   <a href="https://www.bilibili.com/video/BV1Tk4y1R7Yo">视频教程</a>
-  <a href="http://apijson.org/unit">在线体验</a>
+  <a href="http://apijson.cn/unit">在线体验</a>
 </p>
 
 <p align="center" >
@@ -201,7 +201,7 @@ dependencies {
 
 ### 部署后台管理工具
 可以直接[下载源码](https://github.com/TommyLemon/UnitAuto/archive/master.zip)解压后用浏览器打开 [UnitAuto-Admin](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Admin)/index.html，建议用 Chrome 或 火狐 (Safari、Edge、IE 等可能有兼容问题)。<br />
-也可以直接访问官网的线上环境 http://apijson.org/unit 或开发环境 http://apijson.org:8000/unit 。<br />
+也可以直接访问官网的线上环境 http://apijson.cn/unit 或开发环境 http://apijson.org:8000/unit 。<br />
 <br />
 点右上角设置项 "项目服务器地址 URL"，把输入框内基地址改为你主机的地址(例如 http://192.168.0.102:8080 )<br />
 <br />
