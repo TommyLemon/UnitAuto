@@ -24,6 +24,7 @@ import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.os.Environment;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
@@ -34,12 +35,14 @@ import android.widget.Toast;
 import com.alibaba.fastjson.JSONObject;
 import com.koushikdutta.async.AsyncServer;
 import com.koushikdutta.async.http.Headers;
+import com.koushikdutta.async.http.Multimap;
 import com.koushikdutta.async.http.body.AsyncHttpRequestBody;
 import com.koushikdutta.async.http.server.AsyncHttpServer;
 import com.koushikdutta.async.http.server.AsyncHttpServerRequest;
 import com.koushikdutta.async.http.server.AsyncHttpServerResponse;
 import com.koushikdutta.async.http.server.HttpServerRequestCallback;
 
+import java.io.File;
 import java.lang.reflect.Method;
 
 import unitauto.JSON;
@@ -79,6 +82,8 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
     private View pbUnit;
 
     SharedPreferences cache;
+
+    File parentDirectory;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -110,6 +115,15 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
             }
         });
 
+
+      parentDirectory = getExternalFilesDir(Environment.DIRECTORY_PICTURES); // new File(screenshotDirPath);
+      if (parentDirectory.exists() == false) {
+        try {
+          parentDirectory.mkdir();
+        } catch (Throwable e) {
+          e.printStackTrace();
+        }
+      }
     }
 
     @Override
@@ -215,13 +229,14 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
         server.get("/", this);
         server.post("/method/list", this);
         server.post("/method/invoke", this);
+        server.get("/download", this);
         server.listen(mAsyncServer, port);
     }
 
     @Override
     public void onRequest(final AsyncHttpServerRequest asyncHttpServerRequest, final AsyncHttpServerResponse asyncHttpServerResponse) {
-        Headers allHeaders = asyncHttpServerResponse.getHeaders();
-        Headers reqHeaders = asyncHttpServerRequest.getHeaders();
+        final Headers allHeaders = asyncHttpServerResponse.getHeaders();
+        final Headers reqHeaders = asyncHttpServerRequest.getHeaders();
 
         String corsHeaders = reqHeaders.get("access-control-request-headers");
         String corsMethod = reqHeaders.get("access-control-request-method");
@@ -317,6 +332,29 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
                     });
                     break;
 
+                case "/download":
+                  new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                      try {
+                        Multimap query = asyncHttpServerRequest.getQuery();
+                        String fileName = query == null ? null : query.getString("name");
+                        File file = new File(parentDirectory.getAbsolutePath() + "/" + fileName);
+
+                        allHeaders.set("Content-Disposition", String.format("attachment;filename=\"%s", fileName));
+                        allHeaders.set("Cache-Control", "no-cache,no-store,must-revalidate");
+                        allHeaders.set("Pragma", "no-cache");
+                        allHeaders.set("Expires", "0");
+
+                        asyncHttpServerResponse.sendFile(file);
+                      }
+                      catch (Exception e) {
+                        e.printStackTrace();
+                        send(asyncHttpServerRequest, asyncHttpServerResponse, request, MethodUtil.JSON_CALLBACK.newErrorResult(e).toJSONString());
+                      }
+                    }
+                  }).start();
+                  break;
                 default:
                     asyncHttpServerResponse.end();
                     break;
