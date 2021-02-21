@@ -42,7 +42,7 @@ CREATE TABLE `Method` (
   `detail` varchar(1000) NOT NULL COMMENT '详细描述',
   `date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1604152910193 DEFAULT CHARSET=utf8 COMMENT='要做单元测试的方法';
+) ENGINE=InnoDB AUTO_INCREMENT=1604152910193 DEFAULT CHARSET=utf8 COMMENT='要做单元测试的方法(如果用到单元测试，则必须)';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -64,4 +64,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2020-11-02  1:34:22
+-- Dump completed on 2021-02-22  1:48:16
