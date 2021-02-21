@@ -5679,6 +5679,14 @@ var CodeUtil = {
     }
 
     switch (key) {
+      case 'ui':
+        return ['true', 'false'].indexOf(value) < 0 ? ' ! value必须是[true, false]中的一种！' : CodeUtil.getComment('是否在 UI 线程执行', false, '  ');
+      case 'reuse':
+        return ['true', 'false'].indexOf(value) < 0 ? ' ! value必须是[true, false]中的一种！' : CodeUtil.getComment('是否复用实例', false, '  ');
+      case 'timeout':
+        return CodeUtil.getType4Request(value) != 'number' ? ' ! value必须是Integer类型！且必须在 [0, 60000] 内！' : CodeUtil.getComment('超时时间', false, '  ');
+      case 'mock':
+        return ['true', 'false'].indexOf(value) < 0 ? ' ! value必须是[true, false]中的一种！' : CodeUtil.getComment('是否生成模拟值', false, '  ');
       case 'static':
         return ['true', 'false'].indexOf(value) < 0 ? ' ! value必须是[true, false]中的一种！' : CodeUtil.getComment('是否为 static 静态方法', false, '  ');
       case 'this':
@@ -5962,6 +5970,8 @@ var CodeUtil = {
     var key = (pathKeys == null || pathKeys.length <= 0 ? null : pathKeys[pathKeys.length - 1]) || ''
 
     switch (key) {
+      case 'warn':
+        return '警告';
       case 'time':
         if (CodeUtil.getType4Request(value) == 'number') {
           return '调用时间';
