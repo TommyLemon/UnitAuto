@@ -52,6 +52,7 @@ import com.alibaba.fastjson.util.TypeUtils;
  * @author Lemon
  */
 public class MethodUtil {
+	public static final String TAG = "MethodUtil";
 
 	public interface Listener<T> {
 		void complete(T data, Method method, InterfaceProxy proxy, Object... extras) throws Exception;
@@ -115,6 +116,7 @@ public class MethodUtil {
 	public static String KEY_METHOD = "method";
 	public static String KEY_MOCK = "mock";
 	public static String KEY_RETURN = "return";
+	public static String KEY_TIME_DETAIL = "time:start|duration|end";
 	public static String KEY_CLASS_ARGS = "classArgs";
 	public static String KEY_METHOD_ARGS = "methodArgs";
 	public static String KEY_CALLBACK = "callback";
@@ -652,10 +654,16 @@ public class MethodUtil {
 
 		Method method = clazz.getMethod(methodName, types);
 
+		final long[] startTime = new long[]{ System.currentTimeMillis() }; // 必须在 itemListener 前初始化，但又得在后面重新赋值以获得最准确的时间
+		
 		Listener<Object> itemListener = new Listener<Object>() {
 
 			@Override
 			public void complete(Object data, Method m, InterfaceProxy proxy, Object... extra) throws Exception {
+				long endTime = System.currentTimeMillis();
+				long duration = endTime - startTime[0];
+				Log.d(TAG, "getInvokeResult  endTime = " + endTime + ";  duration = " + duration + ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n\n\n");
+				
 				if (listener == null) {
 					return;
 				}
@@ -692,6 +700,7 @@ public class MethodUtil {
 				}
 
 				result.put(KEY_METHOD_ARGS, finalMethodArgs);
+				result.put(KEY_TIME_DETAIL, startTime[0] + "|" + duration + "|" + endTime);
 
 				if (listener != null) {
 					listener.complete(result);
@@ -745,8 +754,11 @@ public class MethodUtil {
 			}
 		}
 
+		startTime[0] = System.currentTimeMillis();  // 排除前面初始化参数的最准确时间
+		Log.d(TAG, "getInvokeResult  startTime = " + startTime[0] + "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n\n ");
+		
 		Object val = method.invoke(instance, args);
-
+		
 		if (isSync) {
 			if (listener != null) {
 				itemListener.complete(val);
