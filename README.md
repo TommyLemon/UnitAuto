@@ -85,7 +85,7 @@ UnitAuto 会自动生成测试参数，并执行方法，拿到返回值等进�
 ### 示例项目
 [UnitAuto Java 后端 Server](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo)    在线 [测试](http://apijson.org:8000/unit/) <br />
 [APIJSON Java 后端 Server](https://github.com/APIJSON/APIJSON-Demo/blob/master/APIJSON-Java-Server/APIJSONBoot)    在线 [测试](http://apijson.org/unit/) <br />
-[UnitAuto Android 客户端 App](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android)    直接 [下载](https://github.com/TommyLemon/UnitAuto/releases/download/2.6.0/UnitAutoDemo.apk) （第一次可能失败，返回报错 JSON，一般重试一次就可以）<br />
+[UnitAuto Android 客户端 App](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android)    直接 [下载](https://github.com/TommyLemon/UnitAuto/releases/download/2.6.0/UnitAutoApp.apk) （第一次可能失败，返回报错 JSON，一般重试一次就可以）<br />
 [APIJSON Android 客户端 App](https://github.com/APIJSON/APIJSON-Demo/blob/master/APIJSON-Android/APIJSONTest)    直接 [下载](https://github.com/TommyLemon/UnitAuto/releases/download/2.5.0/APIJSONTest.apk) （第一次可能失败，返回报错 JSON，一般重试一次就可以）
 <br />
 <br />
