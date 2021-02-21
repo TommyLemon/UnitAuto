@@ -3,8 +3,8 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>unitauto</groupId>
 	<artifactId>unitauto</artifactId>
-	<version>1.0.0</version>
-	<name>UnitAuto-Java</name>
+	<version>2.5.2</version>
+	<name>UnitAuto</name>
 	
 	<build>
 		<plugins>
