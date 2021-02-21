@@ -38,6 +38,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.TimeoutException;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
@@ -102,8 +105,9 @@ public class MethodUtil {
 	public static int CODE_SERVER_ERROR = 500;
 	public static String MSG_SUCCESS = "success";
 
-
+	public static String KEY_UI = "ui";
 	public static String KEY_TIME = "time";
+	public static String KEY_TIMEOUT = "timeout";
 	public static String KEY_PACKAGE = "package";
 	public static String KEY_THIS = "this";
 	public static String KEY_CLASS = "class";
@@ -303,6 +307,8 @@ public class MethodUtil {
 	/**执行方法
 	 * @param req :
 	 {
+	    "ui": false,  //放 UI 线程执行
+	    "timeout": 0,  //超时时间
 		"package": "apijson.demo.server",
 		"class": "DemoFunction",
 		"constructor": "getInstance",  //如果是类似单例模式的类，不能用默认构造方法，可以自定义获取实例的方法，传参仍用 classArgs
@@ -347,46 +353,115 @@ public class MethodUtil {
 		if (req == null) {
 			req = new JSONObject(true);
 		}
+
 		String pkgName = req.getString(KEY_PACKAGE);
 		String clsName = req.getString(KEY_CLASS);
 		String cttName = req.getString(KEY_CONSTRUCTOR);
 		String methodName = req.getString(KEY_METHOD);
 
+		long startTime = System.currentTimeMillis();
 		try {
+			// 客户端才用	 boolean ui = req.getBooleanValue(KEY_UI);
+			final boolean static_ = req.getBooleanValue(KEY_STATIC);
+			final long timeout = req.getLongValue(KEY_TIMEOUT);
+			Object this_ = req.get(KEY_THIS);
+			List<Argument> clsArgs = getArgList(req, KEY_CLASS_ARGS);
+			List<Argument> methodArgs = getArgList(req, KEY_METHOD_ARGS);
+
 			Class<?> clazz = getInvokeClass(pkgName, clsName);
 			if (clazz == null) {
 				throw new ClassNotFoundException("找不到 " + pkgName + "." + clsName + " 对应的类！");
 			}
 
-			Object this_ = req.get(KEY_THIS);
 			if (this_ != null) {
-				if (StringUtil.isNotEmpty(cttName, true) || req.get(KEY_CLASS_ARGS) != null) {
+				if (StringUtil.isNotEmpty(cttName, true) || clsArgs != null) {
 					throw new IllegalArgumentException(KEY_THIS + " 与 " + KEY_CONSTRUCTOR + ", " + KEY_CLASS_ARGS + " 两个都不能同时传！");
 				}
-				
+
 				JSONObject obj = new JSONObject();
 				obj.put(KEY_METHOD_ARGS, Arrays.asList(this_));
-				List<Argument> methodArgs = getArgList(obj, KEY_METHOD_ARGS);
-				
+				List<Argument> mArgs = getArgList(obj, KEY_METHOD_ARGS);
+
 				Class<?>[] types = new Class<?>[1];
 				Object[] args = new Object[1];
-				
-				initTypesAndValues(methodArgs, types, args, true, true);
+
+				initTypesAndValues(mArgs, types, args, true, true);
 				instance = args[0];
 			}
-			
-			if (instance == null && req.getBooleanValue(KEY_STATIC) == false) {
+
+			if (instance == null && static_ == false) {
 				if (StringUtil.isEmpty(cttName, true)) {
-					instance = INSTANCE_GETTER.getInstance(clazz, getArgList(req, KEY_CLASS_ARGS), null);
+					instance = INSTANCE_GETTER.getInstance(clazz, clsArgs, null);
 				}
 				else {
-					instance = getInvokeResult(clazz, null, cttName, getArgList(req, KEY_CLASS_ARGS), null);
+					instance = getInvokeResult(clazz, null, cttName, clsArgs, null);
 				}
 			}
 
-			Object finalInstance = instance;
+			if (timeout < 0 || timeout > 60000) {
+				throw new IllegalArgumentException("参数 " + KEY_TIMEOUT + " 的值不合法！只能在 [0, 60000] 范围内！");
+			}
+			
+			if (timeout > 0) {
+				final Timer timer = new Timer();
+				timer.schedule(new TimerTask() {
+					public void run() {
+						try {
+							timer.cancel();
+						} 
+						catch (Throwable e) {
+							e.printStackTrace();
+						}
+						
+						completeWithError(pkgName, clsName, methodName, startTime, new TimeoutException("处理超时，应该在期望时间 " + timeout + "ms 内！"), listener);
+					}
+				}, timeout, Long.MAX_VALUE);
+			}
+			
+			invokeMethod(clazz, instance, pkgName, clsName, methodName, methodArgs, listener);
 
-			getInvokeResult(clazz, instance, methodName, getArgList(req, KEY_METHOD_ARGS), new Listener<JSONObject>() {
+			// 后端服务只允许在当前线程执行，只有客户端才允许设置在 UI 线程(主线程) 执行
+			//			if (threadStr == null || THREAD_CURRENT_STRING.equals(threadStr) || THREAD_MAIN_STRING.equals(threadStr)) {
+			//				invokeMethod(clazz, instance, pkgName, clsName, methodName, methodArgs, listener);
+			//			}
+			//			else if (THREAD_POOL_STRING.equals(threadStr)) {  // || THREAD_NEW_STRING.equals(threadStr)) {
+			//				final Object instance_ = instance;
+			//				Runnable command = new Runnable() {
+			//
+			//					@Override
+			//					public void run() {
+			//						try {
+			//							invokeMethod(clazz, instance_, pkgName, clsName, methodName, methodArgs, listener);
+			//						}
+			//						catch (Throwable e) {
+			//							completeWithError(pkgName, clsName, methodName, startTime, e, listener);
+			//						}
+			//					}
+			//				};
+			////				if (THREAD_POOL_STRING.equals(threadStr)) {
+			//					EXECUTOR_SERVICE.execute(command);
+			////				}
+			////				else {
+			////					new Thread(command).start();
+			////				}
+			//			}
+			//			else {
+			//				throw new IllegalArgumentException("参数 " + KEY_THREAD + " 的值错误！只能是 [null, " + THREAD_CURRENT_STRING
+			//						+ ", " + THREAD_POOL_STRING + ", " + THREAD_MAIN_STRING + "] 中的一个！");
+			//			}
+		}
+		catch (Throwable e) {
+			completeWithError(pkgName, clsName, methodName, startTime, e, listener);
+		}
+	}
+
+
+	public static void invokeMethod(Class<?> clazz, final Object instance, String pkgName, String clsName
+			, String methodName, List<Argument> methodArgs, Listener<JSONObject> listener) throws Exception {
+
+		long startTime = System.currentTimeMillis();
+		try {
+			getInvokeResult(clazz, instance, methodName, methodArgs, new Listener<JSONObject>() {
 
 				@Override
 				public void complete(JSONObject data, Method method, InterfaceProxy proxy, Object... extras) throws Exception {
@@ -395,8 +470,8 @@ public class MethodUtil {
 						result.putAll(data);
 					}
 
-					if (finalInstance != null) {
-						result.put(KEY_THIS, parseJSON(finalInstance.getClass(), finalInstance)); //TODO InterfaceProxy proxy 改成泛型 I instance ？
+					if (instance != null) {
+						result.put(KEY_THIS, parseJSON(instance.getClass(), instance)); //TODO InterfaceProxy proxy 改成泛型 I instance ？
 					}
 
 					listener.complete(result);
@@ -404,27 +479,44 @@ public class MethodUtil {
 			});
 		}
 		catch (Throwable e) {
-			e.printStackTrace();
-			if (e instanceof NoSuchMethodException) {
-				e = new IllegalArgumentException("字符 " + methodName + " 对应的方法不在 " + pkgName +  "/" + clsName + " 内！"
-						+ "\n请检查函数名和参数数量是否与已定义的函数一致！\n" + e.getMessage());
+			completeWithError(pkgName, clsName, methodName, startTime, e, listener);
+		}
+	}
+
+	private static void completeWithError(String pkgName, String clsName, String methodName, long startTime, Throwable e, Listener<JSONObject> listener) {
+		long endTime = System.currentTimeMillis();
+		e.printStackTrace();
+		if (e instanceof NoSuchMethodException) {
+			e = new IllegalArgumentException("字符 " + methodName + " 对应的方法不在 " + pkgName +  "." + clsName + " 内！"
+					+ "\n请检查函数名和参数数量是否与已定义的函数一致！\n" + e.getMessage());
+		}
+		if (e instanceof InvocationTargetException) {
+			Throwable te = ((InvocationTargetException) e).getTargetException();
+			if (isEmpty(te.getMessage(), true) == false) { //到处把函数声明throws Exception改成throws Throwable挺麻烦
+				e = te instanceof Exception ? (Exception) te : new Exception(te.getMessage());
 			}
-			if (e instanceof InvocationTargetException) {
-				Throwable te = ((InvocationTargetException) e).getTargetException();
-				if (isEmpty(te.getMessage(), true) == false) { //到处把函数声明throws Exception改成throws Throwable挺麻烦
-					e = te instanceof Exception ? (Exception) te : new Exception(te.getMessage());
-				}
-				e = new IllegalArgumentException("字符 " + methodName + " 对应的方法传参类型错误！"
-						+ "\n请检查 key:value 中value的类型是否满足已定义的函数的要求！\n" + e.getMessage());
-			}
-			JSONObject result = JSON_CALLBACK.newErrorResult(e);
-			result.put("throw", e.getClass().getTypeName());
-			result.put("cause", e.getCause());
-			result.put("trace", e.getStackTrace());
-			listener.complete(result);
+			e = new IllegalArgumentException("字符 " + methodName + " 对应的方法传参类型错误！"
+					+ "\n请检查 key:value 中value的类型是否满足已定义的函数的要求！\n" + e.getMessage());
 		}
 
+		long duration = endTime - startTime;
+		String throwName = e.getClass().getTypeName();
+		Log.d(TAG, "getInvokeResult  " + pkgName + "." + clsName + "." + methodName + " throw " + throwName + "! endTime = " + endTime + ";  duration = " + duration + ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n\n\n");
+
+		JSONObject result = JSON_CALLBACK.newErrorResult(e);
+		result.put(KEY_TIME_DETAIL, startTime + "|" + duration + "|" + endTime);
+		result.put("throw", throwName);
+		result.put("cause", e.getCause());
+		result.put("trace", e.getStackTrace());
+
+		try {
+			listener.complete(result);
+		}
+		catch (Exception e1) {
+			e1.printStackTrace();
+		}
 	}
+
 
 
 	public static List<Argument> getArgList(JSONObject req, String arrKey) {
@@ -501,14 +593,14 @@ public class MethodUtil {
 						) {
 					throw new IllegalArgumentException("enum " + clazz.getName() + " 对应的 classArgs 数量只能是 0 或 1 ！且选项类型必须为 String！");
 				}
-				
+
 				return getEnumInstance(clazz, v == null ? null : v.toString());
 			}
 			else { //通过构造方法
 				if (clazz.isAnnotation()) {
 					throw new IllegalArgumentException("@interface " + clazz.getName() + " 没有构造参数，对应的 classArgs 数量只能是 0！");
 				}
-				
+
 				boolean exactContructor = false;  //指定某个构造方法，只要某一项 type 不为空就是
 				for (int i = 0; i < classArgs.size(); i++) {
 					Argument obj = classArgs.get(i);
@@ -641,8 +733,8 @@ public class MethodUtil {
 		Objects.requireNonNull(clazz);
 		Objects.requireNonNull(methodName);
 
-		int size = methodArgs == null ? 0 : methodArgs.size();
-		boolean isEmpty = size <= 0;
+		final int size = methodArgs == null ? 0 : methodArgs.size();
+		final boolean isEmpty = size <= 0;
 
 		//method argument, types and values
 		Class<?>[] types = isEmpty ? null : new Class<?>[size];
@@ -655,15 +747,15 @@ public class MethodUtil {
 		Method method = clazz.getMethod(methodName, types);
 
 		final long[] startTime = new long[]{ System.currentTimeMillis() }; // 必须在 itemListener 前初始化，但又得在后面重新赋值以获得最准确的时间
-		
+
 		Listener<Object> itemListener = new Listener<Object>() {
 
 			@Override
 			public void complete(Object data, Method m, InterfaceProxy proxy, Object... extra) throws Exception {
 				long endTime = System.currentTimeMillis();
 				long duration = endTime - startTime[0];
-				Log.d(TAG, "getInvokeResult  endTime = " + endTime + ";  duration = " + duration + ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n\n\n");
-				
+				Log.d(TAG, "getInvokeResult  " + method.toGenericString() + "; endTime = " + endTime + ";  duration = " + duration + ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n\n\n");
+
 				if (listener == null) {
 					return;
 				}
@@ -755,10 +847,10 @@ public class MethodUtil {
 		}
 
 		startTime[0] = System.currentTimeMillis();  // 排除前面初始化参数的最准确时间
-		Log.d(TAG, "getInvokeResult  startTime = " + startTime[0] + "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n\n ");
-		
+		Log.d(TAG, "getInvokeResult  " + method.toGenericString() + "; startTime = " + startTime[0] + "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n\n ");
+
 		Object val = method.invoke(instance, args);
-		
+
 		if (isSync) {
 			if (listener != null) {
 				itemListener.complete(val);
@@ -921,8 +1013,8 @@ public class MethodUtil {
 						}
 					}
 					// @interface 也必须代理
-//					else if (type.isAnnotation()) {
-//					} 
+					//					else if (type.isAnnotation()) {
+					//					} 
 					else if (type.isInterface()) {
 						InterfaceProxy proxy = JSON.parseObject(JSON.toJSONString(value), InterfaceProxy.class);
 						proxy.$_setType(type);

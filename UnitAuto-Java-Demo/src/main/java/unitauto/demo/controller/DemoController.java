@@ -69,15 +69,17 @@ public class DemoController {
 	public void invokeMethod(@RequestBody String request, HttpServletRequest servletRequest) {
 		AsyncContext asyncContext = servletRequest.startAsync();
 
+		final boolean[] called = new boolean[] { false };
 		MethodUtil.Listener<JSONObject> listener = new MethodUtil.Listener<JSONObject>() {
 
 			@Override
 			public void complete(JSONObject data, Method method, InterfaceProxy proxy, Object... extras) throws Exception {
-				ServletResponse servletResponse = asyncContext.getResponse();
-				if (servletResponse.isCommitted()) {
-                    Log.w(TAG, "invokeMethod  listener.complete  servletResponse.isCommitted() >> return;");
+				ServletResponse servletResponse = called[0] ? null : asyncContext.getResponse();
+				if (servletResponse == null || servletResponse.isCommitted()) {  // isCommitted 在高并发时可能不准，导致写入多次
+                    Log.w(TAG, "invokeMethod  listener.complete  servletResponse == null || servletResponse.isCommitted() >> return;");
                     return;
 				}
+				called[0] = true;
 
 				servletResponse.setCharacterEncoding(servletRequest.getCharacterEncoding());
 				servletResponse.setContentType(servletRequest.getContentType());

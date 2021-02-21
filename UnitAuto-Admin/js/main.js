@@ -1775,6 +1775,8 @@
               'type': methodItem.returnType == null ? null : methodItem.returnType,  // .replace(/[.]/g, '/'),
               'genericType': methodItem.genericReturnType == null ? null : methodItem.genericReturnType,  // .replace(/[.]/g, '/'),
               'static': methodItem.static ? 1 : 0,
+              'timeout': methodItem.timeout,
+              'ui': methodItem.ui ? 1 : 0,
               'exceptions': methodItem.exceptionTypeList == null ? null : methodItem.exceptionTypeList.join(),  // .replace(/[.]/g, '/').join(),
               'genericExceptions': methodItem.genericExceptionTypeList == null ? null : methodItem.genericExceptionTypeList.join(), //  .replace(/[.]/g, '/').join(),
               'detail': methodItem.name
@@ -2833,7 +2835,9 @@
           "classArgs": req.classArgs,
           "method": req.method || App.getMethod(url),
           "methodArgs": req.methodArgs,
-          "static": req.static
+          "static": req.static,
+          'ui': req.ui,
+          'timeout': req.timeout,
         }
 
         vOutput.value = "requesting... \nURL = " + url
@@ -3697,7 +3701,9 @@
                 "classArgs": constJson.classArgs,
                 "method": constJson.method || App.getMethod(url),
                 "methodArgs": constJson.methodArgs,
-                "static": constJson.static
+                "static": constJson.static,
+                "timeout": constJson.timeout,
+                "ui": constJson.ui
               }
               App.request(false, REQUEST_TYPE_JSON, App.project + '/method/invoke', httpReq, header, cb);
             }
@@ -4186,7 +4192,9 @@
               "classArgs": App.getRequest(document.classArgs, []),
               "method": document.method,
               "methodArgs": App.getRequest(document.methodArgs, []),
-              "static": document.static
+              "static": document.static,
+              "timeout": document.timeout,
+              "ui": document.ui
             }
           }
           else {

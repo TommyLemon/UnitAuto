@@ -223,7 +223,17 @@ public class UnitAutoApp extends Application {
 					return jc.parseJSON(type, value);
 				}
 
-				if (value instanceof Context
+				// 需要提交才生效
+        if (value instanceof SharedPreferences.Editor) {
+          try {
+            ((SharedPreferences.Editor) value).commit();
+          } catch (Exception e) {
+            e.printStackTrace();
+          }
+        }
+
+        // 处理不能序列化的类
+        if (value instanceof Context
 						|| value instanceof Fragment
 						|| value instanceof android.app.Fragment
 						|| value instanceof Annotation  // Android 客户端中 fastjon 怎么都不支持 Annotation
@@ -366,6 +376,26 @@ public class UnitAutoApp extends Application {
 
 							throw new ClassNotFoundException("Did not find available " + clazz.getName() + "!");
 						}
+
+            if (SharedPreferences.Editor.class.isAssignableFrom(clazz)) {
+              if (context != null) {
+                String name = classArgs == null || classArgs.isEmpty()
+                  ? (activity != null ? activity.getLocalClassName() : context.getPackageName())
+                  : TypeUtils.castToString(classArgs.get(0).getValue());
+
+                int mode = classArgs == null || classArgs.size() < 1
+                  ? Context.MODE_PRIVATE
+                  : TypeUtils.castToInt(classArgs.get(1).getValue());
+
+                SharedPreferences sharedPreferences = context.getSharedPreferences(name, mode);
+                SharedPreferences.Editor editor = sharedPreferences == null ? null : sharedPreferences.edit();
+                if (editor != null && clazz.isAssignableFrom(editor.getClass())) {  // && clazz.isAssignableFrom(sharedPreferences.getClass())) {
+                  return editor;
+                }
+              }
+
+              throw new ClassNotFoundException("Did not find available " + clazz.getName() + "!");
+            }
 
 //					Service service = context == null ? null : new IntentService() {
 //						@Override
