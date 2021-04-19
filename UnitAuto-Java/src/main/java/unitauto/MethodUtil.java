@@ -341,11 +341,21 @@ public class MethodUtil {
 				"value": {}
 			},
 			{
-				"type": "apijson.demo.server.model.User",  //不可缺省，且必须全称
-				"value": {  //User 的示例值，会根据 type 来转为 Java 类型，这里执行等价于 JSON.parseObject(JSON.toJSONString(value), User.class)
-					"id": 1,
-					"name": "Tommy"
-				}
+				"type": "int[]",  //不可缺省，且必须全称
+				"value": [1, 2, 3]
+			},
+			{
+				"type": "java.util.List<apijson.demo.server.model.User>",  //不可缺省，且必须全称
+				"value": [  //TODO 未验证，可能需要解析 type，改用 JSON.parseArray(JSON.toJSONString(value), User.class)
+					{  //apijson.demo.server.model.User
+						"id": 1,
+						"name": "Tommy"
+					},
+					{  //apijson.demo.server.model.User
+						"id": 2,
+						"name": "Lemon"
+					}
+				]
 			},
 			{
 				"type": "android.content.Context",  //不可缺省，且必须全称
