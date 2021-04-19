@@ -309,32 +309,32 @@ public class MethodUtil {
 	 {
 	    "ui": false,  //放 UI 线程执行
 	    "timeout": 0,  //超时时间
-		"package": "apijson.demo.server",
-		"class": "DemoFunction",
+		"package": "apijson.demo.server",  //被测方法所在的包名
+		"class": "DemoFunction",  //被测方法所在的类名
 		"constructor": "getInstance",  //如果是类似单例模式的类，不能用默认构造方法，可以自定义获取实例的方法，传参仍用 classArgs
-		"classArgs": [
-			null,
+		"classArgs": [  //构造方法的参数值，可以和 methodArgs 结构一样，这里用了简化形式
+			null,  
 			null,
 			0,
 			null
 		],
-		"method": "plus",
-		"methodArgs": [
+		"method": "plus",  //被测方法名
+		"methodArgs": [  //被测方法的参数值
 			{
-				"type": "Integer",  //可缺省，自动根据 value 来判断
+				"type": "Integer",  //Boolean, Integer, Number, String, JSONObject, JSONArray 都可缺省，自动根据 value 来判断
 				"value": 1
 			},
 			{
-				"type": "String",
+				"type": "String",  //可缺省，自动根据 value 来判断
 				"value": "APIJSON"
 			},
 			{
-				"type": "JSONObject",  //可缺省，JSONObject 已缓存到 CLASS_MAP
+				"type": "JSONObject",  //可缺省，JSONObject 已缓存到 CLASS_MAP，也可以写全称 com.alibaba.fastjson.JSONObject
 				"value": {}
 			},
 			{
 				"type": "apijson.demo.server.model.User",  //不可缺省，且必须全称
-				"value": {
+				"value": {  //User 的示例值，会根据 type 来转为 Java 类型，这里执行等价于 JSON.parseObject(JSON.toJSONString(value), User.class)
 					"id": 1,
 					"name": "Tommy"
 				}
@@ -342,6 +342,14 @@ public class MethodUtil {
 			{
 				"type": "android.content.Context",  //不可缺省，且必须全称
 				"reuse": true  //复用实例池 INSTANCE_MAP 里的
+			},
+			{
+			    "type": "unitauto.test.TestUtil$Callback",  //interface 示例，注意内部类用 $ 隔开外部类名和内部类名
+			    "value": {
+				"setData(D)": {  //回调方法签名
+				    "callback": true  //设置为最终回调方法，会自动等待它被调用，并自动记录回调的时间点和传入参数值
+				}
+			    }
 			}
 		]
 	 }
