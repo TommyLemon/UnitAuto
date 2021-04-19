@@ -307,17 +307,25 @@ public class MethodUtil {
 	/**执行方法
 	 * @param req :
 	 {
-	    "ui": false,  //放 UI 线程执行
-	    "timeout": 0,  //超时时间
+ 	        "static": false,  //是否为静态方法，false 时可能会用 constructor & classArgs 来初始化一个类的实例或用 this 直接反序列化成一个类的实例
+	        "ui": false,  //放 UI 线程执行，仅 Android 可用
+	        "timeout": 0,  //超时时间
 		"package": "apijson.demo.server",  //被测方法所在的包名
 		"class": "DemoFunction",  //被测方法所在的类名
 		"constructor": "getInstance",  //如果是类似单例模式的类，不能用默认构造方法，可以自定义获取实例的方法，传参仍用 classArgs
-		"classArgs": [  //构造方法的参数值，可以和 methodArgs 结构一样，这里用了简化形式
+		"classArgs": [  //构造方法的参数值，可以和 methodArgs 结构一样。这里用了简化形式，只传值不传类型，注意简化形式只能在所有值完全符合构造方法的类型定义时才可用
 			null,  
 			null,
 			0,
 			null
 		],
+		"this": {  //当前类示例，和 constructor & classArgs 二选一
+			"type": "apijson.demo.server.model.User",  //不可缺省，且必须全称
+			"value": {  //User 的示例值，会根据 type 来转为 Java 类型，这里执行等价于 JSON.parseObject(JSON.toJSONString(value), User.class)
+				"id": 1,
+				"name": "Tommy"
+			}
+		},
 		"method": "plus",  //被测方法名
 		"methodArgs": [  //被测方法的参数值
 			{
