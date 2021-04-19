@@ -346,7 +346,7 @@ public class MethodUtil {
 			},
 			{
 				"type": "java.util.List<apijson.demo.server.model.User>",  //不可缺省，且必须全称
-				"value": [  //TODO 未验证，可能需要解析 type，改用 JSON.parseArray(JSON.toJSONString(value), User.class)
+				"value": [  //TODO 未验证，可能需要解析 type，改用 JSON.parseArray(JSON.toJSONString(value), User.class)，或遍历和递归子项来逐个用 TypeUtils.cast
 					{  //apijson.demo.server.model.User
 						"id": 1,
 						"name": "Tommy"
