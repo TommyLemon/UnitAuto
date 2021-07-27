@@ -222,6 +222,24 @@ dependencies {
 自动管理测试用例 这个功能 需要部署APIJSON后端，见 <br /> 
 https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server
 <br />
+
+### 常见问题
+#### 1.无法访问接口
+Chrome 90+ 对 CORS 请求禁止携带 Cookie 或 Chrome 80-89 强制 same-site Cookie 的策略导致
+https://github.com/TommyLemon/UnitAuto/issues/11
+
+#### 2.没有生成文档
+右上角设置项与被测服务实际配置不一致 等 
+https://github.com/Tencent/APIJSON/issues/85
+
+#### 3.托管服务器访问不了
+不能代理接口、不能展示文档、不能对断言结果纠错 等
+https://github.com/TommyLemon/UnitAuto/issues/10
+
+更多常见问题 <br />
+https://github.com/TommyLemon/UnitAuto/issues
+
+<br />
 <br />
 
 ### 技术交流
