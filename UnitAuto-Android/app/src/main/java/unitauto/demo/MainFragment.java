@@ -47,7 +47,7 @@ public class MainFragment extends Fragment implements View.OnClickListener, View
         return view;
     }
 
-    // 用 UnitAuto 后台管理界面（http://apijson.org:8000/unit/）测试以下方法
+    // 用 UnitAuto 后台管理界面（http://apijson.cn/unit/）测试以下方法
 
     public boolean test() {
         return true;
