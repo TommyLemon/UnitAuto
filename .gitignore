@@ -17,3 +17,4 @@ UnitAuto-Java-Demo/.idea
 .classpath
 .project
 UnitAuto-Java-Demo/.settings
+*.iml
