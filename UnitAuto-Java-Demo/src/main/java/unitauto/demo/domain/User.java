@@ -16,6 +16,8 @@ limitations under the License.*/
 package unitauto.demo.domain;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 /**用户
  * @author Lemon
@@ -26,6 +28,7 @@ public class User implements Serializable {
 	private Long id; //主键
 	private Integer sex; //性别
 	private String name; //姓名
+	private List<Long> contactIdList;
 
 	public Long getId() {
 		return id;
@@ -40,6 +43,7 @@ public class User implements Serializable {
 	public void setSex(Integer sex) {
 		this.sex = sex;
 	}
+
 	public String getName() {
 		return name;
 	}
@@ -47,5 +51,36 @@ public class User implements Serializable {
 		this.name = name;
 	}
 
+	public List<Long> getContactIdList() {
+		return contactIdList;
+	}
+	public void setContactIdList(List<Long> contactIdList) {
+		this.contactIdList = contactIdList;
+	}
+
+	public List<Long> addContactId(Long contactId) {
+		if (contactIdList == null) {
+			contactIdList = new ArrayList<>(1);
+			contactIdList.add(contactId);
+		} else if (! contactIdList.contains(contactId)) {
+			contactIdList.add(contactId);
+		}
+
+		return contactIdList;
+	}
+
+	public List<Long> addContactIdList(List<Long> list) {
+		if (contactIdList == null) {
+			contactIdList = list;
+		} else {
+			for (Long contactId : list) {
+				if (! contactIdList.contains(contactId)) {
+					contactIdList.add(contactId);
+				}
+			}
+		}
+
+		return contactIdList;
+	}
 
 }

@@ -20,6 +20,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Component;
 
+import unitauto.StringUtil;
 import unitauto.demo.domain.User;
 
 /**
@@ -58,6 +59,49 @@ public class DemoService {
 		}
 		
 		return list;
+	}
+	
+
+	public User addContact(long id, long contactId) throws IllegalArgumentException {
+		User user = getUser(id);
+		List<Long> list = user.getContactIdList();
+		if (list == null) {
+			list = new ArrayList<>(1);
+			list.add(contactId);
+		} else if (list.contains(contactId)) {
+			throw new IllegalArgumentException("已经是联系人了，不能重复添加！");
+		}
+		
+		list.add(contactId);
+		return user;
+	}
+	
+	public List<User> addUser(User user) {
+		List<User> list = listUser(10);
+		
+		for (User u : list) {
+			if (u.getId() == user.getId() || StringUtil.getTrimedString(u.getName()).equals(StringUtil.getTrimedString(user.getName()))) {
+				throw new IllegalArgumentException("已经存在用户，不能重复添加！");
+			}
+		}
+		list.add(user);
+		
+		return list;
+	}
+	
+	public List<User> addUserList(List<User> list) {
+		List<User> userList = listUser(10);
+		
+		for (User u : list) {
+			for (User user : userList) {
+				if (u.getId() == user.getId() || StringUtil.getTrimedString(u.getName()).equals(StringUtil.getTrimedString(user.getName()))) {
+					throw new IllegalArgumentException("已经存在用户，不能重复添加！");
+				}
+			}
+		}
+		userList.addAll(list);
+		
+		return userList;
 	}
 	
 }

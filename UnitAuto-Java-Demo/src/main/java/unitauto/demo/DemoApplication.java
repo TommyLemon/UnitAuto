@@ -59,7 +59,7 @@ public class DemoApplication implements ApplicationContextAware {
 
 	static {
 		UnitAutoApp.init();
-		
+
 		final InstanceGetter ig = MethodUtil.INSTANCE_GETTER;
 		MethodUtil.INSTANCE_GETTER = new InstanceGetter() {
 
@@ -69,17 +69,21 @@ public class DemoApplication implements ApplicationContextAware {
 					return APPLICATION_CONTEXT;
 				}
 
-				// 被 Spring 注解的类基本不会自己通过 new 来构造实例				if (reuse == null || reuse) {
-				Object bean = APPLICATION_CONTEXT.getBean(clazz);  // 如果有多个实例则用 getBeans 返回第 0 项
-				if (bean != null) {
-					return bean;
+				// 被 Spring 注解的类基本不会自己通过 new 来构造实例	if (reuse == null || reuse) {
+				try {
+					Object bean = APPLICATION_CONTEXT.getBean(clazz);  // 如果有多个实例则用 getBeans 返回第 0 项
+					if (bean != null) {
+						return bean;
+					} 
+				} catch (Throwable e) {
+					e.printStackTrace();
 				}
 				//				}
 
 				return ig.getInstance(clazz, classArgs, reuse);
 			}
 		};
-		
+
 		final JSONCallback jc = MethodUtil.JSON_CALLBACK;
 		MethodUtil.JSON_CALLBACK = new JSONCallback() {
 
@@ -92,7 +96,7 @@ public class DemoApplication implements ApplicationContextAware {
 			public JSONObject newErrorResult(Throwable e) {
 				return jc.newErrorResult(e);
 			}
-			
+
 			@Override
 			public JSONObject parseJSON(String type, Object value) {
 				if (value == null || unitauto.JSON.isBooleanOrNumberOrString(value) || value instanceof JSON || value instanceof Enum) {
@@ -137,7 +141,7 @@ public class DemoApplication implements ApplicationContextAware {
 
 				return jc.parseJSON(type, value);
 			}
-			
+
 		};
 	}
 

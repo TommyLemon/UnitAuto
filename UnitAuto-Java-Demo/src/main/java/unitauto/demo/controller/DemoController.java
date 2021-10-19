@@ -16,6 +16,7 @@ limitations under the License.*/
 package unitauto.demo.controller;
 
 import java.lang.reflect.Method;
+import java.util.List;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.ServletResponse;
@@ -34,6 +35,7 @@ import com.alibaba.fastjson.JSONObject;
 import unitauto.Log;
 import unitauto.MethodUtil;
 import unitauto.MethodUtil.InterfaceProxy;
+import unitauto.demo.domain.User;
 import unitauto.demo.service.DemoService;
 
 /**
@@ -52,9 +54,55 @@ public class DemoController {
 		return true;
 	}
 	
-	@GetMapping("hello")
+	@RequestMapping("hello")
 	public String hello(@RequestParam(value = "name", required = false) String name) {
 		return demoService.hello(name);
+	}
+	
+	
+	@RequestMapping("listUser")
+	public String listUser(@RequestParam Integer count) {
+		List<User> list = demoService.listUser(count);
+		JSONObject result = MethodUtil.newSuccessResult();
+		result.put("data", list);
+		return result.toJSONString();
+	}
+	
+	@RequestMapping("addContact")
+	public JSONObject addContact(@RequestParam Long id, @RequestParam Long contactId) {
+		try {
+			User user = demoService.addContact(id, contactId);
+			JSONObject result = MethodUtil.newSuccessResult();
+			result.put("data", user);
+			return result;
+		} catch (Throwable e) {
+			return MethodUtil.newErrorResult(e);
+		}
+	}
+	
+	@PostMapping("addUser")
+	public JSONObject addUser(@RequestParam User user) {
+		try {
+			List<User> list = demoService.addUser(user);
+			JSONObject result = MethodUtil.newSuccessResult();
+			result.put("data", list);
+			return result;
+		} catch (Throwable e) {
+			return MethodUtil.newErrorResult(e);
+		}
+	}
+	
+	
+	@PostMapping("addUserList")
+	public JSONObject addUserList(@RequestParam List<User> list) {
+		try {
+			List<User> userList = demoService.addUserList(list);
+			JSONObject result = MethodUtil.newSuccessResult();
+			result.put("data", userList);
+			return result;
+		} catch (Throwable e) {
+			return MethodUtil.newErrorResult(e);
+		}
 	}
 	
 	
