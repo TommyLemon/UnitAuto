@@ -354,7 +354,7 @@ public class MethodUtil {
 			},
 			{
 				"type": "java.util.List<apijson.demo.server.model.User>",  //不可缺省，且必须全称
-				"value": [  //TODO 未验证，可能需要解析 type，改用 JSON.parseArray(JSON.toJSONString(value), User.class)，或遍历和递归子项来逐个用 TypeUtils.cast
+				"value": [  //TODO 未验证，可能需要解析 type，改用 JSON.parseArray(JSON.toJSONString(value), User.class)，或遍历和递归子项来逐个用 cast
 					{  //apijson.demo.server.model.User
 						"id": 1,
 						"name": "Tommy"
@@ -775,7 +775,7 @@ public class MethodUtil {
 		Object[] args = isEmpty ? null : new Object[size];
 
 		if (isEmpty == false) {
-			initTypesAndValues(methodArgs, types, args, true, false);
+			initTypesAndValues(methodArgs, types, args, true, true);
 		}
 
 		Method method = clazz.getMethod(methodName, types);
@@ -842,8 +842,8 @@ public class MethodUtil {
 				Object value = args[i];
 
 				if (value instanceof InterfaceProxy || (type != null && type.isInterface() && Collection.class.isAssignableFrom(type) == false && Map.class.isAssignableFrom(type) == false)) {  // @interface 也必须代理  && type.isAnnotation() == false)) {  //如果这里不行，就 initTypesAndValues 给个回调
-					try {  //不能交给 initTypesAndValues 中 castValue2Type，否则会导致这里 TypeUtils.cast 抛异常 
-						InterfaceProxy proxy = value instanceof InterfaceProxy ? ((InterfaceProxy) value) : TypeUtils.cast(value, InterfaceProxy.class, ParserConfig.getGlobalInstance());
+					try {  //不能交给 initTypesAndValues 中 castValue2Type，否则会导致这里 cast 抛异常 
+						InterfaceProxy proxy = value instanceof InterfaceProxy ? ((InterfaceProxy) value) : cast(value, InterfaceProxy.class, ParserConfig.getGlobalInstance());
 						Set<Entry<String, Object>> set = proxy.entrySet();
 						if (set != null)  {
 							for (Entry<String, Object> e : set) {
@@ -862,7 +862,7 @@ public class MethodUtil {
 							}
 						}
 
-						args[i] = TypeUtils.cast(proxy, type, ParserConfig.getGlobalInstance());
+						args[i] = cast(proxy, type, ParserConfig.getGlobalInstance());
 						isSync = proxy.$_getCallbackMap().isEmpty();
 					}
 					catch (Throwable e) {
@@ -871,7 +871,7 @@ public class MethodUtil {
 				}
 				//始终需要 cast	 else {  //前面 initTypesAndValues castValue2Type = false
 				try {
-					args[i] = TypeUtils.cast(value, type, ParserConfig.getGlobalInstance());
+					args[i] = cast(value, type, ParserConfig.getGlobalInstance());
 				}
 				catch (Throwable e) {
 					e.printStackTrace();
@@ -1018,7 +1018,7 @@ public class MethodUtil {
 
 			//			if (typeName != null && value != null && value.getClass().equals(CLASS_MAP.get(typeName)) == false) {
 			////				if ("double".equals(typeName)) {
-			//				value = TypeUtils.cast(value, CLASS_MAP.get(typeName), ParserConfig.getGlobalInstance());
+			//				value = cast(value, CLASS_MAP.get(typeName), ParserConfig.getGlobalInstance());
 			////				}
 			////				else if (PRIMITIVE_CLASS_MAP.containsKey(typeName)) {
 			////					value = JSON.parse(JSON.toJSONString(value));
@@ -1061,7 +1061,7 @@ public class MethodUtil {
 
 				if (castValue2Type) {
 					try {
-						value = TypeUtils.cast(value, type, ParserConfig.getGlobalInstance());
+						value = cast(value, type, ParserConfig.getGlobalInstance());
 					}
 					catch (Throwable e) {
 						e.printStackTrace();
@@ -1534,7 +1534,7 @@ public class MethodUtil {
 				}
 			} else if (value != null && StringUtil.isEmpty(child, true) == false && "?".equals(child) == false && "Object".equals(child) == false && Collection.class.isAssignableFrom(type)) {
 				try {
-					// 传参进来必须是 Collection，不是就抛异常  value = TypeUtils.cast(value, type, ParserConfig.getGlobalInstance());
+					// 传参进来必须是 Collection，不是就抛异常  value = cast(value, type, ParserConfig.getGlobalInstance());
 					Collection<?> c = (Collection<?>) value;
 					if (c != null && c.isEmpty() == false) {
 
@@ -1564,7 +1564,7 @@ public class MethodUtil {
 							Object object = (Object) iterator.next();
 							if (object != null) {
 								Class<?> ct = getType(child, object, true);
-								object = TypeUtils.cast(object, ct, ParserConfig.getGlobalInstance());
+								object = cast(object, ct, ParserConfig.getGlobalInstance());
 							}
 							nc.add(object);
 						}
@@ -1586,6 +1586,47 @@ public class MethodUtil {
 		}
 
 		return type;
+	}
+
+	@SuppressWarnings("unchecked")
+	public static <T> T cast(Object obj, Class<T> type, ParserConfig config) {
+		if (type == null || obj == null || type.isAssignableFrom(obj.getClass())) {
+			return (T) obj;
+		}
+
+		if (Collection.class.isAssignableFrom(type)) {
+			Collection<?> c = (Collection<?>) obj;
+			
+			@SuppressWarnings("rawtypes")
+			Collection nc;
+
+			if (LinkedList.class.isAssignableFrom(type)) {
+				nc = new LinkedList<>();
+			} 
+			else if (Vector.class.isAssignableFrom(type)) {  // Stack
+				nc = new Stack<>();
+			} 
+			else if (List.class.isAssignableFrom(type)) {  // 写在最前，和 else 重合，但大部分情况下性能更好  // ArrayList
+				nc = new ArrayList<>(c.size());
+			}
+			else if (SortedSet.class.isAssignableFrom(type)) {  // TreeSet
+				nc = new TreeSet<>();
+			} 
+			else if (Set.class.isAssignableFrom(type)) {  // HashSet, LinkedHashSet
+				nc = new LinkedHashSet<>(c.size());
+			} 
+			else {  // List, ArrayList
+				nc = new ArrayList<>(c.size());
+			}
+
+			for (Iterator<?> iterator = c.iterator(); iterator.hasNext();) {
+				nc.add(iterator.next());
+			}
+			
+			return (T) nc;
+		}
+		
+		return TypeUtils.cast(obj, type, config);
 	}
 
 	/**
@@ -2010,7 +2051,7 @@ public class MethodUtil {
 			}
 
 			try {
-				value = TypeUtils.cast(value, getType(type, value, true), ParserConfig.getGlobalInstance());
+				value = cast(value, getType(type, value, true), ParserConfig.getGlobalInstance());
 			}
 			catch (Throwable e) {
 				e.printStackTrace();
