@@ -69,8 +69,11 @@ public class DemoApplication implements ApplicationContextAware {
 					return APPLICATION_CONTEXT;
 				}
 
-				if (reuse != null && reuse && (classArgs == null || classArgs.isEmpty())) {
-					return APPLICATION_CONTEXT.getBean(clazz);
+				if (reuse != null && reuse) {
+					Object bean = APPLICATION_CONTEXT.getBean(clazz);
+					if (bean != null) {
+						return bean;
+					}
 				}
 
 				return ig.getInstance(clazz, classArgs, reuse);

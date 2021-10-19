@@ -28,6 +28,7 @@ var URL_HEADS = URL_BASE + "/heads"; // 通过POST来HEAD数据，不显示请�
 var URL_POST = URL_BASE + "/post"; // 新增(或者说插入)数据
 var URL_PUT = URL_BASE + "/put"; // 修改数据，只修改传入字段对应的值
 var URL_DELETE = URL_BASE + "/delete"; // 删除数据
+var APIJSON_METHODS = ["get", "head", "gets", "heads", "post", "put", "delete"]
 
 
 /**请求，全走HTTP POST
@@ -146,6 +147,35 @@ function encode(json) {
     }
   }
   // alertOfDebug("encode  after:\n" + format(JSON.stringify(json)));
+
+  return json;
+}
+
+/**解码JSON，反转义所有String
+ * @param json 任意类型
+ */
+function decode(json) {
+  // alertOfDebug("decode  before:\n" + format(JSON.stringify(json)));
+
+  if (typeof json == "string") { //json instanceof String) {
+    json = decodeURIComponent(json);
+  }
+  else if (json instanceof Array) {
+    // alertOfDebug("decode  json instanceof Array");
+
+    for (var i = 0; i < json.length; i ++) {
+      // alertOfDebug("json[" + i + "] = " + format(JSON.stringify(json[i])));
+      json[i] = decode(json[i]);
+    }
+  }
+  else if (json instanceof Object) {
+    // alertOfDebug("decode  json instanceof Object");
+    for (var key in json) {
+      // alertOfDebug("decode  json[" + key + "] = " + format(JSON.stringify(json[key])));
+      json[key] = decode(json[key]);
+    }
+  }
+  // alertOfDebug("decode  after:\n" + format(JSON.stringify(json)));
 
   return json;
 }

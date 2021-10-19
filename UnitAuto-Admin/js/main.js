@@ -98,12 +98,11 @@
         }
 
         var method = App.getMethod();
-        var mIndex = method == null ? -1 : method.indexOf('.');
-        var isRestful = mIndex > 0 && mIndex < method.length - 1;
+        var isRestful = ! JSONObject.isAPIJSONPath(method);
 
         try {
           if (val instanceof Array) {
-            if (val[0] instanceof Object && (val[0] instanceof Array == false) && JSONObject.isArrayKey(key, null, isRestful)) {
+            if (val[0] instanceof Object && (val[0] instanceof Array == false)) {  // && JSONObject.isArrayKey(key, null, isRestful)) {
               // alert('onRenderJSONItem  key = ' + key + '; val = ' + JSON.stringify(val))
 
               var ckey = key.substring(0, key.lastIndexOf('[]'));
@@ -215,14 +214,20 @@
         var s = ''
 
         try {
+          var standardObj = null;
+          try {
+            var currentItem = App.isTestCaseShow ? App.remotes[App.currentDocIndex] : App.currentRemoteItem;
+            standardObj = JSON.parse(((currentItem || {}).TestRecord || {}).standard);
+          } catch (e3) {
+            log(e3)
+          }
 
           var path = null
           var table = null
           var column = null
 
-          var method = App.getMethod();
-          var mIndex = method == null ? -1 : method.indexOf('.');
-          var isRestful = mIndex > 0 && mIndex < method.length - 1;
+          var method = App.isTestCaseShow ? ((App.currentRemoteItem || {}).Method || {}).url : App.getMethod();
+          var isRestful = ! JSONObject.isAPIJSONPath(method);
 
           if (val instanceof Object && (val instanceof Array == false)) {
 
@@ -297,13 +302,13 @@
 
                   var pathUri = (StringUtil.isEmpty(path) ? '' : path + '/') + key;
 
-                  var c = CodeUtil.getCommentFromDoc(docObj == null ? null : docObj['[]'], table, column, App.getMethod(), App.database, App.language, true, false, pathUri.split('/'), isRestful, val); // this.getResponseHint({}, table, $event
+                  var c = CodeUtil.getCommentFromDoc(docObj == null ? null : docObj['[]'], table, column, method, App.database, App.language, true, false, pathUri.split('/'), isRestful, val, true, standardObj); // this.getResponseHint({}, table, $event
                   s0 = column + (StringUtil.isEmpty(c, true) ? '' : ': ' + c)
                 }
 
                 var pathUri = (StringUtil.isEmpty(path) ? '' : path + '/') + (StringUtil.isEmpty(column) ? key : column);
 
-                var c = CodeUtil.getCommentFromDoc(docObj == null ? null : docObj['[]'], table, isRestful ? key : null, App.getMethod(), App.database, App.language, true, false, pathUri.split('/'), isRestful, val);
+                var c = CodeUtil.getCommentFromDoc(docObj == null ? null : docObj['[]'], table, isRestful ? key : null, method, App.database, App.language, true, false, pathUri.split('/'), isRestful, val, true, standardObj);
                 s = (StringUtil.isEmpty(path) ? '' : path + '/') + key + ' 中 '
                   + (
                     StringUtil.isEmpty(c, true) ? '' : table + ': '
@@ -326,7 +331,7 @@
           // alert('setResponseHint  table = ' + table + '; column = ' + column)
 
           var pathUri = (StringUtil.isEmpty(path) ? '' : path + '/') + key;
-          var c = CodeUtil.getCommentFromDoc(docObj == null ? null : docObj['[]'], table, isRestful ? key : column, method, App.database, App.language, true, false, pathUri.split('/'), isRestful, val);
+          var c = CodeUtil.getCommentFromDoc(docObj == null ? null : docObj['[]'], table, isRestful ? key : column, method, App.database, App.language, true, false, pathUri.split('/'), isRestful, val, true, standardObj);
 
           s += pathUri + (StringUtil.isEmpty(c, true) ? '' : ': ' + c)
         }
@@ -357,6 +362,36 @@
 
 
 // APIJSON <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+  function getRequestFromURL() {
+    var url = window.location.search;
+
+    var index = url == null ? -1 : url.indexOf("?")
+    if(index < 0) { //判断是否有参数
+      return null;
+    }
+
+    var theRequest = null;
+    var str = url.substring(index + 1);  //从第一个字符开始 因为第0个是?号 获取所有除问号的所有符串
+    var arr = str.split("&");  //截除“&”生成一个数组
+
+    var len = arr == null ? 0 : arr.length;
+    for(var i = 0; i < len; i++) {
+      var part = arr[i];
+      var ind = part == null ? -1 : part.indexOf("=");
+      if (ind <= 0) {
+        continue
+      }
+
+      if (theRequest == null) {
+        theRequest = {};
+      }
+      theRequest[part.substring(0, ind)] = decodeURIComponent(part.substring(ind+1));
+    }
+
+    return theRequest;
+  }
 
   var REQUEST_TYPE_PARAM = 'PARAM'  // GET ?a=1&b=c&key=value
   var REQUEST_TYPE_FORM = 'FORM'  // POST x-www-form-urlencoded
@@ -518,6 +553,7 @@
       testRandomCount: 1,
       testRandomProcess: '',
       compareColor: '#0000',
+      isRandomTest: false,
       isDelayShow: false,
       isSaveShow: false,
       isExportShow: false,
@@ -541,7 +577,13 @@
       isCrossEnabled: false,
       isMLEnabled: false,
       isDelegateEnabled: false,
+      isPreviewEnabled: false,
+      isEncodeEnabled: false,
+      isEditResponse: false,
       isLocalShow: false,
+      uploadTotal: 0,
+      uploadDoneCount: 0,
+      uploadFailCount: 0,
       exTxt: {
         name: 'APIJSON测试',
         button: '保存',
@@ -563,8 +605,8 @@
       types: [ REQUEST_TYPE_JSON ],
       host: '', // 'apijson.demo.server.DemoFunction.',
       branch: 'countArray',
-      database: 'MYSQL',// 'POSTGRESQL',
-      schema: '', //后端决定 'admin',  // 'sys'
+      database: undefined,  // 后端决定 'MYSQL',// 'POSTGRESQL',
+      schema: undefined,  // 后端决定 'admin',  // 'sys'
       server: 'http://apijson.cn:9090',  //apijson.cn
       // server: 'http://47.74.39.68:9090',  // apijson.org
       project: 'http://apijson.cn:8080',  //apijson.cn
@@ -587,7 +629,7 @@
 
       // 全部展开
       expandAll: function () {
-        if (App.view != 'code') {
+        if (this.view != 'code') {
           alert('请先获取正确的JSON Response！')
           return
         }
@@ -597,12 +639,12 @@
         $('.expand-view').show()
         $('.fold-view').hide()
 
-        App.isExpand = true;
+        this.isExpand = true;
       },
 
       // 全部折叠
       collapseAll: function () {
-        if (App.view != 'code') {
+        if (this.view != 'code') {
           alert('请先获取正确的JSON Response！')
           return
         }
@@ -612,29 +654,29 @@
         $('.expand-view').hide()
         $('.fold-view').show()
 
-        App.isExpand = false;
+        this.isExpand = false;
       },
 
       // diff
       diffTwo: function () {
         var oldJSON = {}
         var newJSON = {}
-        App.view = 'code'
+        this.view = 'code'
         try {
-          oldJSON = jsonlint.parse(App.jsoncon)
+          oldJSON = jsonlint.parse(this.jsoncon)
         } catch (ex) {
-          App.view = 'error'
-          App.error = {
+          this.view = 'error'
+          this.error = {
             msg: '原 JSON 解析错误\r\n' + ex.message
           }
           return
         }
 
         try {
-          newJSON = jsonlint.parse(App.jsoncon)
+          newJSON = jsonlint.parse(this.jsoncon)
         } catch (ex) {
-          App.view = 'error'
-          App.error = {
+          this.view = 'error'
+          this.error = {
             msg: '新 JSON 解析错误\r\n' + ex.message
           }
           return
@@ -656,33 +698,33 @@
       },
 
       baseViewToDiff: function () {
-        App.baseview = 'diff'
-        App.diffTwo()
+        this.baseview = 'diff'
+        this.diffTwo()
       },
 
       // 回到格式化视图
       baseViewToFormater: function () {
-        App.baseview = 'formater'
-        App.view = 'code'
-        App.showJsonView()
+        this.baseview = 'formater'
+        this.view = 'code'
+        this.showJsonView()
       },
 
       // 根据json内容变化格式化视图
       showJsonView: function () {
-        if (App.baseview === 'diff') {
+        if (this.baseview === 'diff') {
           return
         }
         try {
           if (this.jsoncon.trim() === '') {
-            App.view = 'empty'
+            this.view = 'empty'
           } else {
-            App.view = 'code'
+            this.view = 'code'
 
             if (isSingle) {
-              App.jsonhtml = jsonlint.parse(this.jsoncon)
+              this.jsonhtml = jsonlint.parse(this.jsoncon)
             }
             else {
-              App.jsonhtml = Object.assign({
+              this.jsonhtml = Object.assign({
                 _$_this_$_: JSON.stringify({
                   path: null,
                   table: null
@@ -692,8 +734,8 @@
 
           }
         } catch (ex) {
-          App.view = 'error'
-          App.error = {
+          this.view = 'error'
+          this.error = {
             msg: ex.message
           }
         }
@@ -705,17 +747,18 @@
           if (isAdminOperation != true) {
             baseUrl = this.getBaseUrl()
           }
-          vUrl.value = (isAdminOperation ? App.server : baseUrl) + branchUrl
+          vUrl.value = (isAdminOperation ? this.server : baseUrl) + branchUrl
         }
         else {  //隐藏(固定)URL Host
           if (isAdminOperation) {
-            this.host = App.server
+            this.host = this.server
           }
           vUrl.value = branchUrl
         }
 
-        vUrlComment.value = isSingle || StringUtil.isEmpty(App.urlComment, true)
-          ? '' : vUrl.value + App.urlComment;
+        vUrlComment.value = isSingle || StringUtil.isEmpty(this.urlComment, true)
+          ? '' : vUrl.value + CodeUtil.getComment(this.urlComment, false, '  ')
+          + ' - ' + (this.requestVersion > 0 ? 'V' + this.requestVersion : 'V*');
       },
 
       //设置基地址
@@ -735,7 +778,7 @@
           // this.remotes = []
 
           // var index = baseUrl.indexOf(':') //http://localhost:8080
-          // App.server = (index < 0 ? baseUrl : baseUrl.substring(0, baseUrl)) + ':9090'
+          // this.server = (index < 0 ? baseUrl : baseUrl.substring(0, baseUrl)) + ':9090'
 
         }
       },
@@ -778,7 +821,7 @@
         url = url.substring(0, index)
         index = url.lastIndexOf('.')
         var clazz = StringUtil.trim(index < 0 ? url : url.substring(index + 1))
-        if (App.language == 'Java' || App.language == 'JavaScript' || App.language == 'TypeScript') {
+        if (this.language == 'Java' || this.language == 'JavaScript' || this.language == 'TypeScript') {
           if (/[A-Z]{0}[A-Za-z0-9_]/.test(clazz) != true) {
             alert('类名 ' + clazz + ' 不符合规范！')
           }
@@ -808,7 +851,7 @@
       },
 
       getRequest: function (json, defaultValue) {
-        var s = App.toDoubleJSON(json, defaultValue);
+        var s = this.toDoubleJSON(json, defaultValue);
         if (StringUtil.isEmpty(s, true)) {
           return defaultValue
         }
@@ -817,8 +860,8 @@
         }
         catch (e) {
           log('main.getRequest', 'try { return jsonlint.parse(s); \n } catch (e) {\n' + e.message)
-          log('main.getRequest', 'return jsonlint.parse(App.removeComment(s));')
-          return jsonlint.parse(App.removeComment(s));
+          log('main.getRequest', 'return jsonlint.parse(this.removeComment(s));')
+          return jsonlint.parse(this.removeComment(s));
         }
       },
       getHeader: function (text) {
@@ -851,7 +894,7 @@
                 val = eval(val)
               }
               catch (e) {
-                App.log("getHeader  if (hs != null && hs.length > 0) { ... if (ind > 0 && val.indexOf(')') > ind) { ... try { val = eval(val) } catch (e) = " + e.message)
+                this.log("getHeader  if (hs != null && hs.length > 0) { ... if (ind > 0 && val.indexOf(')') > ind) { ... try { val = eval(val) } catch (e) = " + e.message)
               }
             }
 
@@ -862,48 +905,130 @@
         return header
       },
 
+      // 分享 APIAuto 特有链接，打开即可还原分享人的 JSON 参数、设置项、搜索关键词、分页数量及页码等配置
+      shareLink: function (isRandom) {
+        var jsonStr = null
+        if (this.isTestCaseShow != true) {
+          try {
+            jsonStr = JSON.stringify(encode(JSON.parse(vInput.value)))
+          } catch (e) {  // 可能包含注释
+            log(e)
+            jsonStr = encode(StringUtil.trim(vInput.value))
+          }
+        }
+
+        // URL 太长导致打不开标签
+        var settingStr = null
+        try {
+          settingStr = JSON.stringify({
+            requestVersion: this.requestVersion,
+            requestCount: this.requestCount,
+            isTestCaseShow: this.isTestCaseShow,
+            // isHeaderShow: this.isHeaderShow,
+            // isRandomShow: this.isRandomShow,
+            isRandomListShow: this.isRandomShow ? this.isRandomListShow : undefined,
+            isRandomSubListShow: this.isRandomListShow ? this.isRandomSubListShow : undefined,
+            // isRandomEditable: this.isRandomEditable,
+            isCrossEnabled: this.isCrossEnabled,
+            isMLEnabled: this.isMLEnabled,
+            isDelegateEnabled: this.isDelegateEnabled,
+            isPreviewEnabled: this.isPreviewEnabled,
+            isEncodeEnabled: this.isEncodeEnabled,
+            isEditResponse: this.isEditResponse,
+            isLocalShow: this.isTestCaseShow ? this.isLocalShow : undefined,
+            page: this.page,
+            count: this.count,
+            testCasePage: this.testCasePage,
+            testCaseCount: this.testCaseCount,
+            testRandomCount: this.testRandomCount,
+            randomPage: this.randomPage,
+            randomCount: this.randomCount,
+            randomSubPage: this.randomSubPage,
+            randomSubCount: this.randomSubCount,
+            host: StringUtil.isEmpty(this.host, true) ? undefined : encodeURIComponent(this.host),
+            search: StringUtil.isEmpty(this.search, true) ? undefined : encodeURIComponent(this.search),
+            testCaseSearch: StringUtil.isEmpty(this.testCaseSearch, true) ? undefined : this.testCaseSearch,
+            randomSearch: StringUtil.isEmpty(this.randomSearch, true) ? undefined : encodeURIComponent(this.randomSearch),
+            randomSubSearch: StringUtil.isEmpty(this.randomSubSearch, true) ? undefined : encodeURIComponent(this.randomSubSearch)
+          })
+        } catch (e){
+          log(e)
+        }
+
+        var headerStr = this.isTestCaseShow || StringUtil.isEmpty(vHeader.value, true) ? null : encodeURIComponent(StringUtil.trim(vHeader.value))
+        var randomStr = this.isTestCaseShow || StringUtil.isEmpty(vRandom.value, true) ? null : encodeURIComponent(StringUtil.trim(vRandom.value))
+
+        var href = window.location.href || 'http://apijson.cn/api'
+        var ind = href == null ? -1 : href.indexOf('?')  // url 后带参数只能 encodeURIComponent
+
+        // 实测 561059 长度的 URL 都支持，只是输入框显示长度约为 2000
+        window.open((ind < 0 ? href : href.substring(0, ind))
+          + (this.view != 'code' ? "?send=false" : (isRandom ? "?send=random" : "?send=true"))
+          + "&type=" + StringUtil.trim(this.type || 'Object')
+          + "&url=" + encodeURIComponent(StringUtil.trim(vUrl.value))
+          + (StringUtil.isEmpty(jsonStr, true) ? '' : "&json=" + jsonStr)
+          + (StringUtil.isEmpty(headerStr, true) ? '' : "&header=" + headerStr)
+          + (StringUtil.isEmpty(randomStr, true) ? '' : "&random=" + randomStr)
+          + (StringUtil.isEmpty(settingStr, true) ? '' : "&setting=" + settingStr)
+        )
+      },
+
       // 显示保存弹窗
       showSave: function (show) {
         if (show) {
-          if (App.isTestCaseShow) {
+          if (this.isTestCaseShow) {
             alert('请先输入请求内容！')
             return
           }
 
-          var tag = App.getTag()
-          App.history.name = App.getMethod() + (StringUtil.isEmpty(tag, true) ? '' : ' ' + tag) + ' ' + App.formatTime() //不自定义名称的都是临时的，不需要时间太详细
+          var tag = this.getTag()
+          this.history.name = (this.urlComment || this.getMethod() + (StringUtil.isEmpty(tag, true) ? '' : ' ' + tag)) + ' ' + this.formatTime() //不自定义名称的都是临时的，不需要时间太详细
         }
-        App.isSaveShow = show
+        this.isSaveShow = show
       },
 
       // 显示导出弹窗
       showExport: function (show, isRemote, isRandom) {
         if (show) {
           if (isRemote) { //共享测试用例
-            App.isExportRandom = isRandom
-            if (App.isTestCaseShow) {
+            this.isExportRandom = isRandom
+
+            if (isRandom != true) {  // 分享搜索关键词和分页信息也挺好 } && this.isTestCaseShow != true) {  // 没有拿到列表，没用
+              setTimeout(function () {
+                App.shareLink(App.isRandomTest)
+              }, 1000)
+            }
+
+            if (this.isTestCaseShow) {
               alert('请先输入请求内容！')
               return
             }
-            if (App.view == 'error') {  // App.view != 'code') {
+
+            if (this.view == 'error') {  // this.view != 'code') {
               alert('发现错误，请输入正确的内容！')  // alert('请先测试请求，确保是正确可用的！')
               return
             }
             if (isRandom) {
-              App.exTxt.name = '随机配置 ' + App.formatDateTime()
+              this.exTxt.name = '随机配置 ' + this.formatDateTime()
             }
             else {
-              var tag = App.getTag()
-              App.exTxt.name = App.getMethod() + (StringUtil.isEmpty(tag, true) ? '' : ' ' + tag)
+              if (this.isEditResponse) {
+                this.isExportRemote = isRemote
+                this.exportTxt()
+                return
+              }
+
+              var tag = this.getTag()
+              this.exTxt.name = this.urlComment || (this.getMethod() + (StringUtil.isEmpty(tag, true) ? '' : ' ' + tag))
             }
           }
           else { //下载到本地
-            if (App.isTestCaseShow) { //文档
-              App.exTxt.name = 'APIJSON自动化文档 ' + App.formatDateTime()
+            if (this.isTestCaseShow) { //文档
+              this.exTxt.name = 'APIJSON自动化文档 ' + this.formatDateTime()
             }
-            else if (App.view == 'markdown' || App.view == 'output') {
+            else if (this.view == 'markdown' || this.view == 'output') {
               var suffix
-              switch (App.language) {
+              switch (this.language) {
                 case CodeUtil.LANGUAGE_KOTLIN:
                   suffix = '.kt';
                   break;
@@ -946,32 +1071,32 @@
                   break;
               }
 
-              App.exTxt.name = 'User' + suffix
+              this.exTxt.name = 'User' + suffix
               alert('自动生成模型代码，可填类名后缀:\n'
                 + 'Kotlin.kt, Java.java, Swift.swift, Objective-C.m, C#.cs, Go.go,'
                 + '\nTypeScript.ts, JavaScript.js, PHP.php, Python.py, C++.cpp');
             }
             else {
-              App.exTxt.name = 'APIJSON测试 ' + App.getMethod() + ' ' + App.formatDateTime()
+              this.exTxt.name = 'APIJSON测试 ' + this.getMethod() + ' ' + this.formatDateTime()
             }
           }
         }
-        App.isExportShow = show
-        App.isExportRemote = isRemote
+        this.isExportShow = show
+        this.isExportRemote = isRemote
       },
 
       // 显示配置弹窗
       showConfig: function (show, index) {
-        App.isConfigShow = false
-        if (App.isTestCaseShow) {
+        this.isConfigShow = false
+        if (this.isTestCaseShow) {
           if (index == 3 || index == 4 || index == 5 || index == 10) {
-            App.showTestCase(false, false)
+            this.showTestCase(false, false)
           }
         }
 
         if (show) {
-          App.exTxt.button = index == 10 ? '上传' : '切换'
-          App.exTxt.index = index
+          this.exTxt.button = index == 13 ? '上传' : '切换'
+          this.exTxt.index = index
           switch (index) {
             case 0:
             case 1:
@@ -979,10 +1104,10 @@
             case 6:
             case 7:
             case 8:
-            case 10:
-              App.exTxt.name = index == 0 ? App.database : (index == 1 ? App.schema : (index == 2
-                ? App.language : (index == 6 ? App.server : (index == 8 ? App.project : '/method/list'))))
-              App.isConfigShow = true
+            case 13:
+              this.exTxt.name = index == 0 ? this.database : (index == 1 ? this.schema : (index == 2
+                ? this.language : (index == 6 ? this.server : (index == 8 ? this.project : '/method/list'))))
+              this.isConfigShow = true
 
               if (index == 0) {
                 alert('可填数据库:\nMYSQL,POSTGRESQL,SQLSERVER,ORACLE,DB2,SQLITE')
@@ -993,56 +1118,103 @@
               else if (index == 7) {
                 alert('多个类型用 , 隔开，可填类型:\nPARAM(GET ?a=1&b=c&key=value),\nJSON(POST application/json),\nFORM(POST x-www-form-urlencoded),\nDATA(POST form-data)')
               }
-              else if (index == 10) {
-                vInput.value = App.getCache(App.project, 'request4MethodList') || '{'
+              else if (index == 13) {
+                vInput.value = this.getCache(this.project, 'request4MethodList') || '{'
                   + '\n    "mock": true,  // 生成模拟参数值'
-                  + '\n    "package": "' + App.getPackage() + '",  // 包名，不填默认全部'
-                  + '\n    "class": "' + App.getClass() + '"  // 类名，不填默认全部'
+                  + '\n    "package": "' + this.getPackage() + '",  // 包名，不填默认全部'
+                  + '\n    "class": "' + this.getClass() + '"  // 类名，不填默认全部'
                   + '\n}'
-                App.onChange(false)
-                App.request(false, REQUEST_TYPE_JSON, App.project + App.exTxt.name
-                  , App.getRequest(vInput.value), App.getHeader(vHeader.value))
+                this.onChange(false)
+                this.request(false, REQUEST_TYPE_JSON, this.project + this.exTxt.name
+                  , this.getRequest(vInput.value), this.getHeader(vHeader.value))
               }
               break
             case 3:
-              App.host = App.getBaseUrl()
-              App.showUrl(false, new String(vUrl.value).substring(App.host.length)) //没必要导致必须重新获取 Response，App.onChange(false)
-              App.remotes = null
+              this.host = this.getBaseUrl()
+              this.showUrl(false, new String(vUrl.value).substring(this.host.length)) //没必要导致必须重新获取 Response，this.onChange(false)
+              this.remotes = null
               break
             case 4:
-              App.isHeaderShow = show
-              App.saveCache('', 'isHeaderShow', show)
+              this.isHeaderShow = show
+              this.saveCache('', 'isHeaderShow', show)
               break
             case 5:
-              App.isRandomShow = show
-              App.saveCache('', 'isRandomShow', show)
+              this.isRandomShow = show
+              this.saveCache('', 'isRandomShow', show)
               break
             case 9:
-              App.isDelegateEnabled = show
-              App.saveCache('', 'isDelegateEnabled', show)
+              this.isDelegateEnabled = show
+              this.saveCache('', 'isDelegateEnabled', show)
+              break
+            case 10:
+              this.isPreviewEnabled = show
+              this.saveCache('', 'isPreviewEnabled', show)
+
+              this.onChange(false)
+              break
+            case 12:
+              this.isEncodeEnabled = show
+              this.saveCache('', 'isEncodeEnabled', show)
+              break
+            case 11:
+              var did = ((this.currentRemoteItem || {}).Method || {}).id
+              if (did == null) {
+                alert('请先选择一个已上传的用例！')
+                return
+              }
+
+              this.isEditResponse = show
+              // this.saveCache('', 'isEditResponse', show)
+
+              vInput.value = ((this.view != 'code' || StringUtil.isEmpty(this.jsoncon, true) ? null : this.jsoncon)
+                || (this.currentRemoteItem.TestRecord || {}).response) || ''
+
+              vHeader.value = (this.currentRemoteItem.TestRecord || {}).header || ''
+
+              this.isTestCaseShow = false
+              this.onChange(false)
               break
           }
         }
         else if (index == 3) {
-          var host = StringUtil.get(App.host)
+          var host = StringUtil.get(this.host)
           var branch = new String(vUrl.value)
-          App.host = ''
-          vUrl.value = host + branch //保证 showUrl 里拿到的 baseUrl = App.host (http://apijson.cn:8080/put /balance)
-          App.setBaseUrl() //保证自动化测试等拿到的 baseUrl 是最新的
-          App.showUrl(false, branch) //没必要导致必须重新获取 Response，App.onChange(false)
-          App.remotes = null
+          this.host = ''
+          vUrl.value = host + branch //保证 showUrl 里拿到的 baseUrl = this.host (http://apijson.cn:8080/put /balance)
+          this.setBaseUrl() //保证自动化测试等拿到的 baseUrl 是最新的
+          this.showUrl(false, branch) //没必要导致必须重新获取 Response，this.onChange(false)
+          this.remotes = null
         }
         else if (index == 4) {
-          App.isHeaderShow = show
-          App.saveCache('', 'isHeaderShow', show)
+          this.isHeaderShow = show
+          this.saveCache('', 'isHeaderShow', show)
         }
         else if (index == 5) {
-          App.isRandomShow = show
-          App.saveCache('', 'isRandomShow', show)
+          this.isRandomShow = show
+          this.saveCache('', 'isRandomShow', show)
         }
         else if (index == 9) {
-          App.isDelegateEnabled = show
-          App.saveCache('', 'isDelegateEnabled', show)
+          this.isDelegateEnabled = show
+          this.saveCache('', 'isDelegateEnabled', show)
+        }
+        else if (index == 10) {
+          this.isPreviewEnabled = show
+          this.saveCache('', 'isPreviewEnabled', show)
+          // vRequestMarkdown.innerHTML = ''
+        }
+        else if (index == 12) {
+          this.isEncodeEnabled = show
+          this.saveCache('', 'isEncodeEnabled', show)
+        }
+        else if (index == 11) {
+          this.isEditResponse = show
+          // this.saveCache('', 'isEditResponse', show)
+
+          vInput.value = (this.currentRemoteItem.Method || {}).request || ''
+          vHeader.value = (this.currentRemoteItem.Method || {}).header || ''
+
+          this.isTestCaseShow = false
+          this.onChange(false)
         }
       },
 
@@ -1125,19 +1297,19 @@
 
       // 保存当前的JSON
       save: function () {
-        if (App.history.name.trim() === '') {
+        if (this.history.name.trim() === '') {
           Helper.alert('名称不能为空！', 'danger')
           return
         }
         var val = {
-          name: App.history.name,
-          detail: App.history.name,
-          type: App.type,
-          package: App.getPackage(),
-          class: App.getClass(),
-          method: App.getMethod(),
+          name: this.history.name,
+          detail: this.history.name,
+          type: this.type,
+          package: this.getPackage(),
+          class: this.getClass(),
+          method: this.getMethod(),
           request: inputted,
-          response: App.jsoncon,
+          response: this.jsoncon,
           header: vHeader.value,
           random: vRandom.value
         }
@@ -1189,8 +1361,8 @@
 
         var response = ((item || {}).TestRecord || {}).response
         if (StringUtil.isEmpty(response, true) == false) {
-            App.jsoncon = StringUtil.trim(response)
-            App.view = 'code'
+            this.jsoncon = StringUtil.trim(response)
+            this.view = 'code'
         }
       },
       // 根据测试用例/历史记录恢复数据
@@ -1205,40 +1377,42 @@
       },
       // 根据历史恢复数据
       restore: function (item, response, isRemote, test) {
+        this.isEditResponse = false
+
         item = item || {}
         // localforage.getItem(item.key || '', function (err, value) {
 
-          App.type = item.type;
-          App.urlComment =  ': ' + item.type + CodeUtil.getComment(StringUtil.get(item.detail), false, '  ');
-          App.requestVersion = item.version;
+          this.type = item.type;
+          this.urlComment =  ': ' + item.type + CodeUtil.getComment(StringUtil.get(item.detail), false, '  ');
+          this.requestVersion = item.version;
 
-          var host = StringUtil.get(App.host)
+          var host = StringUtil.get(this.host)
           var url = item.package + '.' + item.class + '.' + item.method
           if (url.startsWith(host.trim())) {
             var branch = url.substring(host.endsWith(' ') ? host.length - 1 : host.length)
             vUrl.value = branch
           }
           else {
-            App.host = ''
+            this.host = ''
             vUrl.value = url
           }
-          vUrlComment.value = isSingle || StringUtil.isEmpty(App.urlComment, true)
-            ? '' : vUrl.value + App.urlComment;
+          vUrlComment.value = isSingle || StringUtil.isEmpty(this.urlComment, true)
+            ? '' : vUrl.value + this.urlComment;
 
 
-          App.showTestCase(false, App.isLocalShow)
+          this.showTestCase(false, this.isLocalShow)
           vInput.value = StringUtil.get(item.request)
           vHeader.value = StringUtil.get(item.header)
           vRandom.value = StringUtil.get(item.random)
-          App.onChange(false)
+          this.onChange(false)
 
           if (isRemote) {
-            App.randoms = []
-            App.showRandomList(App.isRandomListShow, item)
+            this.randoms = []
+            this.showRandomList(this.isRandomListShow, item)
           }
 
           if (test) {
-            App.send(false)
+            this.send(false)
           }
           else {
             if (StringUtil.isEmpty(response, true) == false) {
@@ -1268,53 +1442,53 @@
 
       // 导出文本
       exportTxt: function () {
-        App.isExportShow = false
+        this.isExportShow = false
 
-        if (App.isExportRemote == false) { //下载到本地
+        if (this.isExportRemote == false) { //下载到本地
 
-          if (App.isTestCaseShow) { //文档
-            saveTextAs('# ' + App.exTxt.name + '\n主页: https://github.com/Tencent/APIJSON'
+          if (this.isTestCaseShow) { //文档
+            saveTextAs('# ' + this.exTxt.name + '\n主页: https://github.com/Tencent/APIJSON'
               + '\n\nBASE_URL: ' + this.getBaseUrl()
-              + '\n\n\n## 测试用例(Markdown格式，可用工具预览) \n\n' + App.getDoc4TestCase()
+              + '\n\n\n## 测试用例(Markdown格式，可用工具预览) \n\n' + this.getDoc4TestCase()
               + '\n\n\n\n\n\n\n\n## 文档(Markdown格式，可用工具预览) \n\n' + doc
-              , App.exTxt.name + '.txt')
+              , this.exTxt.name + '.txt')
           }
-          else if (App.view == 'markdown' || App.view == 'output') { //model
-            var clazz = StringUtil.trim(App.exTxt.name)
+          else if (this.view == 'markdown' || this.view == 'output') { //model
+            var clazz = StringUtil.trim(this.exTxt.name)
 
             var txt = '' //配合下面 +=，实现注释判断，一次全生成，方便测试
             if (clazz.endsWith('.java')) {
-              txt += CodeUtil.parseJavaBean(docObj, clazz.substring(0, clazz.length - 5), App.database)
+              txt += CodeUtil.parseJavaBean(docObj, clazz.substring(0, clazz.length - 5), this.database)
             }
             else if (clazz.endsWith('.swift')) {
-              txt += CodeUtil.parseSwiftStruct(docObj, clazz.substring(0, clazz.length - 6), App.database)
+              txt += CodeUtil.parseSwiftStruct(docObj, clazz.substring(0, clazz.length - 6), this.database)
             }
             else if (clazz.endsWith('.kt')) {
-              txt += CodeUtil.parseKotlinDataClass(docObj, clazz.substring(0, clazz.length - 3), App.database)
+              txt += CodeUtil.parseKotlinDataClass(docObj, clazz.substring(0, clazz.length - 3), this.database)
             }
             else if  (clazz.endsWith('.m')) {
-              txt += CodeUtil.parseObjectiveCEntity(docObj, clazz.substring(0, clazz.length - 2), App.database)
+              txt += CodeUtil.parseObjectiveCEntity(docObj, clazz.substring(0, clazz.length - 2), this.database)
             }
             else if  (clazz.endsWith('.cs')) {
-              txt += CodeUtil.parseCSharpEntity(docObj, clazz.substring(0, clazz.length - 3), App.database)
+              txt += CodeUtil.parseCSharpEntity(docObj, clazz.substring(0, clazz.length - 3), this.database)
             }
             else if  (clazz.endsWith('.php')) {
-              txt += CodeUtil.parsePHPEntity(docObj, clazz.substring(0, clazz.length - 4), App.database)
+              txt += CodeUtil.parsePHPEntity(docObj, clazz.substring(0, clazz.length - 4), this.database)
             }
             else if  (clazz.endsWith('.go')) {
-              txt += CodeUtil.parseGoEntity(docObj, clazz.substring(0, clazz.length - 3), App.database)
+              txt += CodeUtil.parseGoEntity(docObj, clazz.substring(0, clazz.length - 3), this.database)
             }
             else if  (clazz.endsWith('.cpp')) {
-              txt += CodeUtil.parseCppStruct(docObj, clazz.substring(0, clazz.length - 4), App.database)
+              txt += CodeUtil.parseCppStruct(docObj, clazz.substring(0, clazz.length - 4), this.database)
             }
             else if  (clazz.endsWith('.js')) {
-              txt += CodeUtil.parseJavaScriptEntity(docObj, clazz.substring(0, clazz.length - 3), App.database)
+              txt += CodeUtil.parseJavaScriptEntity(docObj, clazz.substring(0, clazz.length - 3), this.database)
             }
             else if  (clazz.endsWith('.ts')) {
-              txt += CodeUtil.parseTypeScriptEntity(docObj, clazz.substring(0, clazz.length - 3), App.database)
+              txt += CodeUtil.parseTypeScriptEntity(docObj, clazz.substring(0, clazz.length - 3), this.database)
             }
             else if (clazz.endsWith('.py')) {
-              txt += CodeUtil.parsePythonEntity(docObj, clazz.substring(0, clazz.length - 3), App.database)
+              txt += CodeUtil.parsePythonEntity(docObj, clazz.substring(0, clazz.length - 3), this.database)
             }
             else {
               alert('请正确输入对应语言的类名后缀！')
@@ -1327,11 +1501,11 @@
             saveTextAs(txt, clazz)
           }
           else {
-            var res = JSON.parse(App.jsoncon)
+            var res = JSON.parse(this.jsoncon)
             res = this.removeDebugInfo(res)
 
             var s = ''
-            switch (App.language) {
+            switch (this.language) {
               case CodeUtil.LANGUAGE_KOTLIN:
                 s += '(Kotlin):\n\n' + CodeUtil.parseKotlinResponse('', res, 0, false, ! isSingle)
                 break;
@@ -1374,32 +1548,63 @@
                 break;
             }
 
-            saveTextAs('# ' + App.exTxt.name + '\n主页: https://github.com/Tencent/APIJSON'
+            saveTextAs('# ' + this.exTxt.name + '\n主页: https://github.com/Tencent/APIJSON'
               + '\n\n\nURL: ' + StringUtil.get(vUrl.value)
               + '\n\n\nHeader:\n' + StringUtil.get(vHeader.value)
               + '\n\n\nRequest:\n' + StringUtil.get(vInput.value)
-              + '\n\n\nResponse:\n' + StringUtil.get(App.jsoncon)
+              + '\n\n\nResponse:\n' + StringUtil.get(this.jsoncon)
               + '\n\n\n## 解析 Response 的代码' + s
-              , App.exTxt.name + '.txt')
+              , this.exTxt.name + '.txt')
           }
         }
         else { //上传到远程服务器
-          var id = App.User == null ? null : App.User.id
+          var id = this.User == null ? null : this.User.id
           if (id == null || id <= 0) {
             alert('请先登录！')
             return
           }
-          var isExportRandom = App.isExportRandom
-          var did = ((App.currentRemoteItem || {}).Method || {}).id
+
+          var isExportRandom = this.isExportRandom
+
+          if (isExportRandom != true && StringUtil.isEmpty(this.exTxt.name, true)) {
+            alert('请输入接口名！')
+            return
+          }
+
+          var doc = (this.currentRemoteItem || {}).Method || {}
+          var tr = (this.currentRemoteItem || {}).TestRecord || {}
+          var did = doc.id
           if (isExportRandom && did == null) {
             alert('请先共享测试用例！')
             return
           }
 
-          App.isTestCaseShow = false
+          this.isTestCaseShow = false
 
-          var currentAccountId = App.getCurrentAccountId()
-          var currentResponse = App.view != 'code' || StringUtil.isEmpty(App.jsoncon, true) ? {} : App.removeDebugInfo(JSON.parse(App.jsoncon));
+          var currentAccountId = this.getCurrentAccountId()
+          var currentResponse = this.view != 'code' || StringUtil.isEmpty(this.jsoncon, true) ? {} : this.removeDebugInfo(JSON.parse(this.jsoncon));
+
+          var after = this.toDoubleJSON(inputted);
+          var inputObj = this.getRequest(after, {});
+
+          var commentObj = null;
+          if (isExportRandom != true) {
+            var m = this.getMethod();
+            var commentStddObj = null
+            try {
+              commentStddObj = JSON.parse(this.isEditResponse ? tr.standard : doc.standard);
+            }
+            catch(e) {
+              log(e)
+            }
+            var code_ = inputObj.code
+            inputObj.code = null  // delete inputObj.code
+
+            commentObj = JSONResponse.updateStandard(commentStddObj, inputObj);
+            CodeUtil.parseComment(after, docObj == null ? null : docObj['[]'], m, this.database, this.language, true, commentObj, true);
+
+            inputObj.code = code_
+          }
 
           var code = currentResponse.code;
           var thrw = currentResponse.throw;
@@ -1409,21 +1614,21 @@
           var rsp = JSON.parse(JSON.stringify(currentResponse || {}))
           rsp = JSONResponse.array2object(rsp, 'methodArgs', ['methodArgs'], true)
 
-          var isML = App.isMLEnabled;
+          var isML = this.isMLEnabled;
           var stddObj = isML ? JSONResponse.updateStandard({}, rsp) : {};
           stddObj.code = code;
           stddObj.throw = thrw;
           currentResponse.code = code;
           currentResponse.throw = thrw;
 
-          var url = App.server + '/post'
+          var url = this.server + (isExportRandom || this.isEditResponse || did == null ? '/post' : '/put')
           var req = isExportRandom ? {
             format: false,
             'Random': {
               toId: 0,
               documentId: did,
-              count: App.requestCount,
-              name: App.exTxt.name,
+              count: this.requestCount,
+              name: this.exTxt.name,
               config: vRandom.value
             },
             'TestRecord': {
@@ -1433,47 +1638,63 @@
             'tag': 'Random'
           } : {
             format: false,
-            'Method': {
+            'Method': this.isEditResponse ? null : {
+              'id': did == null ? undefined : did,
               'testAccountId': currentAccountId,
-              'method': App.getMethod(),
-              'detail': App.exTxt.name,
-              'type': (currentResponse.type || App.type) || null,
-              'genericType': (currentResponse.type || App.type) || null,
-              'class': App.getClass(),
-              'package': App.getPackage(),
+              'method': this.getMethod(),
+              'detail': this.exTxt.name,
+              'type': (currentResponse.type || this.type) || null,
+              'genericType': (currentResponse.type || this.type) || null,
+              'class': this.getClass(),
+              'package': this.getPackage(),
               'methodArgs': JSON.stringify(currentResponse.methodArgs),
-              'genericMethodArgs': JSON.stringify(App.getRequest(vInput.value, {}).methodArgs),
-              'request': App.toDoubleJSON(inputted)
+              'genericMethodArgs': JSON.stringify(this.getRequest(vInput.value, {}).methodArgs),
+              'request': this.toDoubleJSON(inputted)
             },
-            'TestRecord': {
+            'TestRecord': this.isEditResponse != true && did != null ? null : {
+              'documentId': this.isEditResponse ? did : undefined,
               'randomId': 0,
-              'host': App.getBaseUrl(),
+              'host': this.getBaseUrl(),
               'testAccountId': currentAccountId,
-              'response': JSON.stringify(currentResponse),
-              'standard': isML ? JSON.stringify(stddObj) : null
+              'response': JSON.stringify(this.isEditResponse ? inputObj : currentResponse),
+              'standard': isML || this.isEditResponse ? JSON.stringify(this.isEditResponse ? commentObj : stddObj) : undefined
             },
-            'tag': 'Method'
+            'tag': this.isEditResponse ? 'TestRecord' : 'Method'
           }
 
-          App.request(true, REQUEST_TYPE_JSON, url, req, {}, function (url, res, err) {
+          this.request(true, REQUEST_TYPE_JSON, url, req, {}, function (url, res, err) {
             App.onResponse(url, res, err)
 
             var rpObj = res.data || {}
 
             if (isExportRandom) {
-              if (rpObj.Random != null && rpObj.Random.code == CODE_SUCCESS) {
+              if (rpObj.code == CODE_SUCCESS) {
                 App.randoms = []
                 App.showRandomList(true, (App.currentRemoteItem || {}).Method)
               }
             }
             else {
-              if (rpObj.Method != null && rpObj.Method.code == CODE_SUCCESS) {
+              var isPut = url.indexOf('/put') >= 0
+
+              if (rpObj.code != CODE_SUCCESS) {
+                if (isPut) {  // 修改失败就转为新增
+                  App.currentRemoteItem = null;
+                  alert('修改失败，请重试(自动转为新增)！' + StringUtil.trim(rpObj.msg))
+                }
+              }
+              else {
+                App.remotes = []
+                App.showTestCase(true, false)
+
+                if (isPut) {  // 修改失败就转为新增
+                  alert('修改成功')
+                  return
+                }
 
                 //自动生成随机配置（遍历 JSON，对所有可变值生成配置，排除 @key, key@, key() 等固定值）
-                var config = StringUtil.trim(App.newRandomConfig(null, '', App.getRequest(vInput.value, {})))
+                var req = App.getRequest(vInput.value, {})
+                var config = StringUtil.trim(App.newRandomConfig(null, '', req))
                 if (config == '') {
-                  App.remotes = []
-                  App.showTestCase(true, false)
                   return;
                 }
 
@@ -1500,9 +1721,6 @@
                     vRandom.value = config
                   }
                   App.onResponse(url, res, err)
-
-                  App.remotes = []
-                  App.showTestCase(true, false)
                 })
               }
             }
@@ -1568,7 +1786,7 @@
               }
             }
 
-            config += App.newRandomConfig(childPath, k, v)
+            config += this.newRandomConfig(childPath, k, v)
           }
         }
         else {
@@ -1585,10 +1803,10 @@
             if (isId) {
               config += prefix + 'ORDER_IN(undefined, null, ' + value + ')'
               if (value >= 1000000000) { //PHP 等语言默认精确到秒 1000000000000) {
-                config += '\n// 可替代上面的 ' + prefix.substring(1) + 'RANDOM_INT(' + Math.round(0.9 * value) + ', ' + Math.round(1.1 * value) + ')'
+                config += '\n  // 可替代上面的 ' + prefix.substring(1) + 'RANDOM_INT(' + Math.round(0.9 * value) + ', ' + Math.round(1.1 * value) + ')'
               }
               else {
-                config += '\n// 可替代上面的 ' + prefix.substring(1) + 'RANDOM_INT(1, ' + (10 * value) + ')'
+                config += '\n  // 可替代上面的 ' + prefix.substring(1) + 'RANDOM_INT(1, ' + (10 * value) + ')'
               }
             }
             else {
@@ -1614,16 +1832,16 @@
                 var hasDot = String(value).indexOf('.') >= 0
 
                 if (value < 0) {
-                  config += '\n// 可替代上面的 ' + prefix.substring(1) + (hasDot ? 'RANDOM_NUM' : 'RANDOM_INT') + '(' + (100 * value) + ', 0)'
+                  config += '\n  // 可替代上面的 ' + prefix.substring(1) + (hasDot ? 'RANDOM_NUM' : 'RANDOM_INT') + '(' + (100 * value) + ', 0)'
                 }
                 else if (value > 0 && value < 1) {  // 0-1 比例
-                  config += '\n// 可替代上面的 ' + prefix.substring(1) + 'RANDOM_NUM(0, 1)'
+                  config += '\n  // 可替代上面的 ' + prefix.substring(1) + 'RANDOM_NUM(0, 1)'
                 }
                 else if (value >= 0 && value <= 100) {  // 10% 百分比
-                  config += '\n// 可替代上面的 ' + prefix.substring(1) + 'RANDOM_INT(0, 100)'
+                  config += '\n  // 可替代上面的 ' + prefix.substring(1) + 'RANDOM_INT(0, 100)'
                 }
                 else {
-                  config += '\n// 可替代上面的 ' + prefix.substring(1) + (hasDot != true && value < 10 ? 'ORDER_INT(0, 9)' : ((hasDot ? 'RANDOM_NUM' : 'RANDOM_INT') + '(0, ' + 100 * value + ')'))
+                  config += '\n  // 可替代上面的 ' + prefix.substring(1) + (hasDot != true && value < 10 ? 'ORDER_INT(0, 9)' : ((hasDot ? 'RANDOM_NUM' : 'RANDOM_INT') + '(0, ' + 100 * value + ')'))
                 }
               }
             }
@@ -1649,57 +1867,57 @@
 
       // 保存配置
       saveConfig: function () {
-        App.isConfigShow = App.exTxt.index == 10
+        this.isConfigShow = this.exTxt.index == 13
 
-        switch (App.exTxt.index) {
+        switch (this.exTxt.index) {
           case 0:
-            App.database = CodeUtil.database = App.exTxt.name
-            App.saveCache('', 'database', App.database)
+            this.database = CodeUtil.database = this.exTxt.name
+            this.saveCache('', 'database', this.database)
 
             doc = null
-            var item = App.accounts[App.currentAccountIndex]
+            var item = this.accounts[this.currentAccountIndex]
             item.isLoggedIn = false
-            App.onClickAccount(App.currentAccountIndex, item)
+            this.onClickAccount(this.currentAccountIndex, item)
             break
           case 1:
-            App.schema = CodeUtil.schema = App.exTxt.name
-            App.saveCache('', 'schema', App.schema)
+            this.schema = CodeUtil.schema = this.exTxt.name
+            this.saveCache('', 'schema', this.schema)
 
             doc = null
-            var item = App.accounts[App.currentAccountIndex]
+            var item = this.accounts[this.currentAccountIndex]
             item.isLoggedIn = false
-            App.onClickAccount(App.currentAccountIndex, item)
+            this.onClickAccount(this.currentAccountIndex, item)
             break
           case 2:
-            App.language = CodeUtil.language = App.exTxt.name
-            App.saveCache('', 'language', App.language)
+            this.language = CodeUtil.language = this.exTxt.name
+            this.saveCache('', 'language', this.language)
 
             doc = null
-            App.onChange(false)
+            this.onChange(false)
             break
           case 6:
-            App.server = App.exTxt.name
-            App.saveCache('', 'server', App.server)
-            App.logout(true)
+            this.server = this.exTxt.name
+            this.saveCache('', 'server', this.server)
+            this.logout(true)
             break
           case 7:
-            App.types = StringUtil.split(App.exTxt.name)
-            App.saveCache('', 'types', App.types)
+            this.types = StringUtil.split(this.exTxt.name)
+            this.saveCache('', 'types', this.types)
             break
           case 8:
-            App.project = App.exTxt.name
-            App.saveCache('', 'project', App.project)
+            this.project = this.exTxt.name
+            this.saveCache('', 'project', this.project)
 
-            var c = App.currentAccountIndex == null ? -1 : App.currentAccountIndex
-            var item = App.accounts == null ? null : App.accounts[c]
+            var c = this.currentAccountIndex == null ? -1 : this.currentAccountIndex
+            var item = this.accounts == null ? null : this.accounts[c]
             if (item != null) {
               item.isLoggedIn = ! item.isLoggedIn
-              App.onClickAccount(c, item)
+              this.onClickAccount(c, item)
             }
             break
-          case 10:
-            App.saveCache(App.project, 'request4MethodList', vInput.value)
-            App.request(false, REQUEST_TYPE_JSON, App.project + App.exTxt.name, App.getRequest(vInput.value), App.getHeader(vHeader.value), function (url, res, err) {
+          case 13:
+            this.saveCache(this.project, 'request4MethodList', vInput.value)
+            this.request(false, REQUEST_TYPE_JSON, this.project + this.exTxt.name, this.getRequest(vInput.value), this.getHeader(vHeader.value), function (url, res, err) {
               if (App.isSyncing) {
                 alert('正在同步，请等待完成')
                 return
@@ -1737,31 +1955,31 @@
        */
       sync2DB: function(classItem) {
         if (classItem == null) {
-          App.log('postApi', 'classItem == null  >> return')
+          this.log('postApi', 'classItem == null  >> return')
           return
         }
 
         var methodList = classItem.methodList || []
-        App.uploadTotal += methodList.length
-        App.exTxt.button = 'All:' + App.uploadTotal + '\nDone:' + App.uploadDoneCount + '\nFail:' + App.uploadFailCount
+        this.uploadTotal += methodList.length
+        this.exTxt.button = 'All:' + this.uploadTotal + '\nDone:' + this.uploadDoneCount + '\nFail:' + this.uploadFailCount
 
-        var currentAccount = App.accounts[App.currentAccountIndex]
-        var classArgs = App.getArgs4Sync(classItem.parameterTypeList)
+        var currentAccount = this.accounts[this.currentAccountIndex]
+        var classArgs = this.getArgs4Sync(classItem.parameterTypeList)
 
         var methodItem
         for (var k = 0; k < methodList.length; k++) {
           methodItem = methodList[k]
           if (methodItem == null || methodItem.name == null) {
-            App.uploadFailCount ++
-            App.exTxt.button = 'All:' + App.uploadTotal + '\nDone:' + App.uploadDoneCount + '\nFail:' + App.uploadFailCount
+            this.uploadFailCount ++
+            this.exTxt.button = 'All:' + this.uploadTotal + '\nDone:' + this.uploadDoneCount + '\nFail:' + this.uploadFailCount
             continue
           }
 
-          var currentAccountId = App.getCurrentAccountId()
-          App.request(true, REQUEST_TYPE_JSON, App.server + '/post', {
+          var currentAccountId = this.getCurrentAccountId()
+          this.request(true, REQUEST_TYPE_JSON, this.server + '/post', {
             format: false,
             'Method': {
-              'userId': App.User.id,
+              'userId': this.User.id,
               'testAccountId': currentAccountId,
               'package': classItem.package == null ? null : classItem.package,  // .replace(/[.]/g, '/'),
               'class': classItem.name,
@@ -1769,9 +1987,9 @@
               'this': null,
               'constructor': null,
               'classArgs': classArgs,
-              'genericClassArgs': App.getArgs4Sync(classItem.genericParameterTypeList),
-              'methodArgs': App.getArgs4Sync(methodItem.parameterTypeList, methodItem.parameterDefaultValueList),
-              'genericMethodArgs': App.getArgs4Sync(methodItem.genericParameterTypeList, methodItem.parameterDefaultValueList),
+              'genericClassArgs': this.getArgs4Sync(classItem.genericParameterTypeList),
+              'methodArgs': this.getArgs4Sync(methodItem.parameterTypeList, methodItem.parameterDefaultValueList),
+              'genericMethodArgs': this.getArgs4Sync(methodItem.genericParameterTypeList, methodItem.parameterDefaultValueList),
               'type': methodItem.returnType == null ? null : methodItem.returnType,  // .replace(/[.]/g, '/'),
               'genericType': methodItem.genericReturnType == null ? null : methodItem.genericReturnType,  // .replace(/[.]/g, '/'),
               'static': methodItem.static ? 1 : 0,
@@ -1783,7 +2001,7 @@
             },
             'TestRecord': {
               'randomId': 0,
-              'host': App.getBaseUrl(),
+              'host': this.getBaseUrl(),
               'testAccountId': currentAccountId,
               'response': ''
             },
@@ -1826,7 +2044,7 @@
         for (var l = 0; l < typeList.length; l++) {
 
           var type = typeList[l] == null ? null : typeList[l]  //保持用 . 分割  .replace(/[.]/g, '/')
-          var value = valueList[l] == null ? App.mockValue4Type(type) : valueList[l];
+          var value = valueList[l] == null ? this.mockValue4Type(type) : valueList[l];
 
           args.push({
             type: type,
@@ -1879,7 +2097,7 @@
           var size = randomInt(0, 10)
           var arr = []
           for (var i = 0; i < size; i ++) {
-            var v = App.mockValue4Type(ct)
+            var v = this.mockValue4Type(ct)
             if (v != null) {
               arr.push(v)
             }
@@ -1922,20 +2140,20 @@
         if (date == null) {
           date = new Date()
         }
-        return date.getFullYear() + '-' + App.fillZero(date.getMonth() + 1) + '-' + App.fillZero(date.getDate())
+        return date.getFullYear() + '-' + this.fillZero(date.getMonth() + 1) + '-' + this.fillZero(date.getDate())
       },
       //格式化时间
       formatTime: function (date) {
         if (date == null) {
           date = new Date()
         }
-        return App.fillZero(date.getHours()) + ':' + App.fillZero(date.getMinutes())
+        return this.fillZero(date.getHours()) + ':' + this.fillZero(date.getMinutes())
       },
       formatDateTime: function (date) {
         if (date == null) {
           date = new Date()
         }
-        return App.formatDate(date) + ' ' + App.formatTime(date)
+        return this.formatDate(date) + ' ' + this.formatTime(date)
       },
       //填充0
       fillZero: function (num, n) {
@@ -1959,6 +2177,8 @@
 
 
       onClickAccount: function (index, item, callback) {
+        this.isTestCaseShow = false
+
         if (this.currentAccountIndex == index) {
           if (item == null) {
             if (callback != null) {
@@ -2001,6 +2221,7 @@
                   item.remember = data.remember
                   item.isLoggedIn = true
 
+                  App.accounts[App.currentAccountIndex] = item
                   App.saveCache(App.getBaseUrl(), 'currentAccountIndex', App.currentAccountIndex)
                   App.saveCache(App.getBaseUrl(), 'accounts', App.accounts)
 
@@ -2039,21 +2260,21 @@
       },
 
       removeAccountTab: function () {
-        if (App.accounts.length <= 1) {
+        if (this.accounts.length <= 1) {
           alert('至少要 1 个测试账号！')
           return
         }
 
-        App.accounts.splice(App.currentAccountIndex, 1)
-        if (App.currentAccountIndex >= App.accounts.length) {
-          App.currentAccountIndex = App.accounts.length - 1
+        this.accounts.splice(this.currentAccountIndex, 1)
+        if (this.currentAccountIndex >= this.accounts.length) {
+          this.currentAccountIndex = this.accounts.length - 1
         }
 
-        App.saveCache(App.getBaseUrl(), 'currentAccountIndex', App.currentAccountIndex)
-        App.saveCache(App.getBaseUrl(), 'accounts', App.accounts)
+        this.saveCache(this.getBaseUrl(), 'currentAccountIndex', this.currentAccountIndex)
+        this.saveCache(this.getBaseUrl(), 'accounts', this.accounts)
       },
       addAccountTab: function () {
-        App.showLogin(true, false)
+        this.showLogin(true, false)
       },
 
 
@@ -2097,8 +2318,8 @@
           var search = StringUtil.isEmpty(this.testCaseSearch, true) ? null : StringUtil.trim(this.testCaseSearch)
 
 
-          var host = StringUtil.get(App.host);
-          var pkg = App.getPackage()
+          var host = StringUtil.get(this.host);
+          var pkg = this.getPackage()
 
           var packagePrefix = ''
           var classPrefix = ''
@@ -2122,11 +2343,13 @@
             '[]': {
               'count': this.testCaseCount || 100, //200 条测试直接卡死 0,
               'page': this.testCasePage || 0,
-              'Method': {
+              'Method': {  // 不管是 item.Method.constructor 还是 item.Method['constructor'] 都取到了 js 语言构造器而不是 JSON 中的 value
+                '@column': 'id,userId,static,ui,type,genericType,package,class,constructor:cttr,classArgs,genericClassArgs,method,methodArgs,exceptions,genericExceptions,request,demo,detail,date',
                 '@order': 'date-',
-                'userId{}': [0, App.User.id],
+                'userId{}': [0, this.User.id],
                 'arguments()': 'getMethodArguments(genericMethodArgs)',
                 'defination()': 'getMethodDefination(method,arguments,type,exceptions,null)',
+                'constructorArguments()': 'getMethodArguments(genericClassArgs)',
                 'request()': 'getMethodRequest()',
                 'package$': StringUtil.isEmpty(packagePrefix) ? null : packagePrefix + '%',
                 'class$': StringUtil.isEmpty(classPrefix) ? null : classPrefix + '%',
@@ -2139,19 +2362,19 @@
               },
               'TestRecord': {
                 'documentId@': '/Method/id',
-                'userId': App.User.id,
-                'testAccountId': App.getCurrentAccountId(),
+                'userId': this.User.id,
+                'testAccountId': this.getCurrentAccountId(),
                 'randomId': 0,
                 '@order': 'date-',
-                '@column': 'id,userId,documentId,duration,minDuration,maxDuration,response' + (App.isMLEnabled ? ',standard' : ''),
-                '@having': App.isMLEnabled ? 'length(standard)>2' : null  //用 MySQL 5.6   '@having': App.isMLEnabled ? 'json_length(standard)>0' : null
+                '@column': 'id,userId,documentId,duration,minDuration,maxDuration,response' + (this.isMLEnabled ? ',standard' : ''),
+                '@having': this.isMLEnabled ? 'length(standard)>2' : null  //用 MySQL 5.6   '@having': this.isMLEnabled ? 'json_length(standard)>0' : null
               }
             },
             '@role': 'LOGIN'
           }
 
-          App.onChange(false)
-          App.request(true, REQUEST_TYPE_JSON, App.server + '/get', req, {}, function (url, res, err) {
+          this.onChange(false)
+          this.request(true, REQUEST_TYPE_JSON, this.server + '/get', req, {}, function (url, res, err) {
             App.onResponse(url, res, err)
 
             var rpObj = res.data
@@ -2190,7 +2413,8 @@
             ? null : '%' + StringUtil.trim(this.randomSubSearch) + '%'
           var search = isSub ? subSearch : (StringUtil.isEmpty(this.randomSearch, true)
             ? null : '%' + StringUtil.trim(this.randomSearch) + '%')
-          var url = App.server + '/get'
+
+          var url = this.server + '/get'
           var req = {
             '[]': {
               'count': (isSub ? this.randomSubCount : this.randomCount) || 100,
@@ -2203,8 +2427,8 @@
               },
               'TestRecord': {
                 'randomId@': '/Random/id',
-                'testAccountId': App.getCurrentAccountId(),
-                'host': App.getBaseUrl(),
+                'testAccountId': this.getCurrentAccountId(),
+                'host': this.getBaseUrl(),
                 '@order': 'date-'
               },
               '[]': isSub ? null : {
@@ -2218,8 +2442,8 @@
                 },
                 'TestRecord': {
                   'randomId@': '/Random/id',
-                  'testAccountId': App.getCurrentAccountId(),
-                  'host': App.getBaseUrl(),
+                  'testAccountId': this.getCurrentAccountId(),
+                  'host': this.getBaseUrl(),
                   '@order': 'date-'
                 }
               }
@@ -2270,29 +2494,30 @@
         cache[key] = value
         localStorage.setItem('UnitAuto:' + url, JSON.stringify(cache))
       },
-      getCache: function (url, key) {
+      getCache: function (url, key, defaultValue) {
         var cache = localStorage.getItem('UnitAuto:' + url)
         try {
           cache = JSON.parse(cache)
         } catch(e) {
-          App.log('login  App.send >> try { cache = JSON.parse(cache) } catch(e) {\n' + e.message)
+          this.log('login  this.send >> try { cache = JSON.parse(cache) } catch(e) {\n' + e.message)
         }
         cache = cache || {}
-        return key == null ? cache : cache[key]
+        var val = key == null ? cache : cache[key]
+        return val == null && defaultValue != null ? defaultValue : val
       },
 
       /**登录确认
        */
       confirm: function () {
-        switch (App.loginType) {
+        switch (this.loginType) {
           case 'login':
-            App.login(App.isAdminOperation)
+            this.login(this.isAdminOperation)
             break
           case 'register':
-            App.register(App.isAdminOperation)
+            this.register(this.isAdminOperation)
             break
           case 'forget':
-            App.resetPassword(App.isAdminOperation)
+            this.resetPassword(this.isAdminOperation)
             break
         }
       },
@@ -2305,7 +2530,7 @@
           return
         }
 
-        var user = isAdmin ? App.User : null  // add account   App.accounts[App.currentAccountIndex]
+        var user = isAdmin ? this.User : null  // add account   this.accounts[this.currentAccountIndex]
 
         // alert("showLogin  isAdmin = " + isAdmin + "; user = \n" + JSON.stringify(user, null, '    '))
 
@@ -2326,34 +2551,35 @@
       },
 
       getCurrentAccount: function() {
-        return App.accounts == null ? null : App.accounts[App.currentAccountIndex]
+        return this.accounts == null ? null : this.accounts[this.currentAccountIndex]
       },
       getCurrentAccountId: function() {
-        var a = App.getCurrentAccount()
+        var a = this.getCurrentAccount()
         return a != null && a.isLoggedIn ? a.id : null
       },
 
       /**登录
        */
       login: function (isAdminOperation, callback) {
-        App.isLoginShow = false
+        this.isLoginShow = false
+        this.isEditResponse = false
 
         const req = {
           type: 0, // 登录方式，非必须 0-密码 1-验证码
-          phone: App.account,
-          password: App.password,
+          phone: this.account,
+          password: this.password,
           version: 1, // 全局默认版本号，非必须
           remember: vRemember.checked,
           format: false,
           // 后端决定
           // defaults: {
-          //   '@database': App.database,
-          //   '@schema': App.schema
+          //   '@database': this.database,
+          //   '@schema': this.schema
           // }
         }
 
         if (isAdminOperation) {
-          App.request(isAdminOperation, REQUEST_TYPE_JSON, App.server + '/login', req, {}, function (url, res, err) {
+          this.request(isAdminOperation, REQUEST_TYPE_JSON, this.server + '/login', req, {}, function (url, res, err) {
             if (callback) {
               callback(url, res, err)
               return
@@ -2363,6 +2589,7 @@
 
             if (rpObj.code != CODE_SUCCESS) {
               alert('登录失败，请检查网络后重试。\n' + rpObj.msg + '\n详细信息可在浏览器控制台查看。')
+              App.onResponse(url, res, err)
             }
             else {
               var user = rpObj.user || {}
@@ -2394,21 +2621,21 @@
         else {
           if (callback == null) {
             var item
-            for (var i in App.accounts) {
-              item = App.accounts[i]
+            for (var i in this.accounts) {
+              item = this.accounts[i]
               if (item != null && req.phone == item.phone) {
                 alert(req.phone +  ' 已在测试账号中！')
-                // App.currentAccountIndex = i
+                // this.currentAccountIndex = i
                 item.remember = vRemember.checked
-                App.onClickAccount(i, item)
+                this.onClickAccount(i, item)
                 return
               }
             }
           }
 
-          App.showTestCase(false, App.isLocalShow)
-          App.onChange(false)
-          App.request(isAdminOperation, REQUEST_TYPE_JSON, App.project + '/login', req, {}, function (url, res, err) {
+          this.showTestCase(false, this.isLocalShow)
+          this.onChange(false)
+          this.request(isAdminOperation, REQUEST_TYPE_JSON, this.project + '/login', req, {}, function (url, res, err) {
             if (callback) {
               callback(url, res, err)
               return
@@ -2446,12 +2673,12 @@
       /**注册
        */
       register: function (isAdminOperation) {
-        App.showUrl(isAdminOperation, '/register')
+        this.showUrl(isAdminOperation, '/register')
         vInput.value = JSON.stringify(
           {
             Privacy: {
-              phone: App.account,
-              _password: App.password
+              phone: this.account,
+              _password: this.password
             },
             User: {
               name: 'APIJSONUser'
@@ -2459,9 +2686,9 @@
             verify: vVerify.value
           },
           null, '    ')
-        App.showTestCase(false, false)
-        App.onChange(false)
-        App.send(isAdminOperation, function (url, res, err) {
+        this.showTestCase(false, false)
+        this.onChange(false)
+        this.send(isAdminOperation, function (url, res, err) {
           App.onResponse(url, res, err)
 
           var rpObj = res.data
@@ -2480,19 +2707,19 @@
       /**重置密码
        */
       resetPassword: function (isAdminOperation) {
-        App.showUrl(isAdminOperation, '/put/password')
+        this.showUrl(isAdminOperation, '/put/password')
         vInput.value = JSON.stringify(
           {
             verify: vVerify.value,
             Privacy: {
-              phone: App.account,
-              _password: App.password
+              phone: this.account,
+              _password: this.password
             }
           },
           null, '    ')
-        App.showTestCase(false, App.isLocalShow)
-        App.onChange(false)
-        App.send(isAdminOperation, function (url, res, err) {
+        this.showTestCase(false, this.isLocalShow)
+        this.onChange(false)
+        this.send(isAdminOperation, function (url, res, err) {
           App.onResponse(url, res, err)
 
           var rpObj = res.data
@@ -2511,16 +2738,20 @@
       /**退出
        */
       logout: function (isAdminOperation, callback) {
+        this.isEditResponse = false
         var req = {}
 
         if (isAdminOperation) {
-          // alert('logout  isAdminOperation  this.saveCache(App.server, User, {})')
-          this.saveCache(App.server, 'User', {})
+          // alert('logout  isAdminOperation  this.saveCache(this.server, User, {})')
+          this.delegateId = null
+          this.saveCache(this.server, 'delegateId', null)
+
+          this.saveCache(this.server, 'User', {})
         }
 
         // alert('logout  isAdminOperation = ' + isAdminOperation + '; url = ' + url)
         if (isAdminOperation) {
-          this.request(isAdminOperation, REQUEST_TYPE_JSON, App.server + '/logout', req, {}, function (url, res, err) {
+          this.request(isAdminOperation, REQUEST_TYPE_JSON, this.server + '/logout', req, {}, function (url, res, err) {
             if (callback) {
               callback(url, res, err)
               return
@@ -2534,26 +2765,26 @@
           })
         }
         else {
-          this.showTestCase(false, App.isLocalShow)
+          this.showTestCase(false, this.isLocalShow)
           this.onChange(false)
-          this.request(isAdminOperation, REQUEST_TYPE_JSON, App.project + '/logout', req, {}, callback)
+          this.request(isAdminOperation, REQUEST_TYPE_JSON, this.project + '/logout', req, {}, callback)
         }
       },
 
       /**获取验证码
        */
       getVerify: function (isAdminOperation) {
-        App.showUrl(isAdminOperation, '/post/verify')
-        var type = App.loginType == 'login' ? 0 : (App.loginType == 'register' ? 1 : 2)
+        this.showUrl(isAdminOperation, '/post/verify')
+        var type = this.loginType == 'login' ? 0 : (this.loginType == 'register' ? 1 : 2)
         vInput.value = JSON.stringify(
           {
             type: type,
-            phone: App.account
+            phone: this.account
           },
           null, '    ')
-        App.showTestCase(false, App.isLocalShow)
-        App.onChange(false)
-        App.send(isAdminOperation, function (url, res, err) {
+        this.showTestCase(false, this.isLocalShow)
+        this.onChange(false)
+        this.send(isAdminOperation, function (url, res, err) {
           App.onResponse(url, res, err)
 
           var data = res.data || {}
@@ -2566,10 +2797,12 @@
       },
 
       clearUser: function () {
-        App.User.id = 0
-        App.Privacy = {}
-        App.remotes = []
-        App.saveCache(App.server, 'User', App.User) //应该用lastBaseUrl,baseUrl应随watch输入变化重新获取
+        this.User.id = 0
+        this.Privacy = {}
+        this.remotes = []
+        // 导致刚登录成功就马上退出 this.delegateId = null
+        this.saveCache(this.server, 'User', this.User) //应该用lastBaseUrl,baseUrl应随watch输入变化重新获取
+        // this.saveCache(this.server, 'delegateId', this.delegateId) //应该用lastBaseUrl,baseUrl应随watch输入变化重新获取
       },
 
       /**计时回调
@@ -2581,9 +2814,9 @@
           return;
         }
 
-        App.view = 'output';
+        this.view = 'output';
         vComment.value = '';
-        vUrlComment.value = '';
+        // vUrlComment.value = '';
         vOutput.value = 'resolving...';
 
         //格式化输入代码
@@ -2596,79 +2829,121 @@
             throw new Error(e2.message)
           }
 
-          before = App.toDoubleJSON(StringUtil.trim(before));
-          log('onHandle  before = \n' + before);
+          before = StringUtil.trim(before);
 
           var afterObj;
           var after;
-          try {
-            afterObj = jsonlint.parse(before);
-            after = JSON.stringify(afterObj, null, "    ");
-            before = after;
-          }
-          catch (e) {
-            log('main.onHandle', 'try { return jsonlint.parse(before); \n } catch (e) {\n' + e.message)
-            log('main.onHandle', 'return jsonlint.parse(App.removeComment(before));')
+          if (StringUtil.isEmpty(before)) {
+            afterObj = {};
+            after = '';
+          } else {
+            before = this.toDoubleJSON(StringUtil.trim(before));
+            log('onHandle  before = \n' + before);
 
             try {
-              afterObj = jsonlint.parse(App.removeComment(before));
+              afterObj = jsonlint.parse(before);
               after = JSON.stringify(afterObj, null, "    ");
-            } catch (e2) {
-              throw new Error('请求 JSON 格式错误！请检查并编辑请求！\n\n如果JSON中有注释，请 手动删除 或 点击左边的 \'/" 按钮 来去掉。\n\n' + e2.message)
+              before = after;
             }
+            catch (e) {
+              log('main.onHandle', 'try { return jsonlint.parse(before); \n } catch (e) {\n' + e.message)
+              log('main.onHandle', 'return jsonlint.parse(this.removeComment(before));')
+
+              try {
+                afterObj = jsonlint.parse(this.removeComment(before));
+                after = JSON.stringify(afterObj, null, "    ");
+              } catch (e2) {
+                throw new Error('请求 JSON 格式错误！请检查并编辑请求！\n\n如果JSON中有注释，请 手动删除 或 点击左边的 \'/" 按钮 来去掉。\n\n' + e2.message)
+              }
+            }
+
+            //关键词let在IE和Safari上不兼容
+            // var code = '';
+            // try {
+            //   code = this.getCode(after); //必须在before还是用 " 时使用，后面用会因为解析 ' 导致失败
+            // } catch(e) {
+            //   code = '\n\n\n建议:\n使用其它浏览器，例如 谷歌Chrome、火狐FireFox 或者 微软Edge， 因为这样能自动生成请求代码.'
+            //     + '\nError:\n' + e.message + '\n\n\n';
+            // }
+
+            if (isSingle) {
+              if (before.indexOf('"') >= 0) {
+                before = before.replace(/"/g, "'");
+              }
+            }
+            else {
+              if (before.indexOf("'") >= 0) {
+                before = before.replace(/'/g, '"');
+              }
+            }
+
+            vInput.value = before
+              + '\n\n\n                                                                                                       '
+              + '                                                                                                       \n';  //解决遮挡
           }
 
-          //关键词let在IE和Safari上不兼容
-          var code = '';
-          // try {
-          //   code = this.getCode(after); //必须在before还是用 " 时使用，后面用会因为解析 ' 导致失败
-          // } catch(e) {
-          //   code = '\n\n\n建议:\n使用其它浏览器，例如 谷歌Chrome、火狐FireFox 或者 微软Edge， 因为这样能自动生成请求代码.'
-          //     + '\nError:\n' + e.message + '\n\n\n';
-          // }
-
-          if (isSingle) {
-            if (before.indexOf('"') >= 0) {
-              before = before.replace(/"/g, "'");
-            }
-          }
-          else {
-            if (before.indexOf("'") >= 0) {
-              before = before.replace(/'/g, '"');
-            }
-          }
-
-          vInput.value = before;
           vSend.disabled = false;
-          vOutput.value = output = 'OK，请点击 [运行方法] 按钮来测试。[点击这里查看视频教程](https://www.bilibili.com/video/BV1Tk4y1R7Yo)' + code;
-
-
-          App.showDoc()
-
-          // try {
-          var m = App.getMethod();
-          var c = isSingle ? '' : CodeUtil.parseComment(after, docObj == null ? null : docObj['[]'], m, App.database)
-
-          if (isSingle != true && afterObj.tag == null) {
-            m = m == null ? 'GET' : m.toUpperCase()
-            if (['GETS', 'HEADS', 'POST', 'PUT', 'DELETE'].indexOf(m) >= 0) {
-              c += ' ! 非开放请求必须设置 tag ！例如 "tag": "User"'
-            }
+          if (this.isEditResponse != true) {
+            // vOutput.value = output = 'OK，请点击 [运行方法] 按钮来测试。[点击这里查看视频教程](https://www.bilibili.com/video/BV1Tk4y1R7Yo)'; // + code;
+            this.showDoc()
           }
-          vComment.value = c
-          vUrlComment.value = isSingle || StringUtil.isEmpty(App.urlComment, true) ? '' : vUrl.value + App.urlComment;
 
-          onScrollChanged()
-          onURLScrollChanged()
-          // } catch (e) {
-          //   log('onHandle   try { vComment.value = CodeUtil.parseComment >> } catch (e) {\n' + e.message);
-          // }
+          try {
+            var standardObj = null;
+            try {
+              standardObj = JSON.parse(((this.currentRemoteItem || {})[this.isEditResponse ? 'TestRecord' : 'Method'] || {}).standard);
+            } catch (e3) {
+              log(e3)
+            }
+
+            var m = this.getMethod();
+            var c = isSingle ? '' : StringUtil.trim(CodeUtil.parseComment(after, docObj == null ? null : docObj['[]'], m, this.database, this.language, this.isEditResponse != true, standardObj))
+              + '\n\n\n                                                                                                       '
+              + '                                                                                                       \n';  //解决遮挡
+            //TODO 统计行数，补全到一致 vInput.value.lineNumbers
+
+            if (isSingle != true && afterObj.tag == null) {
+              m = m == null ? 'GET' : m.toUpperCase()
+              if (['GETS', 'HEADS', 'POST', 'PUT', 'DELETE'].indexOf(m) >= 0) {
+                c += ' ! 非开放请求必须设置 tag ！例如 "tag": "User"'
+              }
+            }
+            vComment.value = c
+            vUrlComment.value = isSingle || StringUtil.isEmpty(App.urlComment, true) ? '' : vUrl.value + App.urlComment;
+
+
+            onScrollChanged()
+            onURLScrollChanged()
+          } catch (e) {
+            log('onHandle   try { vComment.value = CodeUtil.parseComment >> } catch (e) {\n' + e.message);
+          }
+
+          try {
+            // 去掉前面的 JSON
+            var it = StringUtil.trim(vInput.value);
+            var ct = StringUtil.trim(vComment.value);
+
+            var raw = (it.lastIndexOf('\n\/*') < 0 || it.lastIndexOf('\n*\/') < 0 ? ct : it) || '';
+            var start = raw.lastIndexOf('\n\/*')
+            var end = raw.lastIndexOf('\n*\/')
+            markdownToHTML('```js\n' + (StringUtil.isEmpty(ct) ? (start < 0 || end <= start ? raw.substring(0, start) : '') : ct) + '\n```\n'
+              // + this.toMD(start < 0 || end <= start ? '' : raw.substring(start + '\n\/*'.length, end) ), true);
+              + (start < 0 || end <= start ? '' : raw.substring(start + '\n\/*'.length, end) ), true);
+          } catch (e3) {
+            log(e3)
+          }
+
+          if (this.isEditResponse) {
+            this.view = 'code';
+            this.jsoncon = after
+          }
+
         } catch(e) {
           log(e)
           vSend.disabled = true
 
-          App.view = 'error'
-          App.error = {
+          this.view = 'error'
+          this.error = {
             msg: e.message
           }
         }
@@ -2681,15 +2956,19 @@
         this.setBaseUrl();
         inputted = new String(vInput.value);
         vComment.value = '';
-        vUrlComment.value = '';
+        // vUrlComment.value = '';
 
         clearTimeout(handler);
 
         this.isDelayShow = delay;
 
-        handler = setTimeout(function () {
-          App.onHandle(inputted);
-        }, delay ? 2*1000 : 0);
+        if (delay) {
+          handler = setTimeout(function () {
+            App.onHandle(inputted);
+          }, 2000);
+        } else {
+          this.onHandle(inputted);
+        }
       },
 
       /**单双引号切换
@@ -2785,11 +3064,11 @@
       },
 
       showAndSend: function (branchUrl, req, isAdminOperation, callback) {
-        App.showUrl(isAdminOperation, branchUrl)
+        this.showUrl(isAdminOperation, branchUrl)
         vInput.value = JSON.stringify(req, null, '    ')
-        App.showTestCase(false, App.isLocalShow)
-        App.onChange(false)
-        App.send(isAdminOperation, callback)
+        this.showTestCase(false, this.isLocalShow)
+        this.onChange(false)
+        this.send(isAdminOperation, callback)
       },
 
       /**发送请求
@@ -2800,20 +3079,25 @@
           return
         }
 
-        if (StringUtil.isEmpty(App.host, true)) {
+        if (StringUtil.isEmpty(this.host, true)) {
           // if (StringUtil.get(vUrl.value).startsWith('http://') != true && StringUtil.get(vUrl.value).startsWith('https://') != true) {
           //   alert('URL 缺少 http:// 或 https:// 前缀，可能不完整或不合法，\n可能使用同域的 Host，很可能访问出错！')
           // }
         }
         else {
           if (StringUtil.get(vUrl.value).indexOf('://') >= 0) {
-            alert('URL Host 已经隐藏(固定) 为 \n' + App.host + ' \n将会自动在前面补全，导致 URL 不合法访问出错！\n如果要改 Host，右上角设置 > 显示(编辑)URL Host')
+            alert('URL Host 已经隐藏(固定) 为 \n' + this.host + ' \n将会自动在前面补全，导致 URL 不合法访问出错！\n如果要改 Host，右上角设置 > 显示(编辑)URL Host')
           }
         }
 
         this.onHandle(vInput.value)
 
         clearTimeout(handler)
+
+        if (this.isEditResponse) {
+          this.onChange(false)
+          return
+        }
 
         var header
         try {
@@ -2823,17 +3107,17 @@
           return
         }
 
-        var req = this.getRequest(vInput.value)
+        var req = this.getRequest(vInput.value, {})
 
         var url = this.getUrl()
 
         var httpReq = {
-          "package": req.package || App.getPackage(url),
-          "class": req.class || App.getClass(url),
+          "package": req.package || this.getPackage(url),
+          "class": req.class || this.getClass(url),
           "this": req.this,
           "constructor": req.constructor,
           "classArgs": req.classArgs,
-          "method": req.method || App.getMethod(url),
+          "method": req.method || this.getMethod(url),
           "methodArgs": req.methodArgs,
           "static": req.static,
           'ui': req.ui,
@@ -2851,29 +3135,32 @@
         if (this.locals.length >= 1000) { //最多1000条，太多会很卡
           this.locals.splice(999, this.locals.length - 999)
         }
-        var method = App.getMethod()
+        var method = this.getMethod()
         this.locals.unshift({
           'Method': {
-            'userId': App.User.id,
-            'name': App.formatDateTime() + (StringUtil.isEmpty(req.tag, true) ? '' : ' ' + req.tag),
-            'method': App.getMethod(url),
-            'class': App.getClass(url),
-            'package': App.getPackage(url),
-            'type': App.type,
+            'userId': this.User.id,
+            'name': this.formatDateTime() + (StringUtil.isEmpty(req.tag, true) ? '' : ' ' + req.tag),
+            'method': this.getMethod(url),
+            'class': this.getClass(url),
+            'package': this.getPackage(url),
+            'type': this.type,
             'url': method,
             'request': JSON.stringify(req, null, '    '),
             'header': vHeader.value
           }
         })
-        App.saveCache('', 'locals', this.locals)
+        this.saveCache('', 'locals', this.locals)
       },
 
       //请求
       request: function (isAdminOperation, type, url, req, header, callback) {
         type = type || REQUEST_TYPE_JSON
+        url = StringUtil.noBlank(url)
+
+        var isDelegate = (isAdminOperation == false && this.isDelegateEnabled) || (isAdminOperation && url.indexOf('://apijson.cn:9090') > 0)
 
         if (header != null && header.Cookie != null) {
-          if (this.isDelegateEnabled) {
+          if (isDelegate) {
             header['Set-Cookie'] = header.Cookie
             delete header.Cookie
           }
@@ -2882,10 +3169,24 @@
           }
         }
 
+        if (isDelegate && this.delegateId != null && (header == null || header['Apijson-Delegate-Id'] == null)) {
+          if (header == null) {
+            header = {};
+          }
+          header['Apijson-Delegate-Id'] = this.delegateId
+        }
+
         // axios.defaults.withcredentials = true
         axios({
           method: (type == REQUEST_TYPE_PARAM ? 'get' : 'post'),
-          url: (isAdminOperation == false && this.isDelegateEnabled ? (this.server + '/delegate?' + (type == REQUEST_TYPE_GRPC ? '$_type=GRPC&' : '') + '$_delegate_url=') : '' ) + StringUtil.noBlank(url),
+          url: (isDelegate
+              ? (
+                this.server + '/delegate?' + (type == REQUEST_TYPE_GRPC ? '$_type=GRPC&' : '')
+                + (StringUtil.isEmpty(this.delegateId, true) ? '' : '$_delegate_id=' + this.delegateId + '&') + '$_delegate_url=' + encodeURIComponent(url)
+              ) : (
+                this.isEncodeEnabled ? encodeURI(url) : url
+              )
+          ),
           params: (type == REQUEST_TYPE_PARAM || type == REQUEST_TYPE_FORM ? req : null),
           data: (type == REQUEST_TYPE_JSON || type == REQUEST_TYPE_GRPC ? req : (type == REQUEST_TYPE_DATA ? toFormData(req) : null)),
           headers: header,  //Accept-Encoding（HTTP Header 大小写不敏感，SpringBoot 接收后自动转小写）可能导致 Response 乱码
@@ -2894,6 +3195,16 @@
         })
           .then(function (res) {
             res = res || {}
+
+            if (isDelegate) {
+              var hs = res.headers || {}
+              var delegateId = hs['Apijson-Delegate-Id'] || hs['apijson-delegate-id']
+              if (delegateId != null && delegateId != App.delegateId) {
+                App.delegateId = delegateId
+                App.saveCache(App.server, 'delegateId', delegateId)
+              }
+            }
+
 	    //any one of then callback throw error will cause it calls then(null)
             // if ((res.config || {}).method == 'options') {
             //   return
@@ -2925,6 +3236,10 @@
           })
           .catch(function (err) {
             log('send >> error:\n' + err)
+            if (isAdminOperation) {
+              App.delegateId = null
+            }
+
             if (callback != null) {
               callback(url, {}, err)
               return
@@ -2949,9 +3264,18 @@
           if (isSingle && data.code == CODE_SUCCESS) { //不格式化错误的结果
             data = JSONResponse.formatObject(data);
           }
-          App.jsoncon = JSON.stringify(data, null, '    ');
-          App.view = 'code';
+          this.jsoncon = JSON.stringify(data, null, '    ');
+          this.view = 'code';
           vOutput.value = '';
+
+          // 会导致断言用了这个
+          // if (this.currentRemoteItem == null) {
+          //   this.currentRemoteItem = {}
+          // }
+          // if (this.currentRemoteItem.TestRecord == null) {
+          //   this.currentRemoteItem.TestRecord = {}
+          // }
+          // this.currentRemoteItem.TestRecord.response = data
         }
       },
 
@@ -2961,6 +3285,14 @@
        */
       doOnKeyUp: function (event, type, isFilter, item) {
         var keyCode = event.keyCode ? event.keyCode : (event.which ? event.which : event.charCode);
+
+        var obj = event.srcElement ? event.srcElement : event.target;
+        if ($(obj).attr('id') == 'vUrl') {
+          vUrlComment.value = ''
+          this.currentDocItem = null
+          this.currentRemoteItem = null
+        }
+
         if (keyCode == 13) { // enter
           if (isFilter) {
             this.onFilterChange(type)
@@ -3135,20 +3467,20 @@
        */
       getCode: function (rq) {
         var s = '\n\n\n### 请求代码(自动生成) \n';
-        switch (App.language) {
+        switch (this.language) {
           case CodeUtil.LANGUAGE_KOTLIN:
             s += '\n#### <= Android-Kotlin: 空对象用 HashMap&lt;String, Any&gt;()，空数组用 ArrayList&lt;Any&gt;()\n'
               + '```kotlin \n'
-              + CodeUtil.parseKotlinRequest(null, JSON.parse(rq), 0, isSingle, false, false, App.type, App.getBaseUrl(), '/' + App.getMethod(), App.urlComment)
+              + CodeUtil.parseKotlinRequest(null, JSON.parse(rq), 0, isSingle, false, false, this.type, this.getBaseUrl(), '/' + this.getMethod(), this.urlComment)
               + '\n ``` \n注：对象 {} 用 mapOf("key": value)，数组 [] 用 listOf(value0, value1)\n';
             break;
           case CodeUtil.LANGUAGE_JAVA:
             s += '\n#### <= Android-Java: 同名变量需要重命名'
               + ' \n ```java \n'
-              + StringUtil.trim(CodeUtil.parseJavaRequest(null, JSON.parse(rq), 0, isSingle, false, false, App.type, '/' + App.getMethod(), App.urlComment))
+              + StringUtil.trim(CodeUtil.parseJavaRequest(null, JSON.parse(rq), 0, isSingle, false, false, this.type, '/' + this.getMethod(), this.urlComment))
               + '\n ``` \n注：' + (isSingle ? '用了 APIJSON 的 JSONRequest, JSONResponse 类，也可使用其它类封装，只要 JSON 有序就行\n' : 'LinkedHashMap&lt;&gt;() 可替换为 fastjson 的 JSONObject(true) 等有序JSON构造方法\n');
 
-            var serverCode = CodeUtil.parseJavaServer(App.type, '/' + App.getMethod(), App.database, App.schema, JSON.parse(rq), isSingle);
+            var serverCode = CodeUtil.parseJavaServer(this.type, '/' + this.getMethod(), this.database, this.schema, JSON.parse(rq), isSingle);
             if (StringUtil.isEmpty(serverCode, true) != true) {
               s += '\n#### <= Server-Java: RESTful 等非 APIJSON 规范的 API'
                 + ' \n ```java \n'
@@ -3213,7 +3545,7 @@
             break;
         }
 
-        if (((App.User || {}).id || 0) > 0) {
+        if (((this.User || {}).id || 0) > 0) {
           s += '\n\n#### 开放源码 '
             + '\nAPIJSON 接口测试: https://github.com/TommyLemon/APIAuto '
             + '\nAPIJSON 单元测试: https://github.com/TommyLemon/UnitAuto '
@@ -3241,8 +3573,9 @@
           return false;
         }
         doc = d;
-        vOutput.value += (
-          '\n\n\n## 包和类文档\n自动查数据库表和字段属性来生成 \n\n' + d
+        vOutput.value = (
+          'OK，请点击 [运行方法] 按钮来测试。[点击这里查看视频教程](https://www.bilibili.com/video/BV1Tk4y1R7Yo)'
+          + '\n\n\n## 包和类文档\n自动查数据库表和字段属性来生成 \n\n' + d
           + '<h3 align="center">关于</h3>'
           + '<p align="center">UnitAuto-零代码单元测试'
           + '<br>机器学习自动化测试、一键导入单元测试用例、自动生成复杂参数组合'
@@ -3253,7 +3586,7 @@
           + '</p><br><br>'
         );
 
-        App.view = 'markdown';
+        this.view = 'markdown';
         markdownToHTML(vOutput.value);
         return true;
       },
@@ -3268,16 +3601,19 @@
         var page = this.page || 0
 
         var search = StringUtil.isEmpty(this.search, true) ? null : '%' + StringUtil.trim(this.search) + '%'
-        App.request(false, REQUEST_TYPE_JSON, this.server + '/get', {
+        this.request(false, REQUEST_TYPE_JSON, this.server + '/get', {
           format: false,
-          '@database': App.database,
-          '@schema': App.schema,
+          '@database': this.database,
+          '@schema': this.schema,
           '[]': {
             'count': count,
             'page': page,
             'Method': {
               '@column': 'DISTINCT package',
-              '@order': 'package+'
+              '@order': 'package+',
+              'package$': search,
+              'class$': search,
+              '@combine': StringUtil.isEmpty(search) ? null : 'package$,class$'
             },
             'Method[]': {
               'count': 0,
@@ -3386,7 +3722,7 @@
 
       toDoubleJSON: function (json, defaultValue) {
         if (StringUtil.isEmpty(json)) {
-          return defaultValue == null ? '{}' : JSON.stringify(defaultValue)
+          return defaultValue == null ? '' : JSON.stringify(defaultValue)
         }
         else if (json.indexOf("'") >= 0) {
           json = json.replace(/'/g, '"');
@@ -3513,11 +3849,11 @@
       },
 
       log: function (msg) {
-        // App.log('Main.  ' + msg)
+        // this.log('Main.  ' + msg)
       },
 
       getDoc4TestCase: function () {
-        var list = App.remotes || []
+        var list = this.remotes || []
         var doc = ''
         var item
         for (var i = 0; i < list.length; i ++) {
@@ -3534,13 +3870,13 @@
       enableCross: function (enable) {
         this.isCrossEnabled = enable
         this.crossProcess = enable ? '交叉账号:已开启' : '交叉账号:已关闭'
-        this.saveCache(App.server, 'isCrossEnabled', enable)
+        this.saveCache(this.server, 'isCrossEnabled', enable)
       },
 
       enableML: function (enable) {
         this.isMLEnabled = enable
         this.testProcess = enable ? '机器学习:已开启' : '机器学习:已关闭'
-        this.saveCache(App.server, 'isMLEnabled', enable)
+        this.saveCache(this.server, 'isMLEnabled', enable)
         this.remotes = null
         this.showTestCase(true, false)
       },
@@ -3549,6 +3885,7 @@
        * @param show
        */
       onClickTestRandom: function () {
+        this.isRandomTest = true
         this.testRandom(! this.isRandomListShow && ! this.isRandomSubListShow, this.isRandomListShow, this.isRandomSubListShow)
       },
       testRandom: function (show, testList, testSubList, limit) {
@@ -3728,7 +4065,7 @@
 
       resetCount: function (randomItem) {
         if (randomItem == null) {
-          App.log('resetCount  randomItem == null >> return')
+          this.log('resetCount  randomItem == null >> return')
           return
         }
         randomItem.totalCount = 0
@@ -3763,8 +4100,8 @@
           log(e)
           vSend.disabled = true
 
-          App.view = 'error'
-          App.error = {
+          this.view = 'error'
+          this.error = {
             msg: e.message
           }
 
@@ -4087,7 +4424,14 @@
 
       },
 
-
+      onClickSend: function () {
+        this.isRandomTest = false
+        this.send(false)
+      },
+      onClickTest: function () {
+        this.isRandomTest = false
+        this.test(false, this.isCrossEnabled ? -1 : this.currentAccountIndex)
+      },
       /**回归测试
        * 原理：
        1.遍历所有上传过的测试用例（URL+请求JSON）
@@ -4118,7 +4462,7 @@
           }
         }
 
-        var baseUrl = StringUtil.trim(App.getBaseUrl())
+        var baseUrl = StringUtil.trim(this.getBaseUrl())
         if (baseUrl == '') {
           alert('请先输入有效的URL！')
           return
@@ -4133,7 +4477,7 @@
         //   return
         // }
 
-        const list = App.remotes || []
+        const list = this.remotes || []
         const allCount = list.length
         doneCount = 0
 
@@ -4158,7 +4502,7 @@
           })
         }
         else {
-          App.startTest(list, allCount, isRandom, accountIndex)
+          this.startTest(list, allCount, isRandom, accountIndex)
         }
       },
 
@@ -4172,15 +4516,15 @@
             doneCount++
             continue
           }
-          App.log('test  document = ' + JSON.stringify(document, null, '  '))
+          this.log('test  document = ' + JSON.stringify(document, null, '  '))
 
           const index = i
 
           var header = null
           try {
-            header = App.getHeader(document.header)
+            header = this.getHeader(document.header)
           } catch (e) {
-            App.log('test  for ' + i + ' >> try { header = App.getHeader(document.header) } catch (e) { \n' + e.message)
+            this.log('test  for ' + i + ' >> try { header = this.getHeader(document.header) } catch (e) { \n' + e.message)
           }
 
           var httpReq = null
@@ -4190,16 +4534,16 @@
               "class": document.class,
               "this": document.this,
               "constructor": document.constructor,
-              "classArgs": App.getRequest(document.classArgs, []),
+              "classArgs": this.getRequest(document.classArgs, []),
               "method": document.method,
-              "methodArgs": App.getRequest(document.methodArgs, []),
+              "methodArgs": this.getRequest(document.methodArgs, []),
               "static": document.static,
               "timeout": document.timeout,
               "ui": document.ui
             }
           }
           else {
-            httpReq = App.getRequest(document.request)
+            httpReq = this.getRequest(document.request)
             if (httpReq.package == null) {
               httpReq.package = document.package
             }
@@ -4213,17 +4557,17 @@
               httpReq.constructor = document.constructor
             }
             if (httpReq.classArgs == null) {
-              httpReq.classArgs = App.getRequest(document.classArgs, [])
+              httpReq.classArgs = this.getRequest(document.classArgs, [])
             }
             if (httpReq.methodArgs == null) {
-              httpReq.methodArgs = App.getRequest(document.methodArgs, [])
+              httpReq.methodArgs = this.getRequest(document.methodArgs, [])
             }
             if (httpReq.this == null) {
               httpReq.this = document.this
             }
           }
 
-          App.request(false, REQUEST_TYPE_JSON, App.project + '/method/invoke', httpReq, header, function (url, res, err) {
+          this.request(false, REQUEST_TYPE_JSON, this.project + '/method/invoke', httpReq, header, function (url, res, err) {
 
             try {
               App.onResponse(url, res, err)
@@ -4239,7 +4583,7 @@
 
       compareResponse: function (allCount, list, index, item, response, isRandom, accountIndex, justRecoverTest, err) {
         var it = item || {} //请求异步
-        var d = (isRandom ? App.currentRemoteItem.Method : it.Method) || {} //请求异步
+        var d = (isRandom ? this.currentRemoteItem.Method : it.Method) || {} //请求异步
         var r = isRandom ? it.Random : null //请求异步
         var tr = it.TestRecord || {} //请求异步
 
@@ -4273,16 +4617,16 @@
           }
         }
         else {
-          var standardKey = App.isMLEnabled != true ? 'response' : 'standard'
+          var standardKey = this.isMLEnabled != true ? 'response' : 'standard'
           var standard = StringUtil.isEmpty(tr[standardKey], true) ? null : JSON.parse(tr[standardKey])
 
-          var rsp = JSON.parse(JSON.stringify(App.removeDebugInfo(response) || {}))
+          var rsp = JSON.parse(JSON.stringify(this.removeDebugInfo(response) || {}))
           rsp = JSONResponse.array2object(rsp, 'methodArgs', ['methodArgs'], true)
 
-          tr.compare = JSONResponse.compareResponse(standard, rsp, '', App.isMLEnabled, null, ['call()[]']) || {}
+          tr.compare = JSONResponse.compareResponse(standard, rsp, '', this.isMLEnabled, null, ['call()[]']) || {}
         }
 
-        App.onTestResponse(allCount, list, index, it, d, r, tr, response, tr.compare || {}, isRandom, accountIndex, justRecoverTest);
+        this.onTestResponse(allCount, list, index, it, d, r, tr, response, tr.compare || {}, isRandom, accountIndex, justRecoverTest);
       },
 
       onTestResponse: function(allCount, list, index, it, d, r, tr, response, cmp, isRandom, accountIndex, justRecoverTest) {
@@ -4378,9 +4722,9 @@
         var toId = random == null ? null : random.toId
         if (toId != null && toId > 0) {
 
-          for (var i in App.randoms) {
+          for (var i in this.randoms) {
 
-            var toIt = App.randoms[i]
+            var toIt = this.randoms[i]
             if (toIt != null && toIt.Random != null && toIt.Random.id == toId) {
 
               var toRandom = toIt.Random
@@ -4405,7 +4749,7 @@
                 }
               }
 
-              Vue.set(App.randoms, i, toIt)
+              Vue.set(this.randoms, i, toIt)
 
               break;
             }
@@ -4435,7 +4779,7 @@
         item = item || {}
         var document;
         if (isRandom) {
-          document = App.currentRemoteItem || {}
+          document = this.currentRemoteItem || {}
         }
         else {
           document = item.Method = item.Method || {}
@@ -4693,8 +5037,8 @@
               },
               TestRecord: isDuration ? Object.assign(testRecord, {
                 id: undefined,
-                host: App.getBaseUrl(),
-                testAccountId: App.getCurrentAccountId(),
+                host: this.getBaseUrl(),
+                testAccountId: this.getCurrentAccountId(),
                 duration: item.duration,
                 minDuration: minDuration,
                 maxDuration: maxDuration,
@@ -4702,8 +5046,8 @@
               }) : {
                 documentId: isNewRandom ? null : (isRandom ? random.documentId : document.id),
                 randomId: isRandom && ! isNewRandom ? random.id : null,
-                host: App.getBaseUrl(),
-                testAccountId: App.getCurrentAccountId(),
+                host: this.getBaseUrl(),
+                testAccountId: this.getCurrentAccountId(),
                 compare: JSON.stringify(testRecord.compare || {}),
                 response: JSON.stringify(currentResponse || {}),
                 standard: isML ? JSON.stringify(stddObj) : null
@@ -4712,7 +5056,7 @@
             }
             // }
             // else {
-            //   url = App.server + '/post/testrecord/ml'
+            //   url = this.server + '/post/testrecord/ml'
             //   req = {
             //     documentId: document.id
             //   }
@@ -4767,7 +5111,7 @@
                 item.TestRecord = testRecord
 
 
-                //
+
                 // if (! isNewRandom) {
                 //   if (isRandom) {
                 //     App.showRandomList(true, App.currentRemoteItem)
@@ -4794,11 +5138,11 @@
           TestRecord: {
             documentId: isRandom ? doc.documentId : doc.id,
             randomId: isRandom ? doc.id : null,
-            testAccountId: App.getCurrentAccountId(),
-            'host': App.getBaseUrl(),
+            testAccountId: this.getCurrentAccountId(),
+            'host': this.getBaseUrl(),
             '@order': 'date-',
-            '@column': 'id,userId,documentId,randomId,duration,minDuration,maxDuration,response' + (App.isMLEnabled ? ',standard' : ''),
-            '@having': App.isMLEnabled ? 'length(standard)>2' : null  // '@having': App.isMLEnabled ? 'json_length(standard)>0' : null
+            '@column': 'id,userId,testAccountId,documentId,randomId,duration,minDuration,maxDuration,response' + (this.isMLEnabled ? ',standard' : ''),
+            '@having': this.isMLEnabled ? 'length(standard)>2' : null  // '@having': this.isMLEnabled ? 'json_length(standard)>0' : null
           }
         }, {}, function (url, res, err) {
           App.onResponse(url, res, err)
@@ -4826,7 +5170,12 @@
           this.$refs[toId <= 0 ? 'randomTexts' : 'randomSubTexts'][index].setAttribute('data-hint', (d || {}).config == null ? '' : d.config);
         }
         else {
-          var args = (this.getRequest(d.request) || [])[isClass ? 'classArgs' : 'methodArgs']
+          if (isClass && d.static && StringUtil.isEmpty(d.cttr)) {
+            return '';
+          }
+
+          var req = this.getRequest(d.request, {});
+          var args = req[isClass ? 'classArgs' : 'methodArgs']
 
           var s = '('
           if (args != null) {
@@ -4853,7 +5202,7 @@
     },
     watch: {
       jsoncon: function () {
-        App.showJsonView()
+        this.showJsonView()
       }
     },
     computed: {
@@ -4892,7 +5241,7 @@
         }
         var types = this.getCache('', 'types')
         if (types != null && types.length > 0) {
-          this.types = types
+          this.types = types instanceof Array ? types : StringUtil.split(types)
         }
         var server = this.getCache('', 'server')
         if (StringUtil.isEmpty(server, true) == false) {
@@ -4903,11 +5252,13 @@
           this.project = project
         }
 
-        this.locals = this.getCache('', 'locals') || []
+        this.locals = this.getCache('', 'locals', [])
 
-        this.isDelegateEnabled = this.getCache('', 'isDelegateEnabled') || this.isDelegateEnabled
-        this.isHeaderShow = this.getCache('', 'isHeaderShow') || this.isHeaderShow
-        this.isRandomShow = this.getCache('', 'isRandomShow') || this.isRandomShow
+        this.isDelegateEnabled = this.getCache('', 'isDelegateEnabled', this.isDelegateEnabled)
+        this.isEncodeEnabled = this.getCache('', 'isEncodeEnabled', this.isEncodeEnabled)
+        //预览了就不能编辑了，点开看会懵 this.isPreviewEnabled = this.getCache('', 'isPreviewEnabled', this.isPreviewEnabled)
+        this.isHeaderShow = this.getCache('', 'isHeaderShow', this.isHeaderShow)
+        this.isRandomShow = this.getCache('', 'isRandomShow', this.isRandomShow)
       } catch (e) {
         console.log('created  try { ' +
           '\nvar url = this.getCache(, url) ...' +
@@ -4926,37 +5277,156 @@
       }
 
       try { //可能URL_BASE是const类型，不允许改，这里是初始化，不能出错
-        this.User = this.getCache(this.server, 'User') || {}
-        this.isCrossEnabled = this.getCache(this.server, 'isCrossEnabled') || this.isCrossEnabled
-        this.isMLEnabled = this.getCache(this.server, 'isMLEnabled') || this.isMLEnabled
+        this.User = this.getCache(this.server, 'User', {})
+        this.isCrossEnabled = this.getCache(this.server, 'isCrossEnabled', this.isCrossEnabled)
+        this.isMLEnabled = this.getCache(this.server, 'isMLEnabled', this.isMLEnabled)
         this.crossProcess = this.isCrossEnabled ? '交叉账号:已开启' : '交叉账号:已关闭'
         this.testProcess = this.isMLEnabled ? '机器学习:已开启' : '机器学习:已关闭'
         // this.host = this.getBaseUrl()
-        this.page = this.getCache(this.server, 'page') || this.page
-        this.count = this.getCache(this.server, 'count') || this.count
-        this.testCasePage = this.getCache(this.server, 'testCasePage') || this.testCasePage
-        this.testCaseCount = this.getCache(this.server, 'testCaseCount') || this.testCaseCount
-        this.randomPage = this.getCache(this.server, 'randomPage') || this.randomPage
-        this.randomCount = this.getCache(this.server, 'randomCount') || this.randomCount
-        this.randomSubPage = this.getCache(this.server, 'randomSubPage') || this.randomSubPage
-        this.randomSubCount = this.getCache(this.server, 'randomSubCount') || this.randomSubCount
+        this.page = this.getCache(this.server, 'page', this.page)
+        this.count = this.getCache(this.server, 'count', this.count)
+        this.testCasePage = this.getCache(this.server, 'testCasePage', this.testCasePage)
+        this.testCaseCount = this.getCache(this.server, 'testCaseCount', this.testCaseCount)
+        this.randomPage = this.getCache(this.server, 'randomPage', this.randomPage)
+        this.randomCount = this.getCache(this.server, 'randomCount', this.randomCount)
+        this.randomSubPage = this.getCache(this.server, 'randomSubPage', this.randomSubPage)
+        this.randomSubCount = this.getCache(this.server, 'randomSubCount', this.randomSubCount)
+        this.delegateId = this.getCache(this.server, 'delegateId', this.delegateId)
 
+        CodeUtil.thirdPartyApiMap = this.getCache(this.thirdParty, 'thirdPartyApiMap')
       } catch (e) {
         console.log('created  try { ' +
-          '\nthis.User = this.getCache(this.server, User) || {}' +
+          '\nthis.User = this.getCache(this.server, User, {})' +
           '\n} catch (e) {\n' + e.message)
       }
 
-
       //无效，只能在index里设置 vUrl.value = this.getCache('', 'URL_BASE')
-      this.listHistory()
-      this.transfer()
 
-      if (this.User != null && this.User.id != null && this.User.id > 0) {
-        setTimeout(function () {
-          App.showTestCase(true, false)  // 本地历史仍然要求登录  App.User == null || App.User.id == null)
-        }, 1000)
+      this.listHistory()
+
+      var rawReq = getRequestFromURL()
+      if (rawReq == null || StringUtil.isEmpty(rawReq.type, true)) {
+        this.transfer()
+
+        if (this.User != null && this.User.id != null && this.User.id > 0) {
+          setTimeout(function () {
+            App.showTestCase(true, false)  // 本地历史仍然要求登录  this.User == null || this.User.id == null)
+          }, 1000)
+        }
       }
+      else {
+        setTimeout(function () {
+          isSingle = ! isSingle
+
+          var hasTestArg = false  // 避免 http://localhost:63342/APIAuto/index.html?_ijt=fh8di51h7qip2d1s3r3bqn73nt 这种无意义参数
+          if (StringUtil.isEmpty(rawReq.type, true) == false) {
+            hasTestArg = true
+            App.type = StringUtil.toUpperCase(rawReq.type, true)
+            if (App.types != null && App.types.indexOf(App.type) < 0) {
+              App.types.push(App.type)
+            }
+          }
+
+          if (StringUtil.isEmpty(rawReq.url, true) == false) {
+            hasTestArg = true
+            vUrl.value = StringUtil.trim(rawReq.url)
+          }
+
+          if (StringUtil.isEmpty(rawReq.json, true) == false) {
+            hasTestArg = true
+            vInput.value = StringUtil.trim(rawReq.json)
+          }
+
+          if (StringUtil.isEmpty(rawReq.header, true) == false) {
+            hasTestArg = true
+            vHeader.value = StringUtil.trim(rawReq.header, true)
+            App.isHeaderShow = true
+          }
+
+          if (StringUtil.isEmpty(rawReq.random, true) == false) {
+            hasTestArg = true
+            vRandom.value = StringUtil.trim(rawReq.random, true)
+            App.isRandomShow = true
+            App.isRandomListShow = false
+          }
+
+          var delayTime = 0
+
+          // URL 太长导致截断和乱码
+          if (StringUtil.isEmpty(rawReq.setting, true) == false) {
+            var save = rawReq.save == 'true'
+            try {
+              var setting = JSON.parse(StringUtil.trim(rawReq.setting, true)) || {}
+
+              if ((setting.count != null && setting.count != App.count)
+                || (setting.page != null && setting.page != App.page)
+                || (setting.search != null && setting.search != App.search)) {
+                delayTime += Math.min(5000, 30*(setting.count) + 1000)
+                App.setDoc("");
+                App.getDoc(function (d) {
+                  App.setDoc(d);
+                })
+              }
+
+              for (var k in setting) {
+                var v = k == null ? null : setting[k]
+                if (v == null) {
+                  continue
+                }
+                App[k] = v  // App.$data[k] = app[k]
+
+                if (save) {
+                  App.saveCache('', k, v)
+                }
+              }
+
+              if (setting.isRandomShow && setting.isRandomListShow) {
+                delayTime += Math.min(5000, (App.isMLEnabled ? 60 : 20)*(setting.randomCount || App.randomCount) + 1000)
+                App.showRandomList(true, setting.isRandomSubListShow ? App.currentRandomItem : null, setting.isRandomSubListShow)
+              }
+
+              if (setting.isTestCaseShow) {
+                delayTime += Math.min(5000, (App.isMLEnabled ? 30 : 10)*(setting.testCaseCount || App.testCaseCount) + 1000)
+                App.showTestCase(true, setting.isLocalShow)
+              }
+            } catch (e) {
+              log(e)
+            }
+          }
+
+          if (hasTestArg) {
+            vUrlComment.value = ""
+            vComment.value = ""
+          }
+
+          App.onChange(false)
+
+          if (hasTestArg && rawReq.send != "false" && rawReq.send != "null") {
+            setTimeout(function () {
+              if (rawReq.send == 'random') {
+                App.onClickTestRandom()
+              } else if (App.isTestCaseShow) {
+                App.onClickTest()
+              } else {
+                App.send(false)
+              }
+
+              var url = vUrl.value || ''
+              if (rawReq.jump == "true" || rawReq.jump == "null"
+                || (rawReq.jump != "false" && App.isTestCaseShow != true && rawReq.send != 'random'
+                  && (url.endsWith("/get") || url.endsWith("/head"))
+                )
+              ) {
+                setTimeout(function () {
+                  window.open(vUrl.value + "/" + encodeURIComponent(JSON.stringify(encode(JSON.parse(vInput.value)))))
+                }, 2000)
+              }
+            }, Math.max(1000, delayTime))
+          }
+        }, 2000)
+
+      }
+
     }
   })
 })()

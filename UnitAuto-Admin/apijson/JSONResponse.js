@@ -354,6 +354,30 @@ var JSONResponse = {
     // }
 
     if (tCode == null) {
+      if (typeof rCode == 'number' && (rCode%10 != 0 || (rCode >= 400 && rCode < 600))) {
+        return {
+          code: JSONResponse.COMPARE_CODE_CHANGE, //未上传对比标准
+          msg: '没有校验标准，且状态码在 [400, 599] 内或不是 0, 200 等以 0 结尾的数',
+          path: folder == null ? '' : folder
+        };
+      }
+
+      if (real != null && real.throw != null) {
+        return {
+          code: JSONResponse.COMPARE_CODE_CHANGE, //未上传对比标准
+          msg: '没有校验标准，且 throw 不是 null',
+          path: folder == null ? '' : folder
+        };
+      }
+
+      if (real == null || real.data == null) {
+        return {
+          code: JSONResponse.COMPARE_KEY_LESS, //未上传对比标准
+          msg: '没有校验标准，且缺少非 null 值的 data 字段',
+          path: folder == null ? '' : folder
+        };
+      }
+
       return {
         code: JSONResponse.COMPARE_NO_STANDARD, //未上传对比标准
         msg: '没有校验标准！',
@@ -655,7 +679,8 @@ var JSONResponse = {
 
 
 
-    if (type != JSONResponse.getType(real)) { //类型改变
+    var realType = JSONResponse.getType(real);
+    if (type != realType && (type != 'number' || realType != 'integer')) { //类型改变
       log('compareWithStandard  type != getType(real) >> return COMPARE_TYPE_CHANGE');
       return {
         code: JSONResponse.COMPARE_TYPE_CHANGE,
@@ -899,9 +924,19 @@ var JSONResponse = {
   },
 
   getType: function(o) { //typeof [] = 'object'
-    log('getType  o = ' + JSON.stringify(o) + '>> return ' + (o instanceof Array ? 'array' : typeof o));
+    if (o == null) {
+      return 'object';
+    }
+    if (o instanceof Array) {
+      return 'array';
+    }
 
-    return o instanceof Array ? 'array' : typeof o;
+    var t = typeof o;
+    if (t == 'number' && Number.isInteger(o)) {
+      return 'integer';
+    }
+
+    return t;
   },
 
 
@@ -1034,6 +1069,139 @@ var JSONResponse = {
     }
 
     log('\nupdateStandard >> return target = ' + JSON.stringify(target, null, '    ') + '\n >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> \n\n\n\n\n');
+
+    return target;
+  },
+
+
+  /**根据路径精准地更新测试标准中的键值对
+   */
+  getStandardByPath: function(target, pathKeys) {
+    if (target instanceof Array) { // JSONArray
+      throw new Error('Standard 语法错误，' + key + ': value 中 value 类型不应该是 Array！');
+    }
+    if (target == null) {
+      return null;
+    }
+
+    var tgt = target;
+    var depth = pathKeys == null ? 0 : pathKeys.length
+    if (depth <= 0) {
+      return target;
+    }
+
+    for (var i = 0; i < depth; i ++) {
+      if (tgt == null) {
+        return null;
+      }
+
+      var k = pathKeys[i];
+      if (k == null) {
+        return null;
+      }
+
+      if (k == '') {
+        k = 0;
+      }
+      else {
+        try {
+          var n = Number.parseInt(k);
+          if (Number.isSafeInteger(n)) {
+            k = 0;
+          }
+        } catch (e) {
+        }
+      }
+
+      if (tgt instanceof Array == false && tgt instanceof Object) {
+        if (tgt.values == null) {
+          return null;
+        }
+
+        var child = tgt.values[0];
+        if (child == null) {
+          return null;
+        }
+
+        tgt = child[k];
+      }
+      else {
+        throw new Error('Standard 语法错误，' + k + ': value 中 value 类型应该是 Object ！');
+      }
+    }
+
+    return tgt;
+  },
+
+
+  /**根据路径精准地更新测试标准中的键值对
+   */
+  updateStandardByPath: function(target, names, key, real, comment) {
+    if (target instanceof Array) { // JSONArray
+      throw new Error('Standard 语法错误，' + key + ': value 中 value 类型不应该是 Array！');
+    }
+    if (target == null) {
+      target = {};
+    }
+
+    var tgt = target;
+    var depth = names == null ? 0 : names.length
+    if (depth <= 1 && (key == null || key == '')) {
+      return target;
+    }
+
+    for (var i = 1; i < depth + 1; i ++) {
+      var k = i >= depth ? key : names[i];
+      if (k == null) {
+        return target;
+      }
+
+      if (k == '') {
+        k = 0;
+      }
+      else {
+        try {
+          var n = Number.parseInt(k);
+          if (Number.isSafeInteger(n)) {
+            k = 0;
+          }
+        } catch (e) {
+        }
+      }
+
+      if (tgt instanceof Array == false && tgt instanceof Object) {
+        if (tgt.values == null) {
+          tgt.values = [];
+        }
+
+        var child = tgt.values[0];
+        if (child == null) {
+          child = {};
+          child.type = typeof k == 'number' ? 'array' : 'number';
+          child.notnull = false;
+          tgt.values[0] = child;
+        }
+
+        if (child[k] == null) {
+          child[k] = {};
+        }
+
+        tgt = child[k];
+      }
+      else {
+        throw new Error('Standard 语法错误，' + k + ': value 中 value 类型应该是 Object ！');
+      }
+    }
+
+    comment = comment == null ? '' : comment.trim();
+
+    if (tgt == null) {
+      tgt = {};
+    }
+    var startsWithQuestion = comment.startsWith('?')
+    tgt.type = JSONResponse.getType(real);
+    tgt.notnull = real != null && startsWithQuestion != true
+    tgt.comment = startsWithQuestion ? comment.substring(1) : comment
 
     return target;
   },
@@ -1284,10 +1452,11 @@ var JSONResponse = {
   },
 
 
-  getAbstractPath: function (folder, name) {
+  getAbstractPath: function (folder, name, divider) {
     folder = folder == null ? '' : folder;
     name = name == null ? '' : name; //导致 0 变为 ''   name = name || '';
-    return StringUtil.isEmpty(folder, true) ? name : folder + '/' + name;
+    divider = divider == null ? '/' : divider;
+    return StringUtil.isEmpty(folder, true) ? name : folder + divider + name;
   },
 
   getShowString(arr, lineItemCount) {

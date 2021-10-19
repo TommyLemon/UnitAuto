@@ -307,9 +307,9 @@ public class MethodUtil {
 	/**执行方法
 	 * @param req :
 	 {
- 	        "static": false,  //是否为静态方法，false 时可能会用 constructor & classArgs 来初始化一个类的实例或用 this 直接反序列化成一个类的实例
-	        "ui": false,  //放 UI 线程执行，仅 Android 可用
-	        "timeout": 0,  //超时时间
+		"static": false,  //是否为静态方法，false 时可能会用 constructor & classArgs 来初始化一个类的实例或用 this 直接反序列化成一个类的实例
+		"ui": false,  //放 UI 线程执行，仅 Android 可用
+		"timeout": 0,  //超时时间
 		"package": "apijson.demo.server",  //被测方法所在的包名
 		"class": "DemoFunction",  //被测方法所在的类名
 		"constructor": "getInstance",  //如果是类似单例模式的类，不能用默认构造方法，可以自定义获取实例的方法，传参仍用 classArgs
@@ -364,9 +364,9 @@ public class MethodUtil {
 			{
 			    "type": "unitauto.test.TestUtil$Callback",  //interface 示例，注意内部类用 $ 隔开外部类名和内部类名
 			    "value": {
-				"setData(D)": {  //回调方法签名
-				    "callback": true  //设置为最终回调方法，会自动等待它被调用，并自动记录回调的时间点和传入参数值
-				}
+					"setData(D)": {  //回调方法签名
+					    "callback": true  //设置为最终回调方法，会自动等待它被调用，并自动记录回调的时间点和传入参数值
+					}
 			    }
 			}
 		]
