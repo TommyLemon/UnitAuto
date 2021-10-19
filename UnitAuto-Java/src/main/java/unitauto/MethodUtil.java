@@ -799,7 +799,7 @@ public class MethodUtil {
 		Object[] args = isEmpty ? null : new Object[size];
 
 		if (isEmpty == false) {
-			initTypesAndValues(methodArgs, types, args, true, true);
+			initTypesAndValues(methodArgs, types, args, true, false);
 		}
 
 		Method method = clazz.getMethod(methodName, types);
