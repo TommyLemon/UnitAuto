@@ -22,7 +22,7 @@ import java.util.List;
 /**用户
  * @author Lemon
  */
-public class User implements Serializable {
+public class User implements Serializable, Comparable<User> {
 	private static final long serialVersionUID = 1L;
 
 	private Long id; //主键
@@ -81,6 +81,11 @@ public class User implements Serializable {
 		}
 
 		return contactIdList;
+	}
+	
+	@Override
+	public int compareTo(User o) {
+		return o == null || id > o.getId() ? 1 : (id == o.getId() ? 0 : -1);
 	}
 
 }

@@ -26,25 +26,33 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.sql.Timestamp;
+import java.util.AbstractCollection;
+import java.util.AbstractList;
+import java.util.AbstractMap;
+import java.util.AbstractSequentialList;
+import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NavigableMap;
+import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.Stack;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.Vector;
 import java.util.concurrent.TimeoutException;
@@ -232,12 +240,28 @@ public class MethodUtil {
 		CLASS_MAP.put(Array[].class.getSimpleName(), Array[].class);
 
 		CLASS_MAP.put(Collection.class.getSimpleName(), Collection.class);//不允许指定<T>
+		CLASS_MAP.put(AbstractCollection.class.getSimpleName(), AbstractCollection.class);//不允许指定<T>
 		CLASS_MAP.put(List.class.getSimpleName(), List.class);//不允许指定<T>
+		CLASS_MAP.put(AbstractList.class.getSimpleName(), AbstractList.class);//不允许指定<T>
 		CLASS_MAP.put(ArrayList.class.getSimpleName(), ArrayList.class);//不允许指定<T>
+		CLASS_MAP.put(AbstractSequentialList.class.getSimpleName(), AbstractSequentialList.class);//不允许指定<T>
+		CLASS_MAP.put(LinkedList.class.getSimpleName(), LinkedList.class);//不允许指定<T>
+		CLASS_MAP.put(Vector.class.getSimpleName(), Vector.class);//不允许指定<T>
+		CLASS_MAP.put(Stack.class.getSimpleName(), Stack.class);//不允许指定<T>
 		CLASS_MAP.put(Map.class.getSimpleName(), Map.class);//不允许指定<T>
+		CLASS_MAP.put(AbstractMap.class.getSimpleName(), AbstractMap.class);//不允许指定<T>
 		CLASS_MAP.put(HashMap.class.getSimpleName(), HashMap.class);//不允许指定<T>
+		CLASS_MAP.put(LinkedHashMap.class.getSimpleName(), LinkedHashMap.class);//不允许指定<T>
+		CLASS_MAP.put(SortedMap.class.getSimpleName(), SortedMap.class);//不允许指定<T>
+		CLASS_MAP.put(NavigableMap.class.getSimpleName(), NavigableMap.class);//不允许指定<T>
+		CLASS_MAP.put(TreeMap.class.getSimpleName(), TreeMap.class);//不允许指定<T>
 		CLASS_MAP.put(Set.class.getSimpleName(), Set.class);//不允许指定<T>
+		CLASS_MAP.put(AbstractSet.class.getSimpleName(), AbstractSet.class);//不允许指定<T>
 		CLASS_MAP.put(HashSet.class.getSimpleName(), HashSet.class);//不允许指定<T>
+		CLASS_MAP.put(LinkedHashSet.class.getSimpleName(), LinkedHashSet.class);//不允许指定<T>
+		CLASS_MAP.put(SortedSet.class.getSimpleName(), SortedSet.class);//不允许指定<T>
+		CLASS_MAP.put(NavigableSet.class.getSimpleName(), NavigableSet.class);//不允许指定<T>
+		CLASS_MAP.put(TreeSet.class.getSimpleName(), TreeSet.class);//不允许指定<T>
 
 		CLASS_MAP.put(JSON.class.getSimpleName(), JSON.class);//必须有，Map中没有getLongValue等方法
 		CLASS_MAP.put(JSONObject.class.getSimpleName(), JSONObject.class);//必须有，Map中没有getLongValue等方法
@@ -841,7 +865,7 @@ public class MethodUtil {
 				Class<?> type = types[i];
 				Object value = args[i];
 
-				if (value instanceof InterfaceProxy || (type != null && type.isInterface() && Collection.class.isAssignableFrom(type) == false && Map.class.isAssignableFrom(type) == false)) {  // @interface 也必须代理  && type.isAnnotation() == false)) {  //如果这里不行，就 initTypesAndValues 给个回调
+				if (value instanceof InterfaceProxy || (type != null && type.isInterface())) {  // @interface 也必须代理  && type.isAnnotation() == false)) {  //如果这里不行，就 initTypesAndValues 给个回调
 					try {  //不能交给 initTypesAndValues 中 castValue2Type，否则会导致这里 cast 抛异常 
 						InterfaceProxy proxy = value instanceof InterfaceProxy ? ((InterfaceProxy) value) : cast(value, InterfaceProxy.class, ParserConfig.getGlobalInstance());
 						Set<Entry<String, Object>> set = proxy.entrySet();
@@ -1541,7 +1565,7 @@ public class MethodUtil {
 						@SuppressWarnings("rawtypes")
 						Collection nc;
 
-						if (LinkedList.class.isAssignableFrom(type)) {
+						if (AbstractSequentialList.class.isAssignableFrom(type)) {  // LinkedList
 							nc = new LinkedList<>();
 						} 
 						else if (Vector.class.isAssignableFrom(type)) {  // Stack
@@ -1560,13 +1584,12 @@ public class MethodUtil {
 							nc = new ArrayList<>(c.size());
 						}
 
-						for (Iterator<?> iterator = c.iterator(); iterator.hasNext();) {
-							Object object = (Object) iterator.next();
-							if (object != null) {
-								Class<?> ct = getType(child, object, true);
-								object = cast(object, ct, ParserConfig.getGlobalInstance());
+						for (Object o : c) {
+							if (o != null) {
+								Class<?> ct = getType(child, o, true);
+								o = cast(o, ct, ParserConfig.getGlobalInstance());
 							}
-							nc.add(object);
+							nc.add(o);
 						}
 
 						// 改变不了外部的 value 值	value = nc;
@@ -1600,7 +1623,7 @@ public class MethodUtil {
 			@SuppressWarnings("rawtypes")
 			Collection nc;
 
-			if (LinkedList.class.isAssignableFrom(type)) {
+			if (AbstractSequentialList.class.isAssignableFrom(type)) {  // LinkedList
 				nc = new LinkedList<>();
 			} 
 			else if (Vector.class.isAssignableFrom(type)) {  // Stack
@@ -1619,8 +1642,8 @@ public class MethodUtil {
 				nc = new ArrayList<>(c.size());
 			}
 
-			for (Iterator<?> iterator = c.iterator(); iterator.hasNext();) {
-				nc.add(iterator.next());
+			for (Object o : c) {
+				nc.add(o);
 			}
 			
 			return (T) nc;
