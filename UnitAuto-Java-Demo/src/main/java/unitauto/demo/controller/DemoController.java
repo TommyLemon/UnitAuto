@@ -45,15 +45,15 @@ public class DemoController {
 	private static final String TAG = "DemoController";
 
 	@Autowired
-	DemoService demoService;
+	public DemoService demoService;
 
 	@GetMapping("test")
-	boolean test() {
+	public boolean test() {
 		return true;
 	}
 	
 	@GetMapping("hello")
-	String hello(@RequestParam(value = "name", required = false) String name) {
+	public String hello(@RequestParam(value = "name", required = false) String name) {
 		return demoService.hello(name);
 	}
 	

@@ -105,6 +105,7 @@ public class MethodUtil {
 	public static int CODE_SERVER_ERROR = 500;
 	public static String MSG_SUCCESS = "success";
 
+	public static String KEY_REUSE = "reuse";
 	public static String KEY_UI = "ui";
 	public static String KEY_TIME = "time";
 	public static String KEY_TIMEOUT = "timeout";
@@ -417,7 +418,7 @@ public class MethodUtil {
 
 			if (instance == null && static_ == false) {
 				if (StringUtil.isEmpty(cttName, true)) {
-					instance = INSTANCE_GETTER.getInstance(clazz, clsArgs, null);
+					instance = INSTANCE_GETTER.getInstance(clazz, clsArgs, req.getBoolean(KEY_REUSE));
 				}
 				else {
 					instance = getInvokeResult(clazz, null, cttName, clsArgs, null);

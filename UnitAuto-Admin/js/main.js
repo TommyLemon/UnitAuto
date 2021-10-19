@@ -3111,18 +3111,11 @@
 
         var url = this.getUrl()
 
-        var httpReq = {
-          "package": req.package || this.getPackage(url),
-          "class": req.class || this.getClass(url),
-          "this": req.this,
-          "constructor": req.constructor,
-          "classArgs": req.classArgs,
-          "method": req.method || this.getMethod(url),
-          "methodArgs": req.methodArgs,
-          "static": req.static,
-          'ui': req.ui,
-          'timeout': req.timeout,
-        }
+        var httpReq = Object.assign({
+          "package": this.getPackage(url),
+          "class": this.getClass(url),
+          "method": this.getMethod(url)
+        }, req)
 
         vOutput.value = "requesting... \nURL = " + url
         this.view = 'output';

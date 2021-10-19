@@ -69,12 +69,12 @@ public class DemoApplication implements ApplicationContextAware {
 					return APPLICATION_CONTEXT;
 				}
 
-				if (reuse != null && reuse) {
-					Object bean = APPLICATION_CONTEXT.getBean(clazz);
-					if (bean != null) {
-						return bean;
-					}
+				// 被 Spring 注解的类基本不会自己通过 new 来构造实例				if (reuse == null || reuse) {
+				Object bean = APPLICATION_CONTEXT.getBean(clazz);  // 如果有多个实例则用 getBeans 返回第 0 项
+				if (bean != null) {
+					return bean;
 				}
+				//				}
 
 				return ig.getInstance(clazz, classArgs, reuse);
 			}
