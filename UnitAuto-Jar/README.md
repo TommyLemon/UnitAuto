@@ -1,6 +1,6 @@
-# apijson-orm  [![](https://jitpack.io/v/APIJSON/apijson-orm.svg)](https://jitpack.io/#APIJSON/apijson-orm)
-APIJSON ORM 库，可通过 Maven, Gradle 等远程依赖。<br />
-APIJSON ORM library for remote dependencies with Maven, Gradle, etc.
+# unitauto-jar  [![](https://jitpack.io/v/TommyLemon/unitauto-jar.svg)](https://jitpack.io/#TommyLemon/unitauto-jar)
+UnitAuto Jar 库，可通过 Maven, Gradle 等远程依赖。<br />
+UnitAuto Jar Library for remote dependencies with Maven, Gradle, etc.
 
 ### Maven
 #### 1. 在 pom.xml 中添加 JitPack 仓库
@@ -15,12 +15,12 @@ APIJSON ORM library for remote dependencies with Maven, Gradle, etc.
 ```
 <br />
 
-#### 2. 在 pom.xml 中添加 apijson-orm 依赖
-#### 2. Add the apijson-orm dependency to pom.xml
+#### 2. 在 pom.xml 中添加 unitauto-jar 依赖
+#### 2. Add the unitauto-jar dependency to pom.xml
 ```xml
 	<dependency>
-	    <groupId>com.github.APIJSON</groupId>
-	    <artifactId>apijson-orm</artifactId>
+	    <groupId>com.github.TommyLemon</groupId>
+	    <artifactId>unitauto-jar</artifactId>
 	    <version>LATEST</version>
 	</dependency>
 ```
@@ -46,6 +46,6 @@ APIJSON ORM library for remote dependencies with Maven, Gradle, etc.
 #### 2. Add the apijson-orm dependency in one of your modules(such as `app`)
 ```gradle
 	dependencies {
-	        implementation 'com.github.APIJSON:apijson-orm:latest'
+	        implementation 'com.github.TommyLemon:unitauto-jar:latest'
 	}
 ```
