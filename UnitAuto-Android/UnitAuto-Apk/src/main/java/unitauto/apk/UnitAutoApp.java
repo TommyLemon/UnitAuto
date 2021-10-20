@@ -143,6 +143,8 @@ public class UnitAutoApp extends Application {
 		});
 
 
+    MethodUtil.CLASS_MAP.put(CharSequence.class.getSimpleName(), CharSequence.class);
+
 
 
 		final MethodUtil.ClassLoaderCallback clc = MethodUtil.CLASS_LOADER_CALLBACK;

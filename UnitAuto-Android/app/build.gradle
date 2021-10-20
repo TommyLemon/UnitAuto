@@ -19,5 +19,5 @@ android {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    api project(':UnitAuto-Apk')  // 本地或远程依赖，两者取其一  api 'com.github.TommyLemon:UnitAuto:2.4.0'
+    api project(':UnitAuto-Apk')  // 本地或远程依赖，两者取其一  api 'com.github.TommyLemon:UnitAuto:2.6.3'
 }
