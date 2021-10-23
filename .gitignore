@@ -18,3 +18,7 @@ UnitAuto-Java-Demo/.idea
 .project
 UnitAuto-Java-Demo/.settings
 *.iml
+
+.gradle
+.idea
+
