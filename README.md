@@ -285,12 +285,8 @@ https://github.com/TommyLemon/UnitAuto/issues
 
 [apijson-learn](https://github.com/rainboy-learn/apijson-learn) APIJSON 学习笔记和源码解析
 
-<br />
-
 ### 持续更新
 [https://github.com/TommyLemon/UnitAuto/commits/master](https://github.com/TommyLemon/UnitAuto/commits/master)
-<br />
-<br />
 
 ### 我要赞赏
 创作不易，右上角点 ⭐ Star 支持下吧，谢谢 ^_^ <br />
