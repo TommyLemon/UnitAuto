@@ -19,6 +19,8 @@
 机器学习单元测试平台，零代码、全方位、自动化 测试 方法/函数 的性能、正确性和可用性。<br />
 腾讯 IEG(互动娱乐事业群)、WXG(微信事业群) 两大事业群多个部门的多个项目使用中。
 
+已被 互联网教育智能技术及应用国家工程实验室 收录。
+https://github.com/TommyLemon/UnitAuto/issues/15
 
 ### 特点优势
 相比 JUnit, JTest, Mockito, Mockk 等一堆 Compiling testing 工具：<br />
