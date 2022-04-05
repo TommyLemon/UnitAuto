@@ -44,7 +44,7 @@ import unitauto.MethodUtil.Argument;
 import unitauto.MethodUtil.InstanceGetter;
 import unitauto.MethodUtil.JSONCallback;
 import unitauto.NotNull;
-import unitauto.jar.UnitAutoApp;
+//import unitauto.jar.UnitAutoApp;
 
 
 /**SpringBootApplication
@@ -58,7 +58,7 @@ public class DemoApplication implements ApplicationContextAware {
 	private static final String TAG = "DemoApplication";
 
 	static {
-		UnitAutoApp.init();
+//		UnitAutoApp.init();
 
 		final InstanceGetter ig = MethodUtil.INSTANCE_GETTER;
 		MethodUtil.INSTANCE_GETTER = new InstanceGetter() {

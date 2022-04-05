@@ -122,7 +122,10 @@ public class DemoController {
 
 			@Override
 			public void complete(JSONObject data, Method method, InterfaceProxy proxy, Object... extras) throws Exception {
-				ServletResponse servletResponse = called[0] ? null : asyncContext.getResponse();
+                Log.w(TAG, "invokeMethod  listener.complete data = " + data + "; method = " + method);
+
+//				ServletResponse servletResponse = called[0] ? null : asyncContext.getResponse();
+				ServletResponse servletResponse = asyncContext.getResponse();
 				if (servletResponse == null || servletResponse.isCommitted()) {  // isCommitted 在高并发时可能不准，导致写入多次
                     Log.w(TAG, "invokeMethod  listener.complete  servletResponse == null || servletResponse.isCommitted() >> return;");
                     return;

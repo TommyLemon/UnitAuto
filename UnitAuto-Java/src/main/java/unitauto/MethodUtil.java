@@ -46,6 +46,7 @@ import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Objects;
+import java.util.Queue;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
@@ -140,6 +141,7 @@ public class MethodUtil {
 	public static String KEY_CLASS_ARGS = "classArgs";
 	public static String KEY_METHOD_ARGS = "methodArgs";
 	public static String KEY_CALLBACK = "callback";
+	public static String KEY_GLOBAL = "global";
 
 	public static String KEY_CALL_LIST = "call()[]";
 	public static String KEY_CALL_MAP = "call(){}";
@@ -193,6 +195,8 @@ public class MethodUtil {
 
 
 
+	@NotNull
+	public static Map<Class<?>, Queue<InterfaceProxy>> GLOBAL_CALLBACK_MAP;
 	//  Map<class, <constructorArgs, instance>>
 	public static final Map<Class<?>, Map<Object, Object>> INSTANCE_MAP;
 	public static final Map<String, Class<?>> PRIMITIVE_CLASS_MAP;
@@ -200,6 +204,7 @@ public class MethodUtil {
 	public static final Map<String, Class<?>> CLASS_MAP;
 	public static final Map<Class<?>, Object> DEFAULT_TYPE_VALUE_MAP;
 	static {
+		GLOBAL_CALLBACK_MAP = new HashMap<>();
 		INSTANCE_MAP = new HashMap<>();
 
 		PRIMITIVE_CLASS_MAP = new HashMap<String, Class<?>>();
@@ -452,7 +457,7 @@ public class MethodUtil {
 					instance = INSTANCE_GETTER.getInstance(clazz, clsArgs, req.getBoolean(KEY_REUSE));
 				}
 				else {
-					instance = getInvokeResult(clazz, null, cttName, clsArgs, null);
+					instance = getInvokeResult(clazz, null, cttName, clsArgs, null, null);
 				}
 			}
 
@@ -476,7 +481,58 @@ public class MethodUtil {
 				}, timeout, Long.MAX_VALUE);
 			}
 
-			invokeMethod(clazz, instance, pkgName, clsName, methodName, methodArgs, listener);
+
+			Queue<InterfaceProxy> globalCallbackQueue = GLOBAL_CALLBACK_MAP.get(clazz);
+			InterfaceProxy globalInterfaceProxy = globalCallbackQueue == null ? null : globalCallbackQueue.peek();
+			boolean hasGlobalCallback = globalInterfaceProxy != null;
+
+//			if (globalInterfaceProxy == null) {
+				Set<Entry<String, Object>> set = req.entrySet();
+				for (Entry<String, Object> e : set) {
+					//判断是否符合 "fun(arg0,arg1...)": { "callback": true } 格式
+					String key = e == null ? null : e.getKey();
+					JSONObject val = key != null && e.getValue() instanceof JSONObject ? ((JSONObject) e.getValue()) : null;
+
+					int index = val == null || key.endsWith(")") == false ? -1 : key.indexOf("(");
+					if (index > 0 && StringUtil.isName(key.substring(0, index))) {
+						boolean isCb = val.getBooleanValue(KEY_CALLBACK);
+						if (isCb) {
+							hasGlobalCallback = true;
+						}
+						if (globalInterfaceProxy == null) {
+							globalInterfaceProxy = new InterfaceProxy();
+						}
+
+						final JSONObject finalReq = req;
+						final InterfaceProxy globalProxy = globalInterfaceProxy;
+						globalInterfaceProxy.$_putCallback(key, new Listener<Object>() {
+
+							@Override
+							public void complete(Object data, Method method, InterfaceProxy proxy, Object... extras) throws Exception {
+								Log.d(TAG, "invokeMethod  LISTENER_QUEUE.poll " + method);
+								if (isCb && listener != null) {
+//									JSONObject result = new JSONObject();
+//									result.put(method == null ? null : method.toString(), data);
+//									listener.complete(result, method, proxy, extras);
+									
+									finalReq.putAll(globalProxy);
+									listener.complete(finalReq, method, proxy, extras);
+								}
+							}
+						});
+					}
+				}
+//			}
+
+			if (globalInterfaceProxy != null && (globalCallbackQueue == null || globalCallbackQueue.contains(globalInterfaceProxy) == false)) {
+				if (globalCallbackQueue == null) {
+					globalCallbackQueue = new LinkedList<>();
+				}
+				globalCallbackQueue.add(globalInterfaceProxy);
+				GLOBAL_CALLBACK_MAP.put(clazz, globalCallbackQueue);
+			}
+
+			invokeMethod(clazz, instance, pkgName, clsName, methodName, methodArgs, listener, hasGlobalCallback ? globalInterfaceProxy : null);
 
 			// 后端服务只允许在当前线程执行，只有客户端才允许设置在 UI 线程(主线程) 执行
 			//			if (threadStr == null || THREAD_CURRENT_STRING.equals(threadStr) || THREAD_MAIN_STRING.equals(threadStr)) {
@@ -515,7 +571,7 @@ public class MethodUtil {
 
 
 	public static void invokeMethod(Class<?> clazz, final Object instance, String pkgName, String clsName
-			, String methodName, List<Argument> methodArgs, Listener<JSONObject> listener) throws Exception {
+			, String methodName, List<Argument> methodArgs, Listener<JSONObject> listener, InterfaceProxy globalInterfaceProxy) throws Exception {
 
 		long startTime = System.currentTimeMillis();
 		try {
@@ -532,9 +588,11 @@ public class MethodUtil {
 						result.put(KEY_THIS, parseJSON(instance.getClass(), instance)); //TODO InterfaceProxy proxy 改成泛型 I instance ？
 					}
 
-					listener.complete(result);
+					if (listener != null) {
+						listener.complete(result);
+					}
 				}
-			});
+			}, globalInterfaceProxy);
 		}
 		catch (Throwable e) {
 			completeWithError(pkgName, clsName, methodName, startTime, e, listener);
@@ -567,11 +625,13 @@ public class MethodUtil {
 		result.put("cause", e.getCause());
 		result.put("trace", e.getStackTrace());
 
-		try {
-			listener.complete(result);
-		}
-		catch (Exception e1) {
-			e1.printStackTrace();
+		if (listener != null) {
+			try {
+				listener.complete(result);
+			}
+			catch (Exception e1) {
+				e1.printStackTrace();
+			}
 		}
 	}
 
@@ -786,7 +846,7 @@ public class MethodUtil {
 	 * @throws Exception
 	 */
 	public static Object getInvokeResult(@NotNull Class<?> clazz, Object instance, @NotNull String methodName
-			, List<Argument> methodArgs, Listener<JSONObject> listener) throws Exception {
+			, List<Argument> methodArgs, Listener<JSONObject> listener, InterfaceProxy globalInterfaceProxy) throws Exception {
 
 		Objects.requireNonNull(clazz);
 		Objects.requireNonNull(methodName);
@@ -858,9 +918,9 @@ public class MethodUtil {
 			}
 		};
 
-		boolean isSync = true;
-		if (types != null) {
+		boolean isSync = globalInterfaceProxy == null;
 
+		if (types != null) {
 			for (int i = 0; i < types.length; i++) {  //当其中有 interface 且用 KEY_CALLBACK 标记了内部至少一个方法，则认为是触发异步回调的方法
 				Class<?> type = types[i];
 				Object value = args[i];
@@ -885,9 +945,21 @@ public class MethodUtil {
 								}
 							}
 						}
+						
+						Argument arg = methodArgs.get(i);
+						if (arg != null && arg.getGlobal() != null && arg.getGlobal()) {
+							Queue<InterfaceProxy> queue = GLOBAL_CALLBACK_MAP.get(clazz);
+							if (queue == null) {
+								queue = new LinkedList<>();
+							}
+							queue.add(proxy);
+							GLOBAL_CALLBACK_MAP.put(clazz, queue);
+						}
 
 						args[i] = cast(proxy, type, ParserConfig.getGlobalInstance());
-						isSync = proxy.$_getCallbackMap().isEmpty();
+						if (isSync) {
+							isSync = proxy.$_getCallbackMap().isEmpty();
+						}
 					}
 					catch (Throwable e) {
 						e.printStackTrace();
@@ -997,11 +1069,11 @@ public class MethodUtil {
 
 
 	public static String dot2Separator(String name) {
-		return name == null ? null : name.replaceAll("\\.", File.separator);
+		return name == null ? null : name.replaceAll("\\.", "\\".equals(File.separator) ? "\\\\" : File.separator);
 	}
 
 	public static String separator2dot(String name) {
-		return name == null ? null : name.replaceAll(File.separator, ".");
+		return name == null ? null : name.replaceAll("\\".equals(File.separator) ? "\\\\" : File.separator, ".");
 	}
 
 	//	private void initTypesAndValues(JSONArray methodArgs, Class<?>[] types, Object[] args)
@@ -1565,7 +1637,7 @@ public class MethodUtil {
 						@SuppressWarnings("rawtypes")
 						Collection nc;
 
-						if (AbstractSequentialList.class.isAssignableFrom(type)) {  // LinkedList
+						if (Queue.class.isAssignableFrom(type) || AbstractSequentialList.class.isAssignableFrom(type)) {  // LinkedList
 							nc = new LinkedList<>();
 						} 
 						else if (Vector.class.isAssignableFrom(type)) {  // Stack
@@ -1619,11 +1691,11 @@ public class MethodUtil {
 
 		if (Collection.class.isAssignableFrom(type)) {
 			Collection<?> c = (Collection<?>) obj;
-			
+
 			@SuppressWarnings("rawtypes")
 			Collection nc;
 
-			if (AbstractSequentialList.class.isAssignableFrom(type)) {  // LinkedList
+			if (Queue.class.isAssignableFrom(type) || AbstractSequentialList.class.isAssignableFrom(type)) {  // LinkedList
 				nc = new LinkedList<>();
 			} 
 			else if (Vector.class.isAssignableFrom(type)) {  // Stack
@@ -1645,10 +1717,10 @@ public class MethodUtil {
 			for (Object o : c) {
 				nc.add(o);
 			}
-			
+
 			return (T) nc;
 		}
-		
+
 		return TypeUtils.cast(obj, type, config);
 	}
 
@@ -1755,7 +1827,7 @@ public class MethodUtil {
 						if (allName || className.equals(name)) {
 							//反射出实例
 							try {
-								Class<?> clazz = loader.loadClass(packageOrFileName.replaceAll(File.separator, "\\.") + "." + name);
+								Class<?> clazz = loader.loadClass(packageOrFileName.replaceAll("\\".equals(File.separator) ? "\\\\" : File.separator, "\\.") + "." + name);
 								list.add(clazz);
 
 								if (allName == false) {
@@ -1835,6 +1907,7 @@ public class MethodUtil {
 		private Boolean reuse;
 		private String type;
 		private Object value;
+		private Boolean global;
 
 		public Argument() {
 		}
@@ -1862,6 +1935,12 @@ public class MethodUtil {
 		}
 		public void setValue(Object value) {
 			this.value = value;
+		}
+		public Boolean getGlobal() {
+			return global;
+		}
+		public void setGlobal(Boolean global) {
+			this.global = global;
 		}
 	}
 
@@ -2002,7 +2081,7 @@ public class MethodUtil {
 			if (name == null) {
 				return null;
 			}
-			String key = name + "(" + StringUtil.getString(trimTypes(method.getGenericParameterTypes())) + ")";
+			String key = name + "(" + StringUtil.getString(trimTypes(method.getGenericParameterTypes())) + ")";  // 带修饰符，太长 method.toGenericString();
 			Object handlerValue = get(key);
 
 			String type = null;
