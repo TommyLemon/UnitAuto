@@ -25,12 +25,34 @@
         />
 
     <Button
+        android:id="@+id/tvUnit"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:onClick="onClickUnit"
         android:text="UnitAutoActivity"
         android:textAllCaps="false"
         android:layout_below="@id/tvMain"
+        android:layout_centerHorizontal="true"
+        />
+
+    <Button
+        android:id="@+id/tvInit"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="onClickInit"
+        android:text="Init SDK"
+        android:textAllCaps="false"
+        android:layout_below="@id/tvUnit"
+        android:layout_centerHorizontal="true"
+        />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="onClickPay"
+        android:text="Start Pay"
+        android:textAllCaps="false"
+        android:layout_below="@id/tvInit"
         android:layout_centerHorizontal="true"
         />
 
