@@ -607,9 +607,9 @@
       branch: 'countArray',
       database: undefined,  // 后端决定 'MYSQL',// 'POSTGRESQL',
       schema: undefined,  // 后端决定 'admin',  // 'sys'
-      server: 'http://localhost:8081',  //apijson.cn
+      server: 'http://apijson.cn:8080',  //apijson.cn
       // server: 'http://47.74.39.68:9090',  // apijson.org
-      project: 'http://apijson.cn:8080',  //apijson.cn
+      project: 'http://localhost:8081',
       language: CodeUtil.LANGUAGE_KOTLIN,
       header: {},
       page: 0,
@@ -993,11 +993,11 @@
           if (isRemote) { //共享测试用例
             this.isExportRandom = isRandom
 
-            if (isRandom != true) {  // 分享搜索关键词和分页信息也挺好 } && this.isTestCaseShow != true) {  // 没有拿到列表，没用
-              setTimeout(function () {
-                App.shareLink(App.isRandomTest)
-              }, 1000)
-            }
+//            if (isRandom != true) {  // 分享搜索关键词和分页信息也挺好 } && this.isTestCaseShow != true) {  // 没有拿到列表，没用
+//              setTimeout(function () {
+//                App.shareLink(App.isRandomTest)
+//              }, 1000)
+//            }
 
             if (this.isTestCaseShow) {
               alert('请先输入请求内容！')

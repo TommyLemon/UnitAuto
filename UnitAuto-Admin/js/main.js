@@ -993,11 +993,11 @@
           if (isRemote) { //共享测试用例
             this.isExportRandom = isRandom
 
-            if (isRandom != true) {  // 分享搜索关键词和分页信息也挺好 } && this.isTestCaseShow != true) {  // 没有拿到列表，没用
-              setTimeout(function () {
-                App.shareLink(App.isRandomTest)
-              }, 1000)
-            }
+//            if (isRandom != true) {  // 分享搜索关键词和分页信息也挺好 } && this.isTestCaseShow != true) {  // 没有拿到列表，没用
+//              setTimeout(function () {
+//                App.shareLink(App.isRandomTest)
+//              }, 1000)
+//            }
 
             if (this.isTestCaseShow) {
               alert('请先输入请求内容！')
@@ -3593,7 +3593,7 @@
         var count = this.count || 100  //超过就太卡了
         var page = this.page || 0
 
-        var search = StringUtil.isEmpty(this.search, true) ? null : '%' + StringUtil.trim(this.search) + '%'
+        var search = StringUtil.isEmpty(this.search, true) ? null : StringUtil.trim(this.search)
         this.request(false, REQUEST_TYPE_JSON, this.server + '/get', {
           format: false,
           '@database': this.database,
@@ -3604,27 +3604,23 @@
             'Method': {
               '@column': 'DISTINCT package',
               '@order': 'package+',
-              'package$': search,
-              'class$': search,
-              '@combine': StringUtil.isEmpty(search) ? null : 'package$,class$'
+              'package%$': search,
+              'class%$': search,
+              '@combine': StringUtil.isEmpty(search) ? null : 'package%$ | class%$'
             },
             'Method[]': {
               'count': 0,
-              'Method:group': {
-                'package@': '[]/Method/package',
-                '@column': 'DISTINCT class',
-                '@order': 'class+',
-                '@having': 'length(class)>0',
-                'package$': search,
-                'class$': search,
-                '@combine': StringUtil.isEmpty(search) ? null : 'package$,class$'
-              },
               'Method': {
                 'package@': '[]/Method/package',
-                'class@': '/Method:group/class',
-                '@column': 'class,constructor,genericClassArgs',
-                '@order': 'class+',
-                'arguments()': "getMethodArguments(genericClassArgs)",
+                'class{}': "length(class)>0",
+                'package%$': search,
+                'class%$': search,
+                '@combine': StringUtil.isEmpty(search) ? null : 'package%$ | class%$',
+                '@column': "DISTINCT class,constructor;(CASE genericClassArgs WHEN '[]' THEN NULL ELSE genericClassArgs END):genericClassArgs",
+                '@raw': '@column',
+                'class{}': 'length(class)>0',
+                '@order': 'class+,constructor+,genericClassArgs+',
+                'arguments()': 'getMethodArguments(genericClassArgs)'
               }
             }
           }
@@ -3689,7 +3685,10 @@
                   log('getDoc [] for j=' + j + ': column = \n' + format(JSON.stringify(column)));
                 }
 
-                doc += '\n' + (j + 1) + ') ' + name + '(' + StringUtil.get(column.arguments) + ')';
+                doc += '\n' + (j + 1) + ') ' + name;
+                if (StringUtil.isEmpty(column.arguments, true) == false) {
+                  doc += '(' + StringUtil.get(column.arguments) + ')';
+                }
 
               }
 
