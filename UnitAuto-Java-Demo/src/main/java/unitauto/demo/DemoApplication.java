@@ -45,6 +45,7 @@ import unitauto.MethodUtil.InstanceGetter;
 import unitauto.MethodUtil.JSONCallback;
 import unitauto.NotNull;
 //import unitauto.jar.UnitAutoApp;
+import unitauto.jar.UnitAutoApp;
 
 
 /**SpringBootApplication
@@ -57,8 +58,31 @@ import unitauto.NotNull;
 public class DemoApplication implements ApplicationContextAware {
 	private static final String TAG = "DemoApplication";
 
+	public static void main(String[] args) throws Exception {
+		SpringApplication.run(DemoApplication.class, args);
+		System.out.println("\n\n<<<<<<<<< 本 Demo 在 resources/static 内置了 UnitAuto-Admin，Chrome/Firefox 打开 http://localhost:8081 即可调试(端口号根据项目配置而定) ^_^ >>>>>>>>>\n");
+	}
+
+	//SpringBoot 2.x 自定义端口方式
+	//	@Bean
+	//	public TomcatServletWebServerFactory servletContainer(){
+	//		return new TomcatServletWebServerFactory(8081) ;
+	//	}
+	//SpringBoot 1.x 自定义端口方式，配置文件加 server.port=80 无效(MacOS 10.10.?)
+	@Bean
+	public EmbeddedServletContainerCustomizer containerCustomizer() {
+		return new EmbeddedServletContainerCustomizer() {
+
+			@Override
+			public void customize(ConfigurableEmbeddedServletContainer container) {
+				container.setPort(8081); //自定义端口号，如果和微信、TiDB 等其它程序端口有冲突，可改为 8081, 9090, 9091 等未被占用的端口 	
+			}
+		};
+	}
+
+	
 	static {
-//		UnitAutoApp.init();
+		UnitAutoApp.init();
 
 		final InstanceGetter ig = MethodUtil.INSTANCE_GETTER;
 		MethodUtil.INSTANCE_GETTER = new InstanceGetter() {
@@ -142,27 +166,6 @@ public class DemoApplication implements ApplicationContextAware {
 				return jc.parseJSON(type, value);
 			}
 
-		};
-	}
-
-	public static void main(String[] args) throws Exception {
-		SpringApplication.run(DemoApplication.class, args);
-	}
-
-	//SpringBoot 2.x 自定义端口方式
-	//	@Bean
-	//	public TomcatServletWebServerFactory servletContainer(){
-	//		return new TomcatServletWebServerFactory(8081) ;
-	//	}
-	//SpringBoot 1.x 自定义端口方式，配置文件加 server.port=80 无效(MacOS 10.10.?)
-	@Bean
-	public EmbeddedServletContainerCustomizer containerCustomizer() {
-		return new EmbeddedServletContainerCustomizer() {
-
-			@Override
-			public void customize(ConfigurableEmbeddedServletContainer container) {
-				container.setPort(8081); //自定义端口号，如果和 TiDB 等其它程序端口有冲突，可改为 8081, 9090, 9091 等未被占用的端口 	
-			}
 		};
 	}
 
