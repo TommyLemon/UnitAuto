@@ -1,14 +1,25 @@
+/*Copyright ©2019 TommyLemon(https://github.com/TommyLemon/UnitAuto)
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.*/
+
 package unitauto.test;
 
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
-import java.util.Queue;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
 
 import unitauto.Log;
 import unitauto.MethodUtil;
@@ -58,7 +69,7 @@ public class TestSDK {
 
 		Map<String, Object> info = new HashMap<>();
 		try {
-			System.out.println("config = " + JSON.toJSONString(this.config));
+			Log.d(TAG, "init config = " + JSON.toJSONString(this.config));
 
 			Thread.sleep(1000);
 
@@ -98,7 +109,7 @@ public class TestSDK {
 			return;
 		}
 
-		System.out.println("req = " + JSON.toJSONString(req));
+		Log.d(TAG, "init req = " + JSON.toJSONString(req));
 		try {
 			Thread.sleep(3000);
 			if (Math.random() > 0.7) {
@@ -122,12 +133,7 @@ public class TestSDK {
 
 
 	public static void main(String[] args) {
-		Queue<InterfaceProxy> globalCallbackQueue = MethodUtil.GLOBAL_CALLBACK_MAP.get(TestSDK.class);
-		if (globalCallbackQueue == null) {
-			globalCallbackQueue = new LinkedList<>();
-		}
-		
-		InterfaceProxy globalInterfaceProxy = globalCallbackQueue.peek();
+		InterfaceProxy globalInterfaceProxy = MethodUtil.GLOBAL_CALLBACK_MAP.get(TestSDK.class);
 		if (globalInterfaceProxy == null) {
 			globalInterfaceProxy = new InterfaceProxy();
 		}
@@ -136,11 +142,10 @@ public class TestSDK {
 
 			@Override
 			public void complete(Object data, Method method, InterfaceProxy proxy, Object... extras) throws Exception {
-				Log.d(TAG, "invokeMethod  LISTENER_QUEUE.poll " + method);
+				Log.d(TAG, "main  globalInterfaceProxy.Listener.complete  method = " + method + "; data = " + JSON.toJSONString(data));
 			}
 		});
-		globalCallbackQueue.add(globalInterfaceProxy);
-		MethodUtil.GLOBAL_CALLBACK_MAP.put(TestSDK.class, globalCallbackQueue);
+		MethodUtil.GLOBAL_CALLBACK_MAP.put(TestSDK.class, globalInterfaceProxy);
 		
 		
 		/**
@@ -154,11 +159,11 @@ public class TestSDK {
 		//      config.put("proxy_type", 1 ); //若没有代理,则不需要此行
 		//      config.put("perform_mode", "LOW_PERFORM");//低性能表现，默认关闭美颜等
 
+		boolean[] called = new boolean[]{false}; 
 		TestSDK.getInstance().init(config, new Callback() {
 			@Override
 			public void response(Map<String, Object> info) {
-				Queue<InterfaceProxy> globalCallbackQueue = MethodUtil.GLOBAL_CALLBACK_MAP.get(TestSDK.class);
-				InterfaceProxy globalCallback = globalCallbackQueue.poll();
+				InterfaceProxy globalCallback = MethodUtil.GLOBAL_CALLBACK_MAP.get(TestSDK.class);
 				try {
 					@SuppressWarnings("unchecked")
 					Listener<Object> listener = (Listener<Object>) globalCallback.$_getCallback("response(Map<String, java.lang.Object>)");
@@ -176,7 +181,8 @@ public class TestSDK {
 				String code = (String) info.get("return_code");
 				String msg = (String) info.get("return_msg");
 
-				System.out.println("TestSDK.main 初始化完成：code = " + code + "；msg = " + msg);
+				Log.d(TAG, "main TestSDK.getInstance().Callback.response " + (called[0] ? "支付回调" : "初始化完成") + "：code = " + code + "；msg = " + msg);
+				called[0] = true;
 			}
 		});
 

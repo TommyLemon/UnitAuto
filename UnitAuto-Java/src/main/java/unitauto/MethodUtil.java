@@ -196,7 +196,7 @@ public class MethodUtil {
 
 
 	@NotNull
-	public static Map<Class<?>, Queue<InterfaceProxy>> GLOBAL_CALLBACK_MAP;
+	public static Map<Class<?>, InterfaceProxy> GLOBAL_CALLBACK_MAP;
 	//  Map<class, <constructorArgs, instance>>
 	public static final Map<Class<?>, Map<Object, Object>> INSTANCE_MAP;
 	public static final Map<String, Class<?>> PRIMITIVE_CLASS_MAP;
@@ -482,8 +482,7 @@ public class MethodUtil {
 			}
 
 
-			Queue<InterfaceProxy> globalCallbackQueue = GLOBAL_CALLBACK_MAP.get(clazz);
-			InterfaceProxy globalInterfaceProxy = globalCallbackQueue == null ? null : globalCallbackQueue.peek();
+			InterfaceProxy globalInterfaceProxy = GLOBAL_CALLBACK_MAP.get(clazz);
 			boolean hasGlobalCallback = globalInterfaceProxy != null;
 
 //			if (globalInterfaceProxy == null) {
@@ -524,12 +523,8 @@ public class MethodUtil {
 				}
 //			}
 
-			if (globalInterfaceProxy != null && (globalCallbackQueue == null || globalCallbackQueue.contains(globalInterfaceProxy) == false)) {
-				if (globalCallbackQueue == null) {
-					globalCallbackQueue = new LinkedList<>();
-				}
-				globalCallbackQueue.add(globalInterfaceProxy);
-				GLOBAL_CALLBACK_MAP.put(clazz, globalCallbackQueue);
+			if (globalInterfaceProxy != null && GLOBAL_CALLBACK_MAP.containsValue(globalInterfaceProxy) == false) {
+				GLOBAL_CALLBACK_MAP.put(clazz, globalInterfaceProxy);
 			}
 
 			invokeMethod(clazz, instance, pkgName, clsName, methodName, methodArgs, listener, hasGlobalCallback ? globalInterfaceProxy : null);
@@ -948,12 +943,7 @@ public class MethodUtil {
 						
 						Argument arg = methodArgs.get(i);
 						if (arg != null && arg.getGlobal() != null && arg.getGlobal()) {
-							Queue<InterfaceProxy> queue = GLOBAL_CALLBACK_MAP.get(clazz);
-							if (queue == null) {
-								queue = new LinkedList<>();
-							}
-							queue.add(proxy);
-							GLOBAL_CALLBACK_MAP.put(clazz, queue);
+							GLOBAL_CALLBACK_MAP.put(clazz, proxy);
 						}
 
 						args[i] = cast(proxy, type, ParserConfig.getGlobalInstance());

@@ -124,9 +124,8 @@ public class DemoController {
 			public void complete(JSONObject data, Method method, InterfaceProxy proxy, Object... extras) throws Exception {
                 Log.w(TAG, "invokeMethod  listener.complete data = " + data + "; method = " + method);
 
-//				ServletResponse servletResponse = called[0] ? null : asyncContext.getResponse();
-				ServletResponse servletResponse = asyncContext.getResponse();
-				if (servletResponse == null || servletResponse.isCommitted()) {  // isCommitted 在高并发时可能不准，导致写入多次
+				ServletResponse servletResponse = called[0] ? null : asyncContext.getResponse();
+				if (servletResponse == null) { // TestSDK 总是不响应数据 || servletResponse.isCommitted()) {  // isCommitted 在高并发时可能不准，导致写入多次
                     Log.w(TAG, "invokeMethod  listener.complete  servletResponse == null || servletResponse.isCommitted() >> return;");
                     return;
 				}
