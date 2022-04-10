@@ -1010,6 +1010,8 @@ public class MethodUtil {
 		boolean queryData = query != 1;
 		boolean queryTotal = query != 0;
 
+		pkgName = StringUtil.isEmpty(pkgName, true) ? null : StringUtil.getTrimedString(pkgName);
+		clsName = StringUtil.isEmpty(clsName, true) ? null : StringUtil.getTrimedString(clsName);
 
 		boolean allMethod = isEmpty(methodName, true);
 
@@ -1052,8 +1054,8 @@ public class MethodUtil {
 					if (queryTotal) {
 						int clsCount = pkgObj.getIntValue(KEY_CLASS_TOTAL);
 						pkgObj.put(KEY_CLASS_TOTAL, clsCount + 1);
-						pkgObj.put(KEY_PACKAGE, pkg);
 					}
+					pkgObj.put(KEY_PACKAGE, pkg);
 
 					JSONArray classList = pkgObj.getJSONArray(KEY_CLASS_LIST);
 					if (classList == null) {
@@ -1062,7 +1064,7 @@ public class MethodUtil {
 
 					JSONObject clsObj = new JSONObject(true);
 
-					clsObj.put(KEY_NAME, cls.getSimpleName());
+					clsObj.put(KEY_CLASS, cls.getSimpleName());
 					clsObj.put(KEY_TYPE, trimType(cls.getGenericSuperclass()));
 
 					JSONArray methodList = null;
