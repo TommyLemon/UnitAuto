@@ -24,8 +24,8 @@ import org.springframework.beans.BeansException;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.embedded.ConfigurableEmbeddedServletContainer;
-import org.springframework.boot.context.embedded.EmbeddedServletContainerCustomizer;
+import org.springframework.boot.web.server.WebServerFactoryCustomizer;
+import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
@@ -36,6 +36,7 @@ import org.springframework.web.filter.CorsFilter;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.parser.ParserConfig;
 import com.alibaba.fastjson.serializer.PropertyFilter;
 
 import unitauto.Log;
@@ -48,39 +49,35 @@ import unitauto.NotNull;
 import unitauto.jar.UnitAutoApp;
 
 
-/**SpringBootApplication
+/**UnitAuto Demo SpringBoot Application 主应用程序启动类
  * 右键这个类 > Run As > Java Application
+ * 具体见 SpringBoot 文档  
+ * https://www.springcloud.cc/spring-boot.html#using-boot-locating-the-main-class
  * @author Lemon
  */
 @EnableAutoConfiguration
 @Configuration
 @SpringBootApplication
-public class DemoApplication implements ApplicationContextAware {
+public class DemoApplication implements ApplicationContextAware, WebServerFactoryCustomizer<ConfigurableServletWebServerFactory> {
 	private static final String TAG = "DemoApplication";
 
 	public static void main(String[] args) throws Exception {
+		Log.DEBUG = true;  // FIXME 不要开放给项目组后端之外的任何人使用 UnitAuto（强制登录鉴权）！！！
+		// Log.DEBUG 时启动 AutoType 来支持传入参数值类型是声明参数类型子类型的情况  https://github.com/alibaba/fastjson/wiki/enable_autotype
+		ParserConfig.getGlobalInstance().setAutoTypeSupport(Log.DEBUG);
+		
 		SpringApplication.run(DemoApplication.class, args);
+		
 		System.out.println("\n\n<<<<<<<<< 本 Demo 在 resources/static 内置了 UnitAuto-Admin，Chrome/Firefox 打开 http://localhost:8081 即可调试(端口号根据项目配置而定) ^_^ >>>>>>>>>\n");
 	}
 
-	//SpringBoot 2.x 自定义端口方式
-	//	@Bean
-	//	public TomcatServletWebServerFactory servletContainer(){
-	//		return new TomcatServletWebServerFactory(8081) ;
-	//	}
-	//SpringBoot 1.x 自定义端口方式，配置文件加 server.port=80 无效(MacOS 10.10.?)
-	@Bean
-	public EmbeddedServletContainerCustomizer containerCustomizer() {
-		return new EmbeddedServletContainerCustomizer() {
-
-			@Override
-			public void customize(ConfigurableEmbeddedServletContainer container) {
-				container.setPort(8081); //自定义端口号，如果和微信、TiDB 等其它程序端口有冲突，可改为 8081, 9090, 9091 等未被占用的端口 	
-			}
-		};
+	// SpringBoot 2.x 自定义端口方式
+	@Override
+	public void customize(ConfigurableServletWebServerFactory server) {
+		server.setPort(8081);
 	}
 
-	
+
 	static {
 		UnitAutoApp.init();
 
@@ -129,7 +126,6 @@ public class DemoApplication implements ApplicationContextAware {
 
 				if (value instanceof ApplicationContext
 						|| value instanceof Context
-						|| value instanceof javax.validation.MessageInterpolator.Context
 						|| value instanceof org.omg.CORBA.Context
 						|| value instanceof org.apache.catalina.Context
 						|| value instanceof ch.qos.logback.core.Context
@@ -147,7 +143,6 @@ public class DemoApplication implements ApplicationContextAware {
 
 								if (value instanceof ApplicationContext
 										|| value instanceof Context
-										|| value instanceof javax.validation.MessageInterpolator.Context
 										|| value instanceof org.omg.CORBA.Context
 										|| value instanceof org.apache.catalina.Context
 										|| value instanceof ch.qos.logback.core.Context

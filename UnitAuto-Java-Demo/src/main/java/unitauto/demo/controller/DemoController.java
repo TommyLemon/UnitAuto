@@ -110,6 +110,10 @@ public class DemoController {
 
 	@PostMapping("method/list")
 	public JSONObject listMethod(@RequestBody String request) {
+		if (Log.DEBUG == false) {
+			return MethodUtil.JSON_CALLBACK.newErrorResult(new IllegalAccessException("非 DEBUG 模式下不允许使用 UnitAuto 单元测试！"));
+		}
+		
 		return MethodUtil.listMethod(request);
 	}
 	
@@ -137,6 +141,18 @@ public class DemoController {
 				asyncContext.complete();
 			}
 		};
+		
+		if (Log.DEBUG == false) {
+			try {
+				listener.complete(MethodUtil.JSON_CALLBACK.newErrorResult(new IllegalAccessException("非 DEBUG 模式下不允许使用 UnitAuto 单元测试！")));
+			}
+			catch (Exception e1) {
+				e1.printStackTrace();
+				asyncContext.complete();
+			}
+			
+			return;
+		}
 
 		try {
 			MethodUtil.invokeMethod(request, null, listener);

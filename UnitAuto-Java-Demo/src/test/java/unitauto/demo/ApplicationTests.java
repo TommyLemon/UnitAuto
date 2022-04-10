@@ -1,7 +1,7 @@
-package unitauto.demo.server;
+package unitauto.demo;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import unitauto.test.TestUtil;
 
@@ -27,7 +27,7 @@ public class ApplicationTests {
 		double c = 0.5;  //期望值，对应 UnitAuto 上传的结果 { "response": { "invoke": 0.5 ... } ... }
 		double d = TestUtil.divide(a, b);  //执行方法并返回实际值，对应 UnitAuto 执行的结果 { "invoke": 0.5, "instance": null ... }
 
-		Assert.assertEquals("1/2 != 0.5 !!!", c, d, 0);  //对比结果，对应 UnitAuto 自动对比和展示结果，红黄蓝绿
+		Assertions.assertEquals(c, d, 0, "1/2 != 0.5 !!!");  //对比结果，对应 UnitAuto 自动对比和展示结果，红黄蓝绿
 	}
 
 	@Test
@@ -37,8 +37,16 @@ public class ApplicationTests {
 		double c = -4;  //期望值，对应 UnitAuto 上传的正确结果 { "response": { "invoke": -4 ... } ... }
 		double d = TestUtil.divide(a, b);  //执行方法并返回实际值，对应 UnitAuto 执行的结果 { "invoke": -4, "instance": null ... }
 
-		Assert.assertEquals("12/-3 != -4 !!!", c, d, 0);  //对比结果，对应 UnitAuto 自动对比和展示结果，红黄蓝绿
+		Assertions.assertEquals(c, d, 0, "12/-3 != -4 !!!");  //对比结果，对应 UnitAuto 自动对比和展示结果，红黄蓝绿
 	}
 
 	//TODO divide2, divide3, ... 或者写数组 aList = [1, 12 ...], bList = [2, -3 ...], cList = [0.5, -4 ...] 然后遍历再调用
+
+
+	
+	public static void main(String[] args) {
+		ApplicationTests test = new ApplicationTests();
+		test.divide0();
+		test.divide1();
+	}
 }
