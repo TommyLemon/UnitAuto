@@ -5,7 +5,7 @@
 
 	<groupId>unitauto.demo</groupId>
 	<artifactId>unitauto-java-demo</artifactId>
-	<version>2.7.0</version>
+	<version>2.7.2</version>
 	<packaging>jar</packaging>
 
 	<name>UnitAuto-Java-Demo</name>
@@ -57,12 +57,12 @@
  		<!-- <dependency>
 			<groupId>com.github.TommyLemon</groupId>
 			<artifactId>unitauto-java</artifactId>
-			<version>2.7.0</version>
+			<version>2.7.2</version>
 		</dependency>
 		<dependency>
 			<groupId>com.github.TommyLemon</groupId>
 			<artifactId>unitauto-jar</artifactId>
-			<version>2.7.0</version>
+			<version>2.7.2</version>
 		</dependency> -->
 
 	</dependencies>
