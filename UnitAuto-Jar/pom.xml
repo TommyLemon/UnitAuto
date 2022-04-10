@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>unitauto.jar</groupId>
 	<artifactId>unitauto-jar</artifactId>
-	<version>2.6.4</version>
+	<version>2.7.0</version>
 	<name>UnitAuto-Jar</name>
 
 	<build>
@@ -36,11 +36,11 @@
 			<version>4.8.87</version>
 		</dependency>
 
-		<dependency>
+		<!-- <dependency>
 			<groupId>com.github.TommyLemon</groupId>
 			<artifactId>unitauto-java</artifactId>
-			<version>2.6.4</version>
-		</dependency>
+			<version>2.7.0</version>
+		</dependency> -->
 	</dependencies>
 	
 	<repositories>
