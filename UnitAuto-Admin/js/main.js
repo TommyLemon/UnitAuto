@@ -568,10 +568,58 @@
       isConfigShow: false,
       isDeleteShow: false,
       currentDocItem: {
-
+        "Method":{
+          "id":1648471968021,
+          "userId":82001,
+          "static":0,
+          "ui":0,
+          "type":"double",
+          "genericType":"double",
+          "package":"unitauto.test",
+          "class":"TestUtil",
+          "method":"divide",
+          "methodArgs":"[{\"type\":\"long\",\"value\":1},{\"type\":\"long\",\"value\":2}]",
+          "request":"{\n    \"static\": true,\n    \"methodArgs\": [\n        {   // 可省略来自动判断的 type : Boolean,Integer,BigDecimal,String,JSONObject,JSONArray\n            \"type\": \"long\",\n            \"value\": 1\n        },\n        {\n            \"type\": \"long\",\n            \"value\": 2\n        }\n    ]\n}\n\n/* 注释可省略，但如果未省略则前面两个空格必须；清空文本内容可查看规则。 */\n\n\n                                                                                                                                                                                                              \n",
+          "detail":": double  // 除法运算",
+          "date":"2022-03-28 20:52:48.0",
+          "arguments":"",
+          "defination":"divide(): double",
+          "constructorArguments":""
+        },
+        "TestRecord":{
+          "id":1649186005068,
+          "userId":82001,
+          "documentId":1648471968021,
+          "response":"{\"msg\":\"success\",\"type\":\"double\",\"return\":0.5,\"methodArgs\":[{\"type\":\"long\",\"value\":1},{\"type\":\"long\",\"value\":2}],\"code\":200}",
+          "standard":"{\"notnull\":true,\"type\":\"object\",\"valueLevel\":0,\"values\":[{\"msg\":{\"notnull\":true,\"type\":\"string\",\"valueLevel\":3,\"values\":[],\"lengthLevel\":1,\"lengths\":[7]},\"type\":{\"notnull\":true,\"type\":\"string\",\"valueLevel\":3,\"values\":[],\"lengthLevel\":1,\"lengths\":[6]},\"return\":{\"notnull\":true,\"type\":\"number\",\"valueLevel\":1,\"values\":[0.5],\"lengthLevel\":1,\"lengths\":[1]},\"methodArgs\":{\"notnull\":true,\"type\":\"object\",\"valueLevel\":0,\"values\":[{\"0\":{\"notnull\":true,\"type\":\"object\",\"valueLevel\":0,\"values\":[{\"type\":{\"notnull\":true,\"type\":\"string\",\"valueLevel\":3,\"values\":[],\"lengthLevel\":1,\"lengths\":[4]},\"value\":{\"notnull\":true,\"type\":\"integer\",\"valueLevel\":0,\"values\":[1],\"lengthLevel\":1,\"lengths\":[]}}]},\"1\":{\"notnull\":true,\"type\":\"object\",\"valueLevel\":0,\"values\":[{\"type\":{\"notnull\":true,\"type\":\"string\",\"valueLevel\":3,\"values\":[],\"lengthLevel\":1,\"lengths\":[4]},\"value\":{\"notnull\":true,\"type\":\"integer\",\"valueLevel\":0,\"values\":[2],\"lengthLevel\":1,\"lengths\":[]}}]}}]}}],\"code\":200}"
+        }
       },
       currentRemoteItem: {
-
+        "Method":{
+          "id":1648471968021,
+          "userId":82001,
+          "static":0,
+          "ui":0,
+          "type":"double",
+          "genericType":"double",
+          "package":"unitauto.test",
+          "class":"TestUtil",
+          "method":"divide",
+          "methodArgs":"[{\"type\":\"long\",\"value\":1},{\"type\":\"long\",\"value\":2}]",
+          "request":"{\n    \"static\": true,\n    \"methodArgs\": [\n        {   // 可省略来自动判断的 type : Boolean,Integer,BigDecimal,String,JSONObject,JSONArray\n            \"type\": \"long\",\n            \"value\": 1\n        },\n        {\n            \"type\": \"long\",\n            \"value\": 2\n        }\n    ]\n}\n\n/* 注释可省略，但如果未省略则前面两个空格必须；清空文本内容可查看规则。 */\n\n\n                                                                                                                                                                                                              \n",
+          "detail":": double  // 除法运算",
+          "date":"2022-03-28 20:52:48.0",
+          "arguments":"",
+          "defination":"divide(): double",
+          "constructorArguments":""
+        },
+        "TestRecord":{
+          "id":1649186005068,
+          "userId":82001,
+          "documentId":1648471968021,
+          "response":"{\"msg\":\"success\",\"type\":\"double\",\"return\":0.5,\"methodArgs\":[{\"type\":\"long\",\"value\":1},{\"type\":\"long\",\"value\":2}],\"code\":200}",
+          "standard":"{\"notnull\":true,\"type\":\"object\",\"valueLevel\":0,\"values\":[{\"msg\":{\"notnull\":true,\"type\":\"string\",\"valueLevel\":3,\"values\":[],\"lengthLevel\":1,\"lengths\":[7]},\"type\":{\"notnull\":true,\"type\":\"string\",\"valueLevel\":3,\"values\":[],\"lengthLevel\":1,\"lengths\":[6]},\"return\":{\"notnull\":true,\"type\":\"number\",\"valueLevel\":1,\"values\":[0.5],\"lengthLevel\":1,\"lengths\":[1]},\"methodArgs\":{\"notnull\":true,\"type\":\"object\",\"valueLevel\":0,\"values\":[{\"0\":{\"notnull\":true,\"type\":\"object\",\"valueLevel\":0,\"values\":[{\"type\":{\"notnull\":true,\"type\":\"string\",\"valueLevel\":3,\"values\":[],\"lengthLevel\":1,\"lengths\":[4]},\"value\":{\"notnull\":true,\"type\":\"integer\",\"valueLevel\":0,\"values\":[1],\"lengthLevel\":1,\"lengths\":[]}}]},\"1\":{\"notnull\":true,\"type\":\"object\",\"valueLevel\":0,\"values\":[{\"type\":{\"notnull\":true,\"type\":\"string\",\"valueLevel\":3,\"values\":[],\"lengthLevel\":1,\"lengths\":[4]},\"value\":{\"notnull\":true,\"type\":\"integer\",\"valueLevel\":0,\"values\":[2],\"lengthLevel\":1,\"lengths\":[]}}]}}]}}],\"code\":200}"
+        }
       },
       currentRandomItem: {
 
