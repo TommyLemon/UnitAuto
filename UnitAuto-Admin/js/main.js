@@ -567,9 +567,15 @@
       isLoginShow: false,
       isConfigShow: false,
       isDeleteShow: false,
-      currentDocItem: {},
-      currentRemoteItem: {},
-      currentRandomItem: {},
+      currentDocItem: {
+
+      },
+      currentRemoteItem: {
+
+      },
+      currentRandomItem: {
+
+      },
       isAdminOperation: false,
       loginType: 'login',
       isExportRemote: false,
@@ -2569,7 +2575,7 @@
         this.password = user.password
       },
 
-      setRememberLogin(remember) {
+      setRememberLogin: function (remember) {
         vRemember.checked = remember || false
       },
 
@@ -2602,7 +2608,7 @@
         }
 
         if (isAdminOperation) {
-          this.request(isAdminOperation, REQUEST_TYPE_JSON, this.server + '/login', req, {}, function (url, res, err) {
+          this.request(isAdminOperation, REQUEST_TYPE_JSON, this.server + '/login', req, this.getHeader(vHeader.value), function (url, res, err) {
             if (callback) {
               callback(url, res, err)
               return
@@ -2658,7 +2664,7 @@
 
           this.showTestCase(false, this.isLocalShow)
           this.onChange(false)
-          this.request(isAdminOperation, REQUEST_TYPE_JSON, this.project + '/login', req, {}, function (url, res, err) {
+          this.request(isAdminOperation, REQUEST_TYPE_JSON, this.project + '/login', req, this.getHeader(vHeader.value), function (url, res, err) {
             if (callback) {
               callback(url, res, err)
               return
@@ -2696,22 +2702,16 @@
       /**注册
        */
       register: function (isAdminOperation) {
-        this.showUrl(isAdminOperation, '/register')
-        vInput.value = JSON.stringify(
-          {
-            Privacy: {
-              phone: this.account,
-              _password: this.password
-            },
-            User: {
-              name: 'APIJSONUser'
-            },
-            verify: vVerify.value
+        this.request(isAdminOperation, REQUEST_TYPE_JSON, '/register', {
+          Privacy: {
+            phone: this.account,
+            _password: this.password
           },
-          null, '    ')
-        this.showTestCase(false, false)
-        this.onChange(false)
-        this.send(isAdminOperation, function (url, res, err) {
+          User: {
+            name: 'APIJSONUser'
+          },
+          verify: vVerify.value
+        }, this.getHeader(vHeader.value), function (url, res, err) {
           App.onResponse(url, res, err)
 
           var rpObj = res.data
@@ -2730,19 +2730,13 @@
       /**重置密码
        */
       resetPassword: function (isAdminOperation) {
-        this.showUrl(isAdminOperation, '/put/password')
-        vInput.value = JSON.stringify(
-          {
-            verify: vVerify.value,
-            Privacy: {
-              phone: this.account,
-              _password: this.password
-            }
-          },
-          null, '    ')
-        this.showTestCase(false, this.isLocalShow)
-        this.onChange(false)
-        this.send(isAdminOperation, function (url, res, err) {
+        this.request(isAdminOperation, REQUEST_TYPE_JSON, '/put/password', {
+          verify: vVerify.value,
+          Privacy: {
+            phone: this.account,
+            _password: this.password
+          }
+        }, this.getHeader(vHeader.value), function (url, res, err) {
           App.onResponse(url, res, err)
 
           var rpObj = res.data
@@ -2774,7 +2768,7 @@
 
         // alert('logout  isAdminOperation = ' + isAdminOperation + '; url = ' + url)
         if (isAdminOperation) {
-          this.request(isAdminOperation, REQUEST_TYPE_JSON, this.server + '/logout', req, {}, function (url, res, err) {
+          this.request(isAdminOperation, REQUEST_TYPE_JSON, this.server + '/logout', req, this.getHeader(vHeader.value), function (url, res, err) {
             if (callback) {
               callback(url, res, err)
               return
@@ -2790,24 +2784,20 @@
         else {
           this.showTestCase(false, this.isLocalShow)
           this.onChange(false)
-          this.request(isAdminOperation, REQUEST_TYPE_JSON, this.project + '/logout', req, {}, callback)
+          this.request(isAdminOperation, REQUEST_TYPE_JSON, this.project + '/logout', req, this.getHeader(vHeader.value), callback)
         }
       },
 
       /**获取验证码
        */
       getVerify: function (isAdminOperation) {
-        this.showUrl(isAdminOperation, '/post/verify')
         var type = this.loginType == 'login' ? 0 : (this.loginType == 'register' ? 1 : 2)
-        vInput.value = JSON.stringify(
-          {
-            type: type,
-            phone: this.account
-          },
-          null, '    ')
         this.showTestCase(false, this.isLocalShow)
         this.onChange(false)
-        this.send(isAdminOperation, function (url, res, err) {
+        this.request(isAdminOperation, REQUEST_TYPE_JSON, '/post/verify', {
+          type: type,
+          phone: this.account
+        }, this.getHeader(vHeader.value), function (url, res, err) {
           App.onResponse(url, res, err)
 
           var data = res.data || {}
@@ -3172,6 +3162,9 @@
       request: function (isAdminOperation, type, url, req, header, callback) {
         type = type || REQUEST_TYPE_JSON
         url = StringUtil.noBlank(url)
+        if (url.startsWith('/')) {
+          url = (isAdminOperation ? this.server : this.project) + url
+        }
 
         var isDelegate = (isAdminOperation == false && this.isDelegateEnabled) || (isAdminOperation && url.indexOf('://apijson.cn:9090') > 0)
 
@@ -5334,7 +5327,7 @@
       },
 
       //显示详细信息, :data-hint :data, :hint 都报错，只能这样
-      setRequestHint(index, item, isRandom, isClass) {
+      setRequestHint: function (index, item, isRandom, isClass) {
         item = item || {}
         var d = isRandom ? item.Random : item.Method;
         // this.$refs[isRandom ? 'randomTexts' : (isClass ? 'testCaseClassTexts' : 'testCaseMethodTexts')][index]
@@ -5365,7 +5358,7 @@
       },
 
       //显示详细信息, :data-hint :data, :hint 都报错，只能这样
-      setTestHint(index, item, isRandom, isDuration) {
+      setTestHint: function (index, item, isRandom, isDuration) {
         item = item || {};
         var toId = isRandom ? ((item.Random || {}).toId || 0) : 0;
         var h = isDuration ? item.durationHint : item.hintMessage;
@@ -5392,7 +5385,7 @@
         return result
       }
     },
-    created () {
+    created: function  () {
       try { //可能URL_BASE是const类型，不允许改，这里是初始化，不能出错
         var url = this.getCache('', 'URL_BASE')
         if (StringUtil.isEmpty(url, true) == false) {
