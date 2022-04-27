@@ -1178,7 +1178,7 @@
                   + '\n    "mock": true,  // 是否生成模拟参数值'
                   + '\n    "package": "' + this.getPackage() + '",  // 包名，不填默认全部'
                   + '\n    "class": "' + this.getClass() + '",  // 类名，不填默认全部'
-                  + '\n    "types": null,  // 类型，不填默认全部，填 ["int", "String"] 这种则只查对应参数的方法 '
+                  + '\n    "types": null  // 类型，不填默认全部，填 ["int", "String"] 这种则只查对应参数的方法 '
                   + '\n}'
                 this.onChange(false)
                 this.request(false, REQUEST_TYPE_JSON, this.project + this.exTxt.name
@@ -2059,7 +2059,7 @@
               'userId': this.User.id,
               'testAccountId': currentAccountId,
               'package': classItem.package == null ? null : classItem.package,  // .replace(/[.]/g, '/'),
-              'class': classItem.name,
+              'class': classItem.class,
               'method': methodItem.name,
               'this': null,
               'constructor': null,
