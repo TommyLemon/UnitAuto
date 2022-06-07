@@ -261,7 +261,7 @@ unitauto.test.TestUtil.divide
             "type": "double",
             "value": 1
         },
-        {   // 如果是 JSON 类型，可以不写类型只写值，例如 true, 1, 3.14, "ok", {"a": 1}, [1, 2, 3]
+        {
             "type": "double",
             "value": 2
         }
@@ -275,7 +275,7 @@ unitauto.test.TestUtil.divide
     "static": true,
     "methodArgs": [
         "double:1",
-        "double:2"
+        "double:2"  // 如果是 JSON 类型，可以不写类型只写值，例如 true, 1, 3.14, "ok", {"a": 1}, [1, 2, 3]
     ]
 }
 ```
