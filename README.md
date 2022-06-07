@@ -227,19 +227,19 @@ https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server
 <br />
 
 ### 远程扫描方法
-UnitAuto-Admin 登录后点击 设置项 \[查看、同步方法文档]
+UnitAuto-Admin 登录后点击 设置项 \[查看、同步方法文档]，等返回方法属性 JSON 后点 \[上传] 按钮
 ![image](https://user-images.githubusercontent.com/5738175/172366167-87b5de56-16c0-4a44-bed7-6a6fe76a4209.png)
 
 对应发送请求 <br />
 POST /method/list
 ```js
 {
-	  "mock": true,
-	  "query": 0,  // 0-数据，1-总数，2-全部
-		"package": "apijson.demo.server",
-		"class": "DemoFunction",
-		"method": "plus",
-		"types": ["Integer", "String", "com.alibaba.fastjson.JSONObject"]
+    "mock": true,
+    "query": 0,  // 0-数据，1-总数，2-全部
+    "package": "apijson.demo.server",
+    "class": "DemoFunction",
+    "method": "plus",
+    "types": ["Integer", "String", "com.alibaba.fastjson.JSONObject"]
 }
 ```
 
