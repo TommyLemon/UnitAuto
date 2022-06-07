@@ -224,6 +224,66 @@ dependencies {
 自动管理测试用例 这个功能 需要部署APIJSON后端，见 <br /> 
 https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server
 <br />
+<br />
+
+### 远程扫描方法
+UnitAuto-Admin 登录后点击 设置项 \[查看、同步方法文档]
+![image](https://user-images.githubusercontent.com/5738175/172366167-87b5de56-16c0-4a44-bed7-6a6fe76a4209.png)
+
+对应发送请求 <br />
+POST /method/list
+```js
+{
+	  "mock": true,
+	  "query": 0,  // 0-数据，1-总数，2-全部
+		"package": "apijson.demo.server",
+		"class": "DemoFunction",
+		"method": "plus",
+		"types": ["Integer", "String", "com.alibaba.fastjson.JSONObject"]
+}
+```
+
+详细说明见 MethodUtil.listMethod 的注释 <br />
+https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java/src/main/java/unitauto/MethodUtil.java#L287-L300
+
+<br />
+
+### 远程调用方法
+UnitAuto-Admin 点击 \[运行方法]
+![image](https://user-images.githubusercontent.com/5738175/172366641-befa1f36-8498-4e7c-a9a3-5a1845e22bfe.png)
+
+unitauto.test.TestUtil.divide
+```js
+{
+    "static": true,
+    "methodArgs": [
+        {   // 可省略来自动判断的 type : Boolean,Integer,BigDecimal,String,JSONObject,JSONArray
+            "type": "long",
+            "value": 1
+        },
+        {
+            "type": "long",
+            "value": 2
+        }
+    ]
+}
+```
+
+对应 Java 方法
+unitauto.test.TestUtil.divide(long, long)
+```java
+	public static double divide(long a, long b) {
+		return divide((double) a, (double) b);  //直接相除会被自动强转为 long，1/2 = 0 !  a / b;
+	}
+```
+https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java/src/main/java/unitauto/test/TestUtil.java#L53-L55
+
+
+详细说明见 MethodUtil.invokeMethod 的注释 <br />
+https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java/src/main/java/unitauto/MethodUtil.java#L287-L300
+
+<br />
+
 
 ### 常见问题
 #### 1.无法访问接口
