@@ -257,11 +257,11 @@ unitauto.test.TestUtil.divide
 {
     "static": true,
     "methodArgs": [
-        {   // 可省略来自动判断的 type : Boolean,Integer,BigDecimal,String,JSONArray
+        {   // 可省略来自动判断的 type : Boolean,Integer,BigDecimal,String,JSONObject,JSONArray 这几种 JSON 类型
             "type": "double",
             "value": 1
         },
-        {
+        {   // 如果是 JSON 类型，可以不写类型只写值，例如 true, 1, 3.14, "ok", {"a": 1}, [1, 2, 3]
             "type": "double",
             "value": 2
         }
@@ -274,7 +274,7 @@ unitauto.test.TestUtil.divide
 {
     "static": true,
     "methodArgs": [
-        "double:1",  // 如果是除了 JSONObject 外的 JSON 基本类型，可以只写值，例如 true, 1, 3.14, "ok", [1, 2, 3]
+        "double:1",
         "double:2"
     ]
 }
@@ -292,7 +292,7 @@ https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java/src/main/java/u
 
 
 详细说明见 MethodUtil.invokeMethod 的注释 <br />
-https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java/src/main/java/unitauto/MethodUtil.java#L287-L300
+https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java/src/main/java/unitauto/MethodUtil.java#L353-L424
 
 <br />
 
