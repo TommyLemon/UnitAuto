@@ -53,13 +53,13 @@ public class DemoController {
 	public boolean test() {
 		return true;
 	}
-	
+
 	@RequestMapping("hello")
 	public String hello(@RequestParam(value = "name", required = false) String name) {
 		return demoService.hello(name);
 	}
-	
-	
+
+
 	@RequestMapping("listUser")
 	public String listUser(@RequestParam Integer count) {
 		List<User> list = demoService.listUser(count);
@@ -67,7 +67,7 @@ public class DemoController {
 		result.put("data", list);
 		return result.toJSONString();
 	}
-	
+
 	@RequestMapping("addContact")
 	public JSONObject addContact(@RequestParam Long id, @RequestParam Long contactId) {
 		try {
@@ -79,7 +79,7 @@ public class DemoController {
 			return MethodUtil.newErrorResult(e);
 		}
 	}
-	
+
 	@PostMapping("addUser")
 	public JSONObject addUser(@RequestParam User user) {
 		try {
@@ -91,8 +91,8 @@ public class DemoController {
 			return MethodUtil.newErrorResult(e);
 		}
 	}
-	
-	
+
+
 	@PostMapping("addUserList")
 	public JSONObject addUserList(@RequestParam List<User> list) {
 		try {
@@ -104,8 +104,8 @@ public class DemoController {
 			return MethodUtil.newErrorResult(e);
 		}
 	}
-	
-	
+
+
 
 
 	@PostMapping("method/list")
@@ -113,10 +113,10 @@ public class DemoController {
 		if (Log.DEBUG == false) {
 			return MethodUtil.JSON_CALLBACK.newErrorResult(new IllegalAccessException("非 DEBUG 模式下不允许使用 UnitAuto 单元测试！"));
 		}
-		
+
 		return MethodUtil.listMethod(request);
 	}
-	
+
 	@PostMapping("method/invoke")
 	public void invokeMethod(@RequestBody String request, HttpServletRequest servletRequest) {
 		AsyncContext asyncContext = servletRequest.startAsync();
@@ -126,12 +126,12 @@ public class DemoController {
 
 			@Override
 			public void complete(JSONObject data, Method method, InterfaceProxy proxy, Object... extras) throws Exception {
-                Log.w(TAG, "invokeMethod  listener.complete data = " + data + "; method = " + method);
+				Log.w(TAG, "invokeMethod  listener.complete data = " + data + "; method = " + method);
 
 				ServletResponse servletResponse = called[0] ? null : asyncContext.getResponse();
 				if (servletResponse == null) { // TestSDK 总是不响应数据 || servletResponse.isCommitted()) {  // isCommitted 在高并发时可能不准，导致写入多次
-                    Log.w(TAG, "invokeMethod  listener.complete  servletResponse == null || servletResponse.isCommitted() >> return;");
-                    return;
+					Log.w(TAG, "invokeMethod  listener.complete  servletResponse == null || servletResponse.isCommitted() >> return;");
+					return;
 				}
 				called[0] = true;
 
@@ -141,7 +141,7 @@ public class DemoController {
 				asyncContext.complete();
 			}
 		};
-		
+
 		if (Log.DEBUG == false) {
 			try {
 				listener.complete(MethodUtil.JSON_CALLBACK.newErrorResult(new IllegalAccessException("非 DEBUG 模式下不允许使用 UnitAuto 单元测试！")));
@@ -150,7 +150,7 @@ public class DemoController {
 				e1.printStackTrace();
 				asyncContext.complete();
 			}
-			
+
 			return;
 		}
 

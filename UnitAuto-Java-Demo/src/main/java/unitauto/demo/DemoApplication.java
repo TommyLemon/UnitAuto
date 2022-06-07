@@ -65,9 +65,9 @@ public class DemoApplication implements ApplicationContextAware, WebServerFactor
 		Log.DEBUG = true;  // FIXME 不要开放给项目组后端之外的任何人使用 UnitAuto（强制登录鉴权）！！！
 		// Log.DEBUG 时启动 AutoType 来支持传入参数值类型是声明参数类型子类型的情况  https://github.com/alibaba/fastjson/wiki/enable_autotype
 		ParserConfig.getGlobalInstance().setAutoTypeSupport(Log.DEBUG);
-		
+
 		SpringApplication.run(DemoApplication.class, args);
-		
+
 		System.out.println("\n\n<<<<<<<<< 本 Demo 在 resources/static 内置了 UnitAuto-Admin，Chrome/Firefox 打开 http://localhost:8081 即可调试(端口号根据项目配置而定) ^_^ >>>>>>>>>\n");
 	}
 

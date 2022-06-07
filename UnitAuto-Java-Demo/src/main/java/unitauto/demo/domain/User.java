@@ -82,7 +82,7 @@ public class User implements Serializable, Comparable<User> {
 
 		return contactIdList;
 	}
-	
+
 	@Override
 	public int compareTo(User o) {
 		return o == null || id > o.getId() ? 1 : (id == o.getId() ? 0 : -1);
