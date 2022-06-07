@@ -230,16 +230,16 @@ https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server
 UnitAuto-Admin 登录后点击 设置项 \[查看、同步方法文档]，等返回方法属性 JSON 后点 \[上传] 按钮
 ![image](https://user-images.githubusercontent.com/5738175/172366167-87b5de56-16c0-4a44-bed7-6a6fe76a4209.png)
 
-对应发送请求 <br />
+对应发送 HTTP 请求 <br />
 POST /method/list
 ```js
 {
+    "query": 2,  // 0-数据，1-总数，2-全部
     "mock": true,
-    "query": 0,  // 0-数据，1-总数，2-全部
-    "package": "apijson.demo.server",
-    "class": "DemoFunction",
-    "method": "plus",
-    "types": ["Integer", "String", "com.alibaba.fastjson.JSONObject"]
+    "package": "unitauto.test",
+    "class": "TestUtil",
+    "method": "divide",
+    "types": null
 }
 ```
 
@@ -250,33 +250,45 @@ https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java/src/main/java/u
 
 ### 远程调用方法
 UnitAuto-Admin 点击 \[运行方法]
-![image](https://user-images.githubusercontent.com/5738175/172366641-befa1f36-8498-4e7c-a9a3-5a1845e22bfe.png)
+![image](https://user-images.githubusercontent.com/5738175/172368105-d4d0b53c-59a7-42d8-aaf1-4ecfc0711b8a.png)
 
 unitauto.test.TestUtil.divide
 ```js
 {
     "static": true,
     "methodArgs": [
-        {   // 可省略来自动判断的 type : Boolean,Integer,BigDecimal,String,JSONObject,JSONArray
-            "type": "long",
+        {   // 可省略来自动判断的 type : Boolean,Integer,BigDecimal,String,JSONArray
+            "type": "double",
             "value": 1
         },
         {
-            "type": "long",
+            "type": "double",
             "value": 2
         }
     ]
 }
 ```
 
-对应 Java 方法
-unitauto.test.TestUtil.divide(long, long)
+也可以简化为 
+```js
+{
+    "static": true,
+    "methodArgs": [
+        "double:1",  // 如果是除了 JSONObject 外的 JSON 基本类型，可以只写值，例如 true, 1, 3.14, "ok", [1, 2, 3]
+        "double:2"
+    ]
+}
+```
+
+
+对应调用 Java 方法
+unitauto.test.TestUtil.divide(double, double)
 ```java
-	public static double divide(long a, long b) {
-		return divide((double) a, (double) b);  //直接相除会被自动强转为 long，1/2 = 0 !  a / b;
+	public static double divide(double a, double b) {
+		return a / b;
 	}
 ```
-https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java/src/main/java/unitauto/test/TestUtil.java#L53-L55
+https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java/src/main/java/unitauto/test/TestUtil.java#L56-L58
 
 
 详细说明见 MethodUtil.invokeMethod 的注释 <br />
