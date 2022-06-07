@@ -231,7 +231,7 @@ UnitAuto-Admin 登录后点击 设置项 \[查看、同步方法文档]，等返
 ![image](https://user-images.githubusercontent.com/5738175/172366167-87b5de56-16c0-4a44-bed7-6a6fe76a4209.png)
 
 对应发送 HTTP 请求 <br />
-POST /method/list
+[POST /method/list](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java-Demo/src/main/java/unitauto/demo/controller/DemoController.java#L111-L118)
 ```js
 {
     "query": 2,  // 0-数据，1-总数，2-全部
@@ -280,8 +280,29 @@ unitauto.test.TestUtil.divide
 }
 ```
 
+对应发送 HTTP 请求  <br />
+[POST /method/invoke](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java-Demo/src/main/java/unitauto/demo/controller/DemoController.java#L120-L170)
+```js
+{
+    "package": "unitauto.test",
+    "class": "TestUtil",
+    "method": "divide",
+    "static": true,
+    "methodArgs": [
+        {
+            "type": "double",
+            "value": 1
+        },
+        {
+            "type": "double",
+            "value": 2
+        }
+    ]
+}
+```
 
-对应调用 Java 方法
+
+对应调用 Java 方法  <br />
 unitauto.test.TestUtil.divide(double, double)
 ```java
 	public static double divide(double a, double b) {
