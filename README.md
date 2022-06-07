@@ -257,7 +257,7 @@ unitauto.test.TestUtil.divide
 {
     "static": true,
     "methodArgs": [
-        {   // 可省略来自动判断的 type : Boolean,Integer,BigDecimal,String,JSONObject,JSONArray 这几种 JSON 类型
+        {   // 可省略来自动判断的 type : Boolean,Integer,BigDecimal,String,Object,JSONArray 这几种 JSON 类型
             "type": "double",
             "value": 1
         },
