@@ -364,8 +364,8 @@
 // APIJSON <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 
-  function getRequestFromURL() {
-    var url = window.location.search;
+  function getRequestFromURL(url_, tryParse) {
+    var url = url_ || window.location.search;
 
     var index = url == null ? -1 : url.indexOf("?")
     if(index < 0) { //判断是否有参数
@@ -387,17 +387,81 @@
       if (theRequest == null) {
         theRequest = {};
       }
-      theRequest[part.substring(0, ind)] = decodeURIComponent(part.substring(ind+1));
+
+      var v = decodeURIComponent(part.substring(ind+1));
+      if (tryParse == true) {
+        try {
+          v = JSON.parse(v)
+        }
+        catch (e) {
+        }
+      }
+
+      theRequest[part.substring(0, ind)] = v;
     }
 
     return theRequest;
   }
+
+
+  function markdownToHTML(md, isRequest) {
+    if (editormd == null) {
+      return;
+    }
+
+    if (isRequest) {
+      vRequestMarkdown.innerHTML = '';
+    }
+    else {
+      vMarkdown.innerHTML = '';
+    }
+    editormd.markdownToHTML(isRequest ? 'vRequestMarkdown' : "vMarkdown", {
+      markdown        : md ,//+ "\r\n" + $("#append-test").text(),
+      //htmlDecode      : true,       // 开启 HTML 标签解析，为了安全性，默认不开启
+      htmlDecode      : "style,script,iframe",  // you can filter tags decode
+      //toc             : false,
+      tocm            : true,    // Using [TOCM]
+      //tocContainer    : "#custom-toc-container", // 自定义 ToC 容器层
+      //gfm             : false,
+      tocDropdown     : true,
+      // markdownSourceCode : true, // 是否保留 Markdown 源码，即是否删除保存源码的 Textarea 标签
+      taskList        : true,
+      tex             : true,  // 默认不解析
+      flowChart       : true,  // 默认不解析
+      sequenceDiagram : true,  // 默认不解析
+    });
+  }
+
+
+
+  var PLATFORM_POSTMAN = 'POSTMAN'
+  var PLATFORM_SWAGGER = 'SWAGGER'
+  var PLATFORM_YAPI = 'YAPI'
+  var PLATFORM_RAP = 'RAP'
 
   var REQUEST_TYPE_PARAM = 'PARAM'  // GET ?a=1&b=c&key=value
   var REQUEST_TYPE_FORM = 'FORM'  // POST x-www-form-urlencoded
   var REQUEST_TYPE_DATA = 'DATA'  // POST form-data
   var REQUEST_TYPE_JSON = 'JSON'  // POST application/json
   var REQUEST_TYPE_GRPC = 'GRPC'  // POST application/json
+
+  var CONTENT_TYPE_MAP = {
+    // 'PARAM': 'plain/text',
+    'FORM': 'x-www-form-urlencoded',
+    'DATA': 'form-data',
+    'JSON': 'application/json',
+    'GRPC': 'application/json',
+  }
+  var CONTENT_VALUE_TYPE_MAP = {
+    'plain/text': 'JSON',
+    'x-www-form-urlencoded': 'FORM',
+    'form-data': 'DATA',
+    'application/json': 'JSON'
+  }
+
+  var IGNORE_HEADERS = ['status code', 'remote address', 'referrer policy', 'connection', 'content-length'
+    , 'content-type', 'date', 'keep-alive', 'proxy-connection', 'set-cookie', 'vary', 'accept', 'cache-control', 'dnt'
+    , 'host', 'origin', 'pragma', 'referer', 'user-agent']
 
   var RANDOM_DB = 'RANDOM_DB'
   var RANDOM_IN = 'RANDOM_IN'
@@ -549,14 +613,16 @@
       tests: { '-1':{}, '0':{}, '1':{}, '2': {} },
       crossProcess: '交叉账号:已关闭',
       testProcess: '机器学习:已关闭',
-      randomTestTitle: '随机测试 Random Test',
+      randomTestTitle: '参数注入 Random Test',
       testRandomCount: 1,
       testRandomProcess: '',
       compareColor: '#0000',
+      isLoading: false,
       isRandomTest: false,
       isDelayShow: false,
       isSaveShow: false,
       isExportShow: false,
+      isExportCheckShow: false,
       isExportRandom: false,
       isTestCaseShow: false,
       isHeaderShow: false,
@@ -640,6 +706,7 @@
       uploadFailCount: 0,
       exTxt: {
         name: 'APIJSON测试',
+        label: '发布简单接口',
         button: '保存',
         index: 0
       },
@@ -655,7 +722,7 @@
         id: 0,
         balance: null //点击更新提示需要判空 0.00
       },
-      type: '',
+      type: REQUEST_TYPE_JSON,
       types: [ REQUEST_TYPE_JSON ],
       host: '', // 'apijson.demo.server.DemoFunction.',
       branch: 'countArray',
@@ -904,8 +971,8 @@
         return req == null ? null : req.tag
       },
 
-      getRequest: function (json, defaultValue) {
-        var s = this.toDoubleJSON(json, defaultValue);
+      getRequest: function (json, defaultValue, isRaw) {  // JSON5 兜底，减少修改范围  , isSingle) {
+        var s = isRaw != true && isSingle ? this.switchQuote(json) : json; // this.toDoubleJSON(json, defaultValue);
         if (StringUtil.isEmpty(s, true)) {
           return defaultValue
         }
@@ -913,11 +980,20 @@
           return jsonlint.parse(s);
         }
         catch (e) {
-          log('main.getRequest', 'try { return jsonlint.parse(s); \n } catch (e) {\n' + e.message)
+          log('main.getRequest', 'try { return jsonlint.parse(s); \n } catch (e2) {\n' + e.message)
           log('main.getRequest', 'return jsonlint.parse(this.removeComment(s));')
-          return jsonlint.parse(this.removeComment(s));
+          return JSON5.parse(s);  // jsonlint.parse(this.removeComment(s));
         }
       },
+      getExtraComment: function(json) {
+        var it = json != null ? json : StringUtil.trim(vInput.value);
+
+        var start = it.lastIndexOf('\n\/*');
+        var end = it.lastIndexOf('\n*\/');
+
+        return start < 0 || end <= start ? null : it.substring(start + '\n\/*'.length, end);
+      },
+
       getHeader: function (text) {
         var header = {}
         var hs = StringUtil.isEmpty(text, true) ? null : StringUtil.split(text, '\n')
@@ -925,8 +1001,10 @@
         if (hs != null && hs.length > 0) {
           var item
           for (var i = 0; i < hs.length; i++) {
-            item = hs[i]
-            var index = item.lastIndexOf('  //')  // 不加空格会导致 http:// 被截断  ('//')  //这里只支持单行注释，不用 removeComment 那种带多行的去注释方式
+            item = hs[i] || ''
+
+            // 解决整体 trim 后第一行  // 被当成正常的 key 路径而不是注释
+            var index = StringUtil.trim(item).startsWith('//') ? 0 : item.lastIndexOf('  //')  // 不加空格会导致 http:// 被截断  ('//')  //这里只支持单行注释，不用 removeComment 那种带多行的去注释方式
             var item2 = index < 0 ? item : item.substring(0, index)
             item2 = item2.trim()
             if (item2.length <= 0) {
@@ -1044,14 +1122,16 @@
       // 显示导出弹窗
       showExport: function (show, isRemote, isRandom) {
         if (show) {
+          // this.isExportCheckShow = isRemote
+
           if (isRemote) { //共享测试用例
             this.isExportRandom = isRandom
 
-//            if (isRandom != true) {  // 分享搜索关键词和分页信息也挺好 } && this.isTestCaseShow != true) {  // 没有拿到列表，没用
-//              setTimeout(function () {
-//                App.shareLink(App.isRandomTest)
-//              }, 1000)
-//            }
+            // if (isRandom != true) {  // 分享搜索关键词和分页信息也挺好 } && this.isTestCaseShow != true) {  // 没有拿到列表，没用
+              // setTimeout(function () {
+              //   App.shareLink(App.isRandomTest)
+              // }, 1000)
+            // }
 
             if (this.isTestCaseShow) {
               alert('请先输入请求内容！')
@@ -1135,6 +1215,7 @@
             }
           }
         }
+
         this.isExportShow = show
         this.isExportRemote = isRemote
       },
@@ -1393,6 +1474,7 @@
         } else {
           if (this.isLocalShow) {
             this.locals.splice(index, 1)
+            this.saveCache('', 'locals', this.locals)
             return
           }
 
@@ -1405,7 +1487,7 @@
         }
       },
 
-      // 根据随机测试用例恢复数据
+      // 根据参数注入用例恢复数据
       restoreRandom: function (index, item) {
         this.currentRandomItem = item
         this.isRandomListShow = false
@@ -1497,7 +1579,16 @@
       },
 
       // 导出文本
-      exportTxt: function () {
+      exportTxt: function (btnIndex) {
+        if (btnIndex == null) {
+          btnIndex = 0
+        }
+
+        if (btnIndex == 1 && this.isExportRandom != true) {
+          this.shareLink(this.isRandomTest)
+          return
+        }
+
         this.isExportShow = false
 
         if (this.isExportRemote == false) { //下载到本地
@@ -1620,35 +1711,58 @@
             return
           }
 
-          var isExportRandom = this.isExportRandom
+          const isExportRandom = this.isExportRandom
+          const isEditResponse = this.isEditResponse
+          const isReleaseRESTful = isExportRandom && btnIndex == 1 && ! isEditResponse
 
-          if (isExportRandom != true && StringUtil.isEmpty(this.exTxt.name, true)) {
+          const method = App.getMethod();
+          const methodInfo = isReleaseRESTful ? (CodeUtil.parseUri(method, true) || {}) : {};
+          if (isReleaseRESTful) {
+            var isRestful = methodInfo.isRestful;
+            var tag = methodInfo.tag;
+            var table = methodInfo.table;
+
+            if (isRestful) {
+              alert('请求 URL 格式不是 APIJSON 万能通用接口！必须为 /get/user 这种 /{method}/{tag} 格式！其中 method 只能为 [' + APIJSON_METHODS.join() + '] 中的一个，tag 不能为 Table, Table[] 这种与 APIJSON 简单接口冲突的格式！ ')
+              return
+            }
+            if (StringUtil.isEmpty(tag, true)) {
+              alert('请求 URL 缺少 tag！必须为 /get/user 这种 /{method}/{tag} 格式！其中 method 只能为 [' + APIJSON_METHODS.join() + '] 中的一个，tag 不能为 Table, Table[] 这种与 APIJSON 简单接口冲突的格式！ ')
+              return
+            }
+            if (JSONObject.isTableKey(table)) {
+              alert('请求 URL 中的字符 ' + table + ' 与 APIJSON 简单接口冲突！必须为 /get/user 这种 /{method}/{tag} 格式！其中 method 只能为 [' + APIJSON_METHODS.join() + '] 中的一个，tag 不能为 Table, Table[] 这种与 APIJSON 简单接口冲突的格式！ ')
+              return
+            }
+          }
+
+          if ((isExportRandom != true || btnIndex == 1) && StringUtil.isEmpty(this.exTxt.name, true)) {
             alert('请输入接口名！')
             return
           }
 
           var doc = (this.currentRemoteItem || {}).Method || {}
           var tr = (this.currentRemoteItem || {}).TestRecord || {}
-          var did = doc.id
-          if (isExportRandom && did == null) {
+          const did = isExportRandom && btnIndex == 1 ? null : doc.id
+          if (isExportRandom && btnIndex <= 0 && did == null) {
             alert('请先共享测试用例！')
             return
           }
 
           this.isTestCaseShow = false
 
-          var currentAccountId = this.getCurrentAccountId()
-          var currentResponse = this.view != 'code' || StringUtil.isEmpty(this.jsoncon, true) ? {} : this.removeDebugInfo(JSON.parse(this.jsoncon));
+          const currentAccountId = this.getCurrentAccountId()
+          const currentResponse = this.view != 'code' || StringUtil.isEmpty(this.jsoncon, true) ? {} : this.removeDebugInfo(JSON.parse(this.jsoncon));
 
-          var after = this.toDoubleJSON(inputted);
-          var inputObj = this.getRequest(after, {});
+          const after = isSingle ? this.switchQuote(inputted) : inputted;  // this.toDoubleJSON(inputted);
+          const inputObj = this.getRequest(after, {});
 
           var commentObj = null;
           if (isExportRandom != true) {
             var m = this.getMethod();
             var commentStddObj = null
             try {
-              commentStddObj = JSON.parse(this.isEditResponse ? tr.standard : doc.standard);
+              commentStddObj = JSON.parse(isEditResponse ? tr.standard : doc.standard);
             }
             catch(e) {
               log(e)
@@ -1657,27 +1771,89 @@
             inputObj.code = null  // delete inputObj.code
 
             commentObj = JSONResponse.updateStandard(commentStddObj, inputObj);
-            CodeUtil.parseComment(after, docObj == null ? null : docObj['[]'], m, this.database, this.language, true, commentObj, true);
+            CodeUtil.parseComment(after, docObj == null ? null : docObj['[]'], m, this.database, this.language, isEditResponse != true, commentObj, true);
 
             inputObj.code = code_
           }
 
-          var code = currentResponse.code;
-          var thrw = currentResponse.throw;
+          const code = currentResponse.code;
+          const thrw = currentResponse.throw;
           delete currentResponse.code; //code必须一致
           delete currentResponse.throw; //throw必须一致
 
           var rsp = JSON.parse(JSON.stringify(currentResponse || {}))
           rsp = JSONResponse.array2object(rsp, 'methodArgs', ['methodArgs'], true)
 
-          var isML = this.isMLEnabled;
-          var stddObj = isML ? JSONResponse.updateStandard({}, rsp) : {};
+          const isML = this.isMLEnabled;
+          const stddObj = isML ? JSONResponse.updateStandard({}, rsp) : {};
           stddObj.code = code;
           stddObj.throw = thrw;
           currentResponse.code = code;
           currentResponse.throw = thrw;
 
-          var url = this.server + (isExportRandom || this.isEditResponse || did == null ? '/post' : '/put')
+          var config = vRandom.value;
+          const mapReq = {};
+          const mustKeys = [];
+          const typeObj = {};
+          const refuseKeys = [];
+
+          if (isReleaseRESTful) {
+            var mapReq2 = {}
+
+            var cfgLines = StringUtil.split(config, '\n', true);
+            var newCfg = '';
+            if (cfgLines != null) {
+              for (var i = 0; i < cfgLines.length; i++) {
+                var cfgLine = cfgLines[i];
+                var ind = cfgLine == null ? -1 : cfgLine.indexOf(': ');
+                if (ind <= 0) {
+                  continue;
+                }
+
+                var cInd = cfgLine.indexOf('//');
+                if (cInd >= 0 && cInd <= ind) {
+                  continue;
+                }
+
+                var k = cfgLine.substring(0, ind).replace(/\//g, '.'); // .trim();
+                var ks = StringUtil.split(k, '.')
+                var p = inputObj;
+                for (var j = 0; j < ks.length - 1; j ++) {
+                  if (p == null) {
+                    break;
+                  }
+
+                  var jk = ks[j];
+                  p = jk == null ? null : p[jk];
+                }
+
+                var v = p == null ? null : p[ks[ks.length - 1]];
+                mapReq[k] = v;
+                mapReq2[k] = v;
+
+                // 智能判断 count, @key 等
+                if (k.startsWith('@') || k.endsWith('[].count') || k.endsWith('[].query') || ['format', 'version'].indexOf(k) >= 0) {
+                  refuseKeys.push('!' + k);
+                }
+                else {
+                  mustKeys.push(k);
+                }
+
+                var t = JSONResponse.getType(v);
+                typeObj[k] = t == 'integer' ? 'NUMBER' : (t == 'number' ? 'DECIMAL' : t.toUpperCase());
+
+                newCfg += (i <= 0 ? '' : '\n') + k + ': ' + cfgLine.substring(ind+2).trim();
+              }
+
+              refuseKeys.push('!');
+              config = newCfg;
+            }
+
+            commentObj = JSONResponse.updateStandard({}, mapReq2);
+          }
+          const extName = App.exTxt.name;
+          const baseUrl = App.getBaseUrl();
+          var url = this.server + (isExportRandom || isEditResponse || did == null ? '/post' : '/put')
           var req = isExportRandom ? {
             format: false,
             'Random': {
@@ -1694,7 +1870,7 @@
             'tag': 'Random'
           } : {
             format: false,
-            'Method': this.isEditResponse ? null : {
+            'Method': isEditResponse ? null : {
               'id': did == null ? undefined : did,
               'testAccountId': currentAccountId,
               'method': this.getMethod(),
@@ -1707,15 +1883,15 @@
               'genericMethodArgs': JSON.stringify(this.getRequest(vInput.value, {}).methodArgs),
               'request': this.toDoubleJSON(inputted)
             },
-            'TestRecord': this.isEditResponse != true && did != null ? null : {
-              'documentId': this.isEditResponse ? did : undefined,
+            'TestRecord': isEditResponse != true && did != null ? null : {
+              'documentId': isEditResponse ? did : undefined,
               'randomId': 0,
               'host': this.getBaseUrl(),
               'testAccountId': currentAccountId,
-              'response': JSON.stringify(this.isEditResponse ? inputObj : currentResponse),
-              'standard': isML || this.isEditResponse ? JSON.stringify(this.isEditResponse ? commentObj : stddObj) : undefined
+              'response': JSON.stringify(isEditResponse ? inputObj : currentResponse),
+              'standard': isML || isEditResponse ? JSON.stringify(isEditResponse ? commentObj : stddObj) : undefined
             },
-            'tag': this.isEditResponse ? 'TestRecord' : 'Method'
+            'tag': isEditResponse ? 'TestRecord' : 'Method'
           }
 
           this.request(true, REQUEST_TYPE_JSON, url, req, {}, function (url, res, err) {
@@ -1723,7 +1899,7 @@
 
             var rpObj = res.data || {}
 
-            if (isExportRandom) {
+              if (isExportRandom && btnIndex <= 0) {
               if (rpObj.code == CODE_SUCCESS) {
                 App.randoms = []
                 App.showRandomList(true, (App.currentRemoteItem || {}).Method)
@@ -1747,33 +1923,66 @@
                   return
                 }
 
-                //自动生成随机配置（遍历 JSON，对所有可变值生成配置，排除 @key, key@, key() 等固定值）
-                var req = App.getRequest(vInput.value, {})
-                var config = StringUtil.trim(App.newRandomConfig(null, '', req))
-                if (config == '') {
-                  return;
-                }
+                  if (isReleaseRESTful) {
+                    var structure = {"MUST": mustKeys.join(), "TYPE": typeObj, "REFUSE": refuseKeys.join()};
 
-                App.request(true, REQUEST_TYPE_JSON, App.server + '/post', {
+                    var reqObj = {
+                      format: false,
+                      Request: {
+                        method: StringUtil.toUpperCase(methodInfo.method),
+                        tag: methodInfo.tag,
+                        structure: JSON.stringify(structure, null, '    '),
+                        detail: extName
+                      },
+                      tag: 'Request'
+                    };
+
+                    App.request(true, REQUEST_TYPE_JSON, baseUrl + '/post', reqObj, {}, function (url, res, err) {
+                      if (res.data != null && res.data.Request != null && res.data.Request.code == CODE_SUCCESS) {
+                        alert('已自动生成并上传 Request 表校验规则配置:\n' + JSON.stringify(reqObj.Request, null, '  '))
+                      }
+                      else {
+                        var reqStr = JSON.stringify(reqObj, null, '  ');
+                        console.log('已自动生成，但上传以下 Request 表校验规则配置失败，可能需要手动加表记录:\nPOST ' + baseUrl + '/post' + '\n' + reqStr)
+                        alert('已自动生成，但上传以下 Request 表校验规则配置失败，可能需要手动加表记录，如未自动复制可在控制台复制:\n' + reqStr)
+                        navigator.clipboard.writeText(reqStr);
+                      }
+                      App.onResponse(url, res, err)
+                    })
+                  }
+
+                  //自动生成随机配置（遍历 JSON，对所有可变值生成配置，排除 @key, key@, key() 等固定值）
+
+                  const isGenerate = StringUtil.isEmpty(config, true);
+                  if (isGenerate) {
+                    var req = isReleaseRESTful ? mapReq : App.getRequest(vInput.value, {})
+                    config = StringUtil.trim(App.newRandomConfig(null, '', req))
+
+                    if (StringUtil.isEmpty(config, true)) {
+                      return;
+                    }
+                  }
+
+                App.request(true, REQUEST_TYPE_JSON, (isReleaseRESTful ? baseUrl : App.server + '/post'), {
                   format: false,
                   'Random': {
                     documentId: rpObj.Method.id,
                     count: App.requestCount,
-                    name: '默认配置(上传测试用例时自动生成)',
+                    name: '默认配置' + (isGenerate ? '(上传测试用例时自动生成)' : ''),
                     config: config
                   },
                   TestRecord: {
-                    host: App.getBaseUrl(),
+                    host: baseUrl,
                     response: ''
                   },
                   'tag': 'Random'
                 }, {}, function (url, res, err) {
                   if (res.data != null && res.data.Random != null && res.data.Random.code == CODE_SUCCESS) {
-                    alert('已自动生成并上传随机配置:\n' + config)
+                    alert('已' + (isGenerate ? '自动生成并' : '') + '上传随机配置:\n' + config)
                     App.isRandomListShow = true
                   }
                   else {
-                    alert('已自动生成，但上传以下随机配置失败:\n' + config)
+                    alert((isGenerate ? '已自动生成，但' : '') + '上传以下随机配置失败:\n' + config)
                     vRandom.value = config
                   }
                   App.onResponse(url, res, err)
@@ -1978,7 +2187,7 @@
                   alert('正在同步，请等待完成')
                   return
                 }
-                
+
                 App.isSyncing = true
                 App.onResponse(url, res, err)
 
@@ -1994,7 +2203,7 @@
                   alert('没有查到 Project 文档！请开启跨域代理，并检查 URL 是否正确！')
                   return
                 }
-                
+
                 App.uploadTotal = 0
                 App.uploadDoneCount = 0
                 App.uploadFailCount = 0
@@ -2006,7 +2215,7 @@
                       alert('没有查到 Project 文档！请开启跨域代理，并检查 URL 是否正确！')
                       return
                   }
-               
+
                   for (var i in classList) {
                     try {
                       var classItem = classList[i]
@@ -2877,6 +3086,7 @@
 
         this.view = 'output';
         vComment.value = '';
+        vWarning.value = '';
         // vUrlComment.value = '';
         vOutput.value = 'resolving...';
 
@@ -2898,23 +3108,24 @@
             afterObj = {};
             after = '';
           } else {
-            before = this.toDoubleJSON(StringUtil.trim(before));
+            before = StringUtil.trim(before); // this.toDoubleJSON(StringUtil.trim(before));
             log('onHandle  before = \n' + before);
 
+            var json = isSingle ? this.switchQuote(before) : before;
             try {
-              afterObj = jsonlint.parse(before);
+              afterObj = jsonlint.parse(json);
               after = JSON.stringify(afterObj, null, "    ");
-              before = after;
+              before = isSingle ? this.switchQuote(after) : after;
             }
             catch (e) {
               log('main.onHandle', 'try { return jsonlint.parse(before); \n } catch (e) {\n' + e.message)
               log('main.onHandle', 'return jsonlint.parse(this.removeComment(before));')
 
               try {
-                afterObj = jsonlint.parse(this.removeComment(before));
+                afterObj = JSON5.parse(json);  // jsonlint.parse(this.removeComment(before));
                 after = JSON.stringify(afterObj, null, "    ");
               } catch (e2) {
-                throw new Error('请求 JSON 格式错误！请检查并编辑请求！\n\n如果JSON中有注释，请 手动删除 或 点击左边的 \'/" 按钮 来去掉。\n\n' + e2.message)
+                throw new Error('请求 JSON 格式错误！请检查并编辑请求！\n\n如果JSON中有注释，请 手动删除 或 点击左边的 \'/" 按钮 来去掉。\n\n' + e.message + '\n\n' + e2.message)
               }
             }
 
@@ -2927,20 +3138,17 @@
             //     + '\nError:\n' + e.message + '\n\n\n';
             // }
 
-            if (isSingle) {
-              if (before.indexOf('"') >= 0) {
-                before = before.replace(/"/g, "'");
-              }
-            }
-            else {
-              if (before.indexOf("'") >= 0) {
-                before = before.replace(/'/g, '"');
-              }
-            }
 
+
+            var selectionStart = vInput.selectionStart
+            var selectionEnd = vInput.selectionEnd
             vInput.value = before
               + '\n\n\n                                                                                                       '
               + '                                                                                                       \n';  //解决遮挡
+
+            vInput.selectionStart = selectionStart
+            vInput.selectionEnd = selectionEnd
+            vInput.setSelectionRange(selectionStart, selectionEnd)
           }
 
           vSend.disabled = false;
@@ -2949,27 +3157,56 @@
             this.showDoc()
           }
 
+          var docKey = this.isEditResponse ? 'TestRecord' : 'Method';
+          var currentItem = (this.currentRemoteItem || {})[docKey] || {}
+          var detail = currentItem.detail;
+          var extraComment = this.getExtraComment()
+
           try {
             var standardObj = null;
             try {
-              standardObj = JSON.parse(((this.currentRemoteItem || {})[this.isEditResponse ? 'TestRecord' : 'Method'] || {}).standard);
+              standardObj = JSON.parse(currentItem.standard);
             } catch (e3) {
               log(e3)
             }
 
-            var m = this.getMethod();
-            var c = isSingle ? '' : StringUtil.trim(CodeUtil.parseComment(after, docObj == null ? null : docObj['[]'], m, this.database, this.language, this.isEditResponse != true, standardObj))
-              + '\n\n\n                                                                                                       '
-              + '                                                                                                       \n';  //解决遮挡
-            //TODO 统计行数，补全到一致 vInput.value.lineNumbers
+            var isAPIJSONRouter = false;
+            // try {
+              // var apijson = JSON.parse(currentItem.apijson);
+              // isAPIJSONRouter = JSONResponse.isObject(apijson)
+            // } catch (e3) {
+              // log(e3)
+            // }
 
-            if (isSingle != true && afterObj.tag == null) {
-              m = m == null ? 'GET' : m.toUpperCase()
-              if (['GETS', 'HEADS', 'POST', 'PUT', 'DELETE'].indexOf(m) >= 0) {
-                c += ' ! 非开放请求必须设置 tag ！例如 "tag": "User"'
+            var m = null  // this.getMethod();
+            var w = isSingle || this.isEditResponse ? '' : StringUtil.trim(CodeUtil.parseComment(after, docObj == null ? null : docObj['[]'], m, this.database, this.language, this.isEditResponse != true, standardObj, null, true, isAPIJSONRouter));
+            var c = isSingle ? '' : StringUtil.trim(CodeUtil.parseComment(after, docObj == null ? null : docObj['[]'], m, this.database, this.language, this.isEditResponse != true, standardObj, null, null, isAPIJSONRouter));
+
+            //TODO 统计行数，补全到一致 vInput.value.lineNumbers
+            if (isSingle != true) {
+              if (afterObj.tag == null) {
+                m = m == null ? 'GET' : m.toUpperCase()
+                if (['GETS', 'HEADS', 'POST', 'PUT', 'DELETE'].indexOf(m) >= 0) {
+                  w += ' ! 非开放请求必须设置 tag ！例如 "tag": "User"'
+                  c += ' ! 非开放请求必须设置 tag ！例如 "tag": "User"'
+                }
+              }
+
+              if (StringUtil.isEmpty(detail, true)) {
+                c += extraComment == null ? '' : ('\n\n/*' + extraComment + '\n*/');
+              } else {
+                c += '\n\n/*' + (extraComment == null ? '' : extraComment + '\n\n') + detail + '\n*/';
               }
             }
+
+
+            vWarning.value = w
+              + '\n\n\n                                                                                                       '
+              + '                                                                                                       \n';  //解决遮挡
             vComment.value = c
+              + '\n\n\n                                                                                                       '
+              + '                                                                                                       \n';  //解决遮挡
+
             vUrlComment.value = isSingle || StringUtil.isEmpty(App.urlComment, true) ? '' : vUrl.value + App.urlComment;
 
 
@@ -2979,19 +3216,19 @@
             log('onHandle   try { vComment.value = CodeUtil.parseComment >> } catch (e) {\n' + e.message);
           }
 
-          try {
-            // 去掉前面的 JSON
-            var it = StringUtil.trim(vInput.value);
-            var ct = StringUtil.trim(vComment.value);
+          if (this.isPreviewEnabled) {
+            try {
+              // 去掉前面的 JSON
+              var raw = StringUtil.trim(isSingle ? vInput.value : vComment.value);
+              var start = raw.lastIndexOf('\n\/*')
+              var end = raw.lastIndexOf('\n*\/')
+              var ct = start < 0 || end <= start ? '' : StringUtil.trim(raw.substring(start + '\n\/*'.length, end))
 
-            var raw = (it.lastIndexOf('\n\/*') < 0 || it.lastIndexOf('\n*\/') < 0 ? ct : it) || '';
-            var start = raw.lastIndexOf('\n\/*')
-            var end = raw.lastIndexOf('\n*\/')
-            markdownToHTML('```js\n' + (StringUtil.isEmpty(ct) ? (start < 0 || end <= start ? raw.substring(0, start) : '') : ct) + '\n```\n'
-              // + this.toMD(start < 0 || end <= start ? '' : raw.substring(start + '\n\/*'.length, end) ), true);
-              + (start < 0 || end <= start ? '' : raw.substring(start + '\n\/*'.length, end) ), true);
-          } catch (e3) {
-            log(e3)
+              markdownToHTML('```js\n' + (start < 0 || end <= start ? raw : raw.substring(0, start)) + '\n```\n'
+                + (StringUtil.isEmpty(ct, true) ? '' : ct + '\n\n```js\n' + ct + '\n```\n'), true);
+            } catch (e3) {
+              log(e3)
+            }
           }
 
           if (this.isEditResponse) {
@@ -3017,6 +3254,7 @@
         this.setBaseUrl();
         inputted = new String(vInput.value);
         vComment.value = '';
+        vWarning.value = '';
         // vUrlComment.value = '';
 
         clearTimeout(handler);
@@ -3036,6 +3274,8 @@
        */
       transfer: function () {
         isSingle = ! isSingle;
+
+        vInput.value = this.switchQuote(vInput.value);
 
         this.isTestCaseShow = false
 
@@ -3069,43 +3309,37 @@
           var index = this.types.indexOf(this.type)
           index++;
           this.type = this.types[index % count]
+          CodeUtil.type = this.type;
         }
 
         var url = StringUtil.get(vUrl.value)
         var index = url.indexOf('?')
         if (index >= 0) {
-          var params = StringUtil.split(url.substring(index + 1), '&')
-
-          var paramObj = {}
-          var p
-          var v
-          var ind
-          if (params != null) {
-            for (var i = 0; i < params.length; i++) {
-              p = params[i]
-              ind = p == null ? -1 : p.indexOf('=')
-              if (ind < 0) {
-                continue
-              }
-
-              v = p.substring(ind + 1)
-              try {
-                v = JSON.parse(v)
-              }
-              catch (e) {}
-
-              paramObj[p.substring(0, ind)] = v
-            }
-          }
-
+          var paramObj = getRequestFromURL(url.substring(index), true)
           vUrl.value = url.substring(0, index)
-          if ($.isEmptyObject(paramObj) == false) {
-            vInput.value = '//TODO 从 URL 上的参数转换过来：\n' +  JSON.stringify(paramObj, null, '    ') + '\n//FIXME 需要与下面原来的字段合并为一个 JSON：\n' + StringUtil.get(vInput.value)
+          if (paramObj != null && $.isEmptyObject(paramObj) == false) {
+            var originVal = this.getRequest(vInput.value, {});
+            var isConflict = false;
+
+            if ($.isEmptyObject(originVal) == false) {
+              for (var k in paramObj) {
+                if (originVal.hasOwnProperty(k)) {
+                  isConflict = true;
+                  break;
+                }
+              }
+            }
+
+            if (isConflict) {
+              vInput.value = JSON.stringify(paramObj, null, '    ') + '\n\n// FIXME 从 URL 上的参数转换过来，需要与下面原来的字段合并为一个 JSON：\n\n' + StringUtil.get(vInput.value)
+            }
+            else {
+              vInput.value = JSON.stringify(Object.assign(originVal, paramObj), null, '    ')
+            }
           }
           clearTimeout(handler)  //解决 vUrl.value 和 vInput.value 变化导致刷新，而且会把 vInput.value 重置，加上下面 onChange 再刷新就卡死了
         }
 
-        CodeUtil.type = this.type;
         this.onChange(false);
       },
 
@@ -3208,6 +3442,8 @@
 
       //请求
       request: function (isAdminOperation, type, url, req, header, callback) {
+        this.isLoading = true
+
         type = type || REQUEST_TYPE_JSON
         url = StringUtil.noBlank(url)
         if (url.startsWith('/')) {
@@ -3251,6 +3487,8 @@
           // crossDomain: true
         })
           .then(function (res) {
+            App.isLoading = false
+
             res = res || {}
 
             if (isDelegate) {
@@ -3336,6 +3574,257 @@
         }
       },
 
+
+      /**处理复制事件
+       * @param event
+       */
+      doOnCopy: function(event) {
+        var target = event.target;
+        var selectionStart = target.selectionStart;
+        var selectionEnd = target.selectionEnd;
+
+        if (target == vUrl) {
+          try {
+            var contentType = CONTENT_TYPE_MAP[this.type];
+            var json = this.getRequest(vInput.value)
+            var header = this.getHeader(vHeader.value);
+            var headerStr = '';
+            if (header != null) {
+              for (var k in header) {
+                var v = header[k];
+                headerStr += '\n' + k + ': ' + StringUtil.get(v);
+              }
+            }
+
+            console.log('复制时自动转换:\n'
+            + `Request URL: ` + vUrl.value + `
+Request Method: ` + (this.type == REQUEST_TYPE_PARAM ? 'GET' : 'POST') + (StringUtil.isEmpty(contentType, true) ? '' : `
+Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : headerStr)
+              + '\n\n' + JSON.stringify(json));
+          } catch (e) {
+            log(e)
+          }
+        }
+        else if (target == vHeader || target == vRandom) {  // key: value 转 { "key": value }
+          if (selectionStart < 0 || selectionStart <= selectionEnd) {
+            try {
+              var selection = selectionStart < 0 ? target.value : StringUtil.get(target.value).substring(selectionStart, selectionEnd);
+              var lines = StringUtil.split(selection, '\n');
+              var json = {};
+
+              for (var i = 0; i < lines.length; i ++) {
+                var l = StringUtil.trim(lines[i]) || '';
+                if (l.startsWith('//')) {
+                  continue;
+                }
+
+                var ind = l.lastIndexOf('  //');
+                l = ind < 0 ? l : StringUtil.trim(l.substring(0, ind));
+
+                ind = l.indexOf(':');
+                if (ind >= 0) {
+                  var left = target == vHeader ? StringUtil.trim(l.substring(0, ind)) : l.substring(0, ind);
+                  json[left] = StringUtil.trim(l.substring(ind + 1));
+                }
+              }
+
+              if (Object.keys(json).length > 0) {
+                var txt = JSON.stringify(json)
+                console.log('复制时自动转换:\n' +  txt)
+                navigator.clipboard.writeText(selection + '\n\n' + txt);
+                alert('复制内容最后拼接了，控制台 Console 也打印了：\n' + txt);
+              }
+            } catch (e) {
+              log(e)
+            }
+          }
+        }
+
+      },
+
+      /**处理粘贴事件
+       * @param event
+       */
+      doOnPaste: function(event) {
+        var paste = (event.clipboardData || window.clipboardData || navigator.clipboard).getData('text');
+        var target = event.target;
+        var selectionStart = target.selectionStart;
+        var selectionEnd = target.selectionEnd;
+
+        if (StringUtil.isNotEmpty(paste, true) && (StringUtil.isEmpty(target.value, true)
+          || selectionStart <= 0 && selectionEnd >= StringUtil.get(target.value).length)) {
+          if (target == vUrl) {  // TODO 把 Chrome 或 Charles 等抓到的 Response Header 和 Content 自动粘贴到 vUrl, vHeader
+            try {
+              if (paste.trim().indexOf('\n') > 0) {  // 解决正常的 URL 都粘贴不了
+                var contentStart = 0;
+                var lines = StringUtil.split(paste, '\n');
+                var header = '';
+
+                for (var i = 0; i < lines.length; i++) {
+                  var l = StringUtil.trim(lines[i]);
+                  var ind = l.indexOf(':');
+                  var left = ind < 0 ? '' : StringUtil.trim(l.substring(0, ind));
+
+                  if (/^[a-zA-Z0-9\- ]+$/g.test(left)) {
+                    var lowerKey = left.toLowerCase();
+                    var value = l.substring(ind + 1).trim();
+
+                    if (lowerKey == 'host') {
+                      this.setBaseUrl(value.endsWith(':443') ? 'https://' + value.substring(0, value.length - ':443'.length) : 'http://' + value);
+                      event.preventDefault();
+                    }
+                    else if (lowerKey == 'request method') {
+                      value = value.toUpperCase();
+                      this.type = value == 'GET' ? 'PARAM' : (value == 'POST' ? 'JSON' : value);
+                      event.preventDefault();
+                    }
+                    else if (lowerKey == 'content-type') {
+                      var type = vType.value != 'JSON' ? null : CONTENT_VALUE_TYPE_MAP[value];
+                      if (StringUtil.isEmpty(type, true) != true) {
+                        this.type = type;
+                        event.preventDefault();
+                      }
+                    }
+                    else if (lowerKey == 'request url') {
+                      vUrl.value = value;
+                      event.preventDefault();
+                    }
+                    else if (StringUtil.isEmpty(lowerKey, true) || lowerKey.startsWith('accept-')
+                      || lowerKey.startsWith('access-control-') || IGNORE_HEADERS.indexOf(lowerKey) >= 0) {
+                      // 忽略
+                    }
+                    else {
+                      header += '\n' + left + ': ' + StringUtil.trim(l.substring(ind + 1));
+                    }
+
+                    contentStart += lines[i].length + 1;
+                  }
+                  else {
+                    if (ind <= 0 || StringUtil.isEmpty(l) || l.startsWith('HTTP/') || l.startsWith('HTTPS/')) {  // HTTP/1.1 200
+                      contentStart += lines[i].length + 1;
+                      continue;
+                    }
+
+                    var ind = l.indexOf(' ');
+                    var m = ind < 0 ? '' : StringUtil.trim(l.substring(0, ind));
+                    if (APIJSON_METHODS.indexOf(m.toLowerCase()) >= 0) {  // POST /gets HTTP/1.1
+                      contentStart += lines[i].length + 1;
+                      var t = m.toUpperCase()
+                      this.type = t == 'GET' ? 'PARAM' : (t == 'POST' ? 'JSON' : t);
+
+                      l = l.substring(ind).trim();
+                      ind = l.indexOf(' ');
+                      var url = ind < 0 ? l : l.substring(0, ind);
+                      if (url.length > 0 && url != '/') {
+                        vUrl.value = this.getBaseUrl() + (url.startsWith('/') ? url : '/' + url);
+                      }
+
+                      event.preventDefault();
+                      continue;
+                    }
+
+                    var content = StringUtil.trim(paste.substring(contentStart));
+                    var json = null;
+                    try {
+                      json = JSON5.parse(content);  // { "a":1, "b": "c" }
+                    }
+                    catch (e) {
+                      log(e)
+                      try {
+                        json = getRequestFromURL('?' + content, true);  // a=1&b=c
+                      } catch (e2) {
+                        log(e2)
+                      }
+                    }
+
+                    vInput.value = json == null ? '' : JSON.stringify(json, null, '    ');
+                    event.preventDefault();
+                    break;
+                  }
+
+                }
+
+                if (StringUtil.isEmpty(header, true) != true) {
+                  vHeader.value = StringUtil.trim(header);
+                  event.preventDefault();
+                }
+              }
+            }
+            catch (e) {
+              log(e)
+            }
+          }
+          else if (target == vHeader || target == vRandom) {  // { "key": value } 转 key: value
+            try {
+              var json = JSON5.parse(paste);
+              var newStr = '';
+              for (var k in json) {
+                var v = json[k];
+                if (v instanceof Object || v instanceof Array) {
+                  v = JSON.stringify(v);
+                }
+                newStr += '\n' + k + ': ' + (target != vHeader && typeof v == 'string' ? "'" + v.replaceAll("'", "\\'") + "'" : StringUtil.get(v));
+              }
+              target.value = StringUtil.trim(newStr);
+              event.preventDefault();
+            }
+            catch (e) {
+              log(e)
+            }
+          }
+          else if (target == vInput) {  // key: value 转 { "key": value }
+            try {
+              try {
+                JSON5.parse(paste);  // 正常的 JSON 就不用转了
+              }
+              catch (e) {
+                var lines = StringUtil.split(paste, '\n');
+                var json = {};
+
+                for (var i = 0; i < lines.length; i++) {
+                  var l = StringUtil.trim(lines[i]) || '';
+                  if (l.startsWith('//')) {
+                    continue;
+                  }
+
+                  var ind = l.lastIndexOf('  //');
+                  l = ind < 0 ? l : StringUtil.trim(l.substring(0, ind));
+
+                  ind = l.indexOf(':');
+                  if (ind >= 0) {
+                    var left = target == vHeader ? StringUtil.trim(l.substring(0, ind)) : l.substring(0, ind);
+                    if (left.indexOf('=') >= 0 || left.indexOf('&') >= 0) {
+                      try {
+                        json = getRequestFromURL('?' + paste, true);
+                        if (Object.keys(json).length > 0) {
+                          break;
+                        }
+                      } catch (e2) {
+                        log(e)
+                      }
+                    }
+
+                    json[left] = StringUtil.trim(l.substring(ind + 1));
+                  }
+                }
+
+                if (Object.keys(json).length <= 0) {
+                  json = getRequestFromURL('?' + paste, true);
+                }
+
+                if (Object.keys(json).length > 0) {
+                  vInput.value = JSON.stringify(json, null, '    ');
+                  event.preventDefault();
+                }
+              }
+            }
+            catch (e) {
+              log(e)
+            }
+          }
+        }
+
+      },
 
       /**处理按键事件
        * @param event
@@ -3606,13 +4095,13 @@
           s += '\n\n#### 开放源码 '
             + '\nAPIJSON 接口测试: https://github.com/TommyLemon/APIAuto '
             + '\nAPIJSON 单元测试: https://github.com/TommyLemon/UnitAuto '
-            + '\nAPIJSON 官方文档: https://github.com/vincentCheng/apijson-doc '
+            + '\nAPIJSON 中文文档: https://github.com/vincentCheng/apijson-doc '
             + '\nAPIJSON 英文文档: https://github.com/ruoranw/APIJSONdocs '
-            + '\nAPIJSON 官方网站: https://github.com/APIJSON/apijson.org '
+            + '\nAPIJSON 官方网站: https://github.com/APIJSON/apijson.cn '
             + '\nAPIJSON -Java版: https://github.com/Tencent/APIJSON '
-            + '\nAPIJSON - Go 版: https://gitee.com/tiangao/apijson-go '
             + '\nAPIJSON - C# 版: https://github.com/liaozb/APIJSON.NET '
-            + '\nAPIJSON - PHP版: https://github.com/xianglong111/APIJSON-php '
+            + '\nAPIJSON - Go 版: https://github.com/j2go/apijson-go '
+            + '\nAPIJSON - PHP版: https://github.com/kvnZero/hyperf-APIJSON '
             + '\nAPIJSON -Node版: https://github.com/kevinaskin/apijson-node '
             + '\nAPIJSON -Python: https://github.com/zhangchunlin/uliweb-apijson '
             + '\n感谢热心的作者们的贡献，GitHub 右上角点 ⭐Star 支持下他们吧 ^_^';
@@ -3665,7 +4154,7 @@
 //            'method%$': search,
             '@combine': StringUtil.isEmpty(search) ? null : 'package%$ | class%$'  // 'package%$ | class%$ | method%$'
         }
-        		
+
         this.request(false, REQUEST_TYPE_JSON, this.server + '/get', {
           format: false,
           '@database': this.database,
@@ -3747,7 +4236,7 @@
 
 //        log('getDoc  docRq.responseText = \n' + docRq.responseText);
           docObj = res.data || {};  //避免后面又调用 onChange ，onChange 又调用 getDoc 导致死循环
-          
+
           var finalCallback = function (url2, res2, err2) {
         	  var data2 = (res2 || {}).data || {}
         	  var realPackageTotal = data2.packageTotal || 0
@@ -3763,7 +4252,7 @@
         	  var doc = App.getTotalAndCoverageString('包', packageTotal, realPackageTotal)
         	  + '\n' +  App.getTotalAndCoverageString('类', classTotal, realClassTotal)
         	  + '\n' +  App.getTotalAndCoverageString('方法', methodTotal, realMethodTotal)
-        	  
+
         	  var list = docObj == null ? null : docObj['[]'];
         	  CodeUtil.tableList = list;
         	  if (list != null) {
@@ -3783,11 +4272,11 @@
         			  if (StringUtil.isEmpty(pkg, true)) {
         				  continue;
         			  }
-        			  
+
         			  if (DEBUG) {
         				  log('getDoc [] for i=' + i + ': table = \n' + format(JSON.stringify(table)));
         			  }
-        			 
+
         			  var classTotal = item.total || 0
         			  var realClassTotal = App.getRealClassTotal(data2, pkg);
 
@@ -3843,7 +4332,7 @@
 //      	  log('getDoc  callback(doc); = \n' + doc);
 
           }
-          
+
           finalCallback()
 
           App.request(false, REQUEST_TYPE_JSON, App.project + '/method/list', {
@@ -3855,38 +4344,41 @@
         });
 
       },
-      
+
       getTotalAndCoverageString: function(typeName, count, total) {
     	  count = count || 0
     	  total = total || 0
-    	  
+        if (count > total) {
+          count = total
+        }
+
     	  return '共 ' + total + ' 个' + (typeName || '子项') + '，覆盖 ' + count  + ' 个'
 		  + (Number.isInteger(total) != true || total <= 0 ? '' : '，覆盖率 ' + (100*count/total).toFixed(2) + '%');
       },
-      
+
       getRealClassTotal: function(data, packageName) {
     	if (data == null) {
     		return 0;
     	}
-    	  
+
     	var packageList = data.packageList
     	var len = packageList == null ? 0 : packageList.length
-    	
+
 		if (StringUtil.isEmpty(packageName, true)) {
 			return Math.max(data.classTotal || 0, len);
 		}
-    	
+
     	if (len <= 0) {
     		return 0;
     	}
-		
+
 		for (var i in packageList) {
 			var pkgObj = packageList[i]
 			if (pkgObj != null && pkgObj['package'] == packageName) {
 				return Math.max(pkgObj.classTotal || 0, (pkgObj.classList || []).length || 0);
 			}
 		}
-		
+
 		return 0;
 	  },
 
@@ -3894,36 +4386,36 @@
 		  if (data == null) {
 	    	 return 0;
 	      }
-	    	  
+
 	    	var packageList = data.packageList
 	    	var len = packageList == null ? 0 : packageList.length
-	    	
+
 			if (StringUtil.isEmpty(packageName, true)) {
 				if (StringUtil.isEmpty(className, true)) {
 					return Math.max(data.classTotal || 0, len);
 				}
 				return 0;
 			}
-	    	
+
 	    	if (len <= 0) {
 	    		return 0;
 	    	}
-	    	
+
 
 		  for (var i in packageList) {
 			  var pkgObj = packageList[i]
 			  if (pkgObj != null && pkgObj['package'] == packageName) {
-				  
+
 				  var classList = pkgObj.classList
 				  var len2 = classList == null ? 0 : classList.length
 				  if (StringUtil.isEmpty(className, true)) {
 					 return Math.max(data.methodTotal || 0, len2);
 				  }
-				  
+
 				  if (len2 <= 0) {
 			    	  return 0;
 			      }
-				  
+
 				  for (var j in classList) {
 					  var clsObj = classList[j]
 					  if (clsObj != null && clsObj['class'] == className) {
@@ -3932,18 +4424,38 @@
 				  }
 			  }
 		  }
-		  
+
 		  return 0;
 	  },
-
-      toDoubleJSON: function(json, defaultValue) {
+     toDoubleJSON: function (json, defaultValue) {
         if (StringUtil.isEmpty(json)) {
-          return defaultValue == null ? '' : JSON.stringify(defaultValue)
+          return defaultValue == null ? '{}' : JSON.stringify(defaultValue)
         }
         else if (json.indexOf("'") >= 0) {
           json = json.replace(/'/g, '"');
         }
         return json;
+      },
+
+      switchQuote: function (before) {
+        if (before == null) {
+          return before;
+        }
+
+        var newBefore = '';
+        for (var i = 0; i < before.length; i++) {
+          var chr = before.substring(i, i + 1); // .charAt(i);
+          if (chr == '"') {
+            newBefore += "'"; // chr = "'";
+          }
+          else if (chr == "'") {
+            newBefore += '"'; // chr = '"';
+          }
+          else {
+            newBefore += chr;
+          }
+        }
+        return newBefore;
       },
 
       /**转为Markdown格式
@@ -3958,6 +4470,7 @@
           //无效
           s = s.replace(/\|/g, '\|');
           s = s.replace(/\n/g, ' <br /> ');
+          // s = s.replace(/ /g, '&ensp;');
         }
 
         return s;
@@ -4097,7 +4610,7 @@
         this.showTestCase(true, false)
       },
 
-      /**随机测试，动态替换键值对
+      /**参数注入，动态替换键值对
        * @param show
        */
       onClickTestRandom: function () {
@@ -4140,7 +4653,7 @@
             this.resetCount(this.currentRandomItem)
           }
 
-          var json = this.getRequest(vInput.value) || {}
+          var json = this.getRequest(vInput.value, {})
           var url = this.getUrl()
           var header = this.getHeader(vHeader.value)
 
@@ -4176,7 +4689,7 @@
           }
         }
       },
-      /**随机测试，动态替换键值对
+      /**参数注入，动态替换键值对
        * @param show
        * @param callback
        */
@@ -4292,7 +4805,7 @@
         randomItem.redCount = 0
       },
 
-      /**随机测试，动态替换键值对
+      /**参数注入，动态替换键值对
        * @param show
        * @param callback
        */
@@ -4309,7 +4822,7 @@
                 config: vRandom.value
               }
             },
-            this.type, this.getUrl(), this.getRequest(vInput.value), this.getHeader(vHeader.value), callback
+            this.type, this.getUrl(), this.getRequest(vInput.value, {}), this.getHeader(vHeader.value), callback
           )
         }
         catch (e) {
@@ -4334,7 +4847,7 @@
        *    json: {} //const json
        *  }
        */
-      /**随机测试，动态替换键值对
+      /**参数注入，动态替换键值对
        * @param show
        * @param callback
        */
@@ -4362,8 +4875,8 @@
           const which = i;
           const lineItem = lines[i] || '';
 
-          // remove comment
-          const commentIndex = lineItem.lastIndexOf('  //'); //  -1; // eval 本身支持注释 eval('1 // test') = 1 lineItem.indexOf('  //');
+          // remove comment   // 解决整体 trim 后第一行  // 被当成正常的 key 路径而不是注释
+          const commentIndex = StringUtil.trim(lineItem).startsWith('//') ? 0 : lineItem.lastIndexOf('  //'); //  -1; // eval 本身支持注释 eval('1 // test') = 1 lineItem.indexOf('  //');
           const line = commentIndex < 0 ? lineItem : lineItem.substring(0, commentIndex).trim();
 
           if (line.length <= 0) {
@@ -4377,12 +4890,12 @@
           // path User/id  key id@
           const index = line.indexOf(': '); //APIJSON Table:alias 前面不会有空格 //致后面就接 { 'a': 1} 报错 Unexpected token ':'   lastIndexOf(': '); // indexOf(': '); 可能会有 Comment:to
           const p_k = line.substring(0, index);
-          const bi = p_k.indexOf(' ');
+          const bi = -1;  //没必要支持，用 before: undefined, after: .. 同样支持替换，反而这样导致不兼容包含空格的 key   p_k.indexOf(' ');
           const path = bi < 0 ? p_k : p_k.substring(0, bi); // User/id
 
           const pathKeys = path.split('/')
           if (pathKeys == null || pathKeys.length <= 0) {
-            throw new Error('随机测试 第 ' + (i + 1) + ' 行格式错误！\n字符 ' + path + ' 不符合 JSON 路径的格式 key0/key1/../targetKey !' +
+            throw new Error('参数注入 第 ' + (i + 1) + ' 行格式错误！\n字符 ' + path + ' 不符合 JSON 路径的格式 key0/key1/../targetKey !' +
               '\n每个随机变量配置都必须按照\n  key0/key1/../targetKey replaceKey: value  // 注释\n的格式！' +
               '\n注意冒号 ": " 左边 0 空格，右边 1 空格！其中 replaceKey 可省略。' +
               '\nkey: {} 中最外层常量对象 {} 必须用括号包裹为 ({})，也就是 key: ({}) 这种格式！' +
@@ -4393,7 +4906,7 @@
           const customizeKey = bi > 0;
           const key = customizeKey ? p_k.substring(bi + 1) : lastKeyInPath;
           if (key == null || key.trim().length <= 0) {
-            throw new Error('随机测试 第 ' + (i + 1) + ' 行格式错误！\n字符 ' + key + ' 不是合法的 JSON key!' +
+            throw new Error('参数注入 第 ' + (i + 1) + ' 行格式错误！\n字符 ' + key + ' 不是合法的 JSON key!' +
               '\n每个随机变量配置都必须按照\n  key0/key1/../targetKey replaceKey: value  // 注释\n的格式！' +
               '\n注意冒号 ": " 左边 0 空格，右边 1 空格！其中 replaceKey 可省略。' +
               '\nkey: {} 中最外层常量对象 {} 必须用括号包裹为 ({})，也就是 key: ({}) 这种格式！' +
@@ -4451,7 +4964,7 @@
                     current = parent[pathKeys[j]] = {}
                   }
                   if (parent instanceof Object == false) {
-                    throw new Error('随机测试 第 ' + (i + 1) + ' 行格式错误！路径 ' + path + ' 中' +
+                    throw new Error('参数注入 第 ' + (i + 1) + ' 行格式错误！路径 ' + path + ' 中' +
                       ' pathKeys[' + j + '] = ' + pathKeys[j] + ' 在实际请求 JSON 内对应的值不是对象 {} 或 数组 [] !');
                   }
                   parent = current;
@@ -4489,22 +5002,37 @@
             vOutput.value = 'requesting value for ' + tableName + '/' + key + ' from database...';
 
             const args = StringUtil.split(value.substring(start + 1, end)) || [];
-            const min = StringUtil.isEmpty(args[0], true) ? null : +args[0];
-            const max = StringUtil.isEmpty(args[1], true) ? null : +args[1]
+            var min = StringUtil.trim(args[0]);
+            var max = StringUtil.trim(args[1]);
+            var table = StringUtil.trim(args[2]) || '';
+            var column = StringUtil.trim(args[3]) || '';
+
+            min = min == '' || min == 'null' || min == 'undefined' ? null : +min;
+            max = max == '' || max == 'null' || max == 'undefined' ? null : +max;
+
+            if ((table.startsWith('"') && table.endsWith('"')) || (table.startsWith("'") && table.endsWith("'"))) {
+              table = table.substring(1, table.length - 1);
+            }
+            if ((column.startsWith('"') && column.endsWith('"')) || (column.startsWith("'") && column.endsWith("'"))) {
+              column = column.substring(1, column.length - 1);
+            }
+
+            const finalTableName = StringUtil.isEmpty(table, true) ? tableName : table;
+            const finalColumnName = StringUtil.isEmpty(column, true) ? lastKeyInPath : column;
 
             const tableReq = {
-              '@column': lastKeyInPath,
-              '@order': isRandom ? 'rand()' : (lastKeyInPath + (isDesc ? '-' : '+'))
+              '@column': isRandom ? finalColumnName : ('DISTINCT ' + finalColumnName),
+              '@order': isRandom ? 'rand()' : (finalColumnName + (isDesc ? '-' : '+'))
             };
-            tableReq[lastKeyInPath + '>='] = min;
-            tableReq[lastKeyInPath + '<='] = max;
+            tableReq[finalColumnName + '>='] = min;
+            tableReq[finalColumnName + '<='] = max;
 
             const req = {};
-            const listName = isRandom ? null : tableName + '-' + lastKeyInPath + '[]';
+            const listName = isRandom ? null : finalTableName + '-' + finalColumnName + '[]';
             const orderIndex = isRandom ? null : getOrderIndex(randomId, line, null)
 
             if (isRandom) {
-              req[tableName] = tableReq;
+              req[finalTableName] = tableReq;
             }
             else {
               // 从数据库获取时不考虑边界，不会在越界后自动循环
@@ -4512,7 +5040,7 @@
                 count: 1, // count <= 100 ? count : 0,
                 page: (step*orderIndex) % 100  //暂时先这样，APIJSON 应该改为 count*page <= 10000  //FIXME 上限 100 怎么破，lastKeyInPath 未必是 id
               };
-              listReq[tableName] = tableReq;
+              listReq[finalTableName] = tableReq;
               req[listName] = listReq;
             }
 
@@ -4526,14 +5054,14 @@
               var data = (res || {}).data || {}
               if (data.code != CODE_SUCCESS) {
                 respCount = -reqCount;
-                vOutput.value = '随机测试 为第 ' + (which + 1) + ' 行\n  ' + p_k + '  \n获取数据库数据 异常：\n' + data.msg;
+                vOutput.value = '参数注入 为第 ' + (which + 1) + ' 行\n  ' + p_k + '  \n获取数据库数据 异常：\n' + data.msg;
                 alert(StringUtil.get(vOutput.value));
                 return
-                // throw new Error('随机测试 为\n  ' + tableName + '/' + key + '  \n获取数据库数据 异常：\n' + data.msg)
+                // throw new Error('参数注入 为\n  ' + tableName + '/' + key + '  \n获取数据库数据 异常：\n' + data.msg)
               }
 
               if (isRandom) {
-                invoke((data[tableName] || {})[lastKeyInPath], which, p_k, pathKeys, key, lastKeyInPath);
+                invoke((data[finalTableName] || {})[finalColumnName], which, p_k, pathKeys, key, lastKeyInPath);
               }
               else {
                 var val = (data[listName] || [])[0];
@@ -4564,7 +5092,7 @@
 
           //支持 1, "a" 这种原始值
           // if (start < 0 || end <= start) {  //(1) 表示原始值  start*end <= 0 || start >= end) {
-          //   throw new Error('随机测试 第 ' + (i + 1) + ' 行格式错误！字符 ' + value + ' 不是合法的随机函数!');
+          //   throw new Error('参数注入 第 ' + (i + 1) + ' 行格式错误！字符 ' + value + ' 不是合法的随机函数!');
           // }
 
           var toEval = value;
@@ -4588,7 +5116,7 @@
               if (Number.isSafeInteger(step) != true || step <= 0
                 || (StringUtil.isEmpty(stepStr, false) != true && StringUtil.isNumber(stepStr) != true)
               ) {
-                throw new Error('随机测试 第 ' + (i + 1) + ' 行格式错误！路径 ' + path + ' 中字符 ' + stepStr + ' 不符合跨步 step 格式！'
+                throw new Error('参数注入 第 ' + (i + 1) + ' 行格式错误！路径 ' + path + ' 中字符 ' + stepStr + ' 不符合跨步 step 格式！'
                   + '\n顺序整数 和 顺序取值 可以通过以下格式配置 升降序 和 跨步：'
                   + '\n  ODER_REAL+step(arg0, arg1...)\n  ODER_REAL-step(arg0, arg1...)'
                   + '\n  ODER_INT+step(arg0, arg1...)\n  ODER_INT-step(arg0, arg1...)'
@@ -4732,6 +5260,12 @@
             doneCount++
             continue
           }
+          var method = (document.method || '').toLowerCase()
+          if (method.indexOf('login') >= 0 || method.indexOf('logout') >= 0) { //login会导致登录用户改变为默认的但UI上还显示原来的，单独测试OWNER权限时能通过很困惑
+            this.log("startTest  method.indexOf('login') >= 0 || method.indexOf('logout') >= 0 >> continue")
+            doneCount++
+            continue
+          }
           this.log('test  document = ' + JSON.stringify(document, null, '  '))
 
           const index = i
@@ -4808,7 +5342,8 @@
         try {
           var durationInfo = response['time:start|duration|end']
           it.durationInfo = durationInfo
-          it.duration = durationInfo.substring(durationInfo.indexOf('\|') + 1, durationInfo.lastIndexOf('\|') || durationInfo.length) || 0
+          var di = durationInfo.substring(durationInfo.indexOf('\|') + 1)
+          it.duration = di.substring(0, di.indexOf('\|') || di.length) || 0
           var dt = + it.duration
           it.duration = dt
           it.durationShowStr = dt < 0 ? '' : (dt < 1000 ? dt + 'ms' : (dt < 1000*60 ? (dt/1000).toFixed(1) + 's' : (dt <= 1000*60*60 ? (dt/1000/60/60).toFixed(1) + 'm' : '>1h')))
@@ -4840,6 +5375,7 @@
           rsp = JSONResponse.array2object(rsp, 'methodArgs', ['methodArgs'], true)
 
           tr.compare = JSONResponse.compareResponse(standard, rsp, '', this.isMLEnabled, null, ['call()[]']) || {}
+          tr.compare.duration = it.durationHint
         }
 
         this.onTestResponse(allCount, list, index, it, d, r, tr, response, tr.compare || {}, isRandom, accountIndex, justRecoverTest);
@@ -4926,7 +5462,7 @@
 
         if (doneCount >= allCount && this.isCrossEnabled && isRandom != true) {
           // alert('onTestResponse  accountIndex = ' + accountIndex)
-          //TODO 自动给非 红色 报错的接口跑随机测试
+          //TODO 自动给非 红色 报错的接口跑参数注入
 
           this.test(false, accountIndex + 1)
         }
@@ -4983,6 +5519,8 @@
           delete obj["sql:generate|cache|execute|maxExecute"]
           delete obj["depth:count|max"]
           delete obj["time:start|duration|end"]
+          delete obj["trace:stack"]
+          delete obj["stack"]
         }
         return obj
       },
@@ -5005,7 +5543,7 @@
 
         saveTextAs(
           '# APIJSON自动化回归测试-前\n主页: https://github.com/Tencent/APIJSON'
-          + '\n\n接口名称: \n' + document.method
+          + '\n\n方法名称: \n' + document.method
           + '\n返回结果: \n' + JSON.stringify(JSON.parse(testRecord.response || '{}'), null, '    ')
           , '测试：' + document.method + '-前.txt'
         )
@@ -5020,7 +5558,7 @@
           var tests = App.tests[String(App.currentAccountIndex)] || {}
           saveTextAs(
             '# APIJSON自动化回归测试-后\n主页: https://github.com/Tencent/APIJSON'
-            + '\n\n接口名称: \n' + document.method
+            + '\n\n方法名称: \n' + document.method
             + '\n返回结果: \n' + JSON.stringify(tests[document.id][isRandom ? random.id : 0] || {}, null, '    ')
             , '测试：' + document.method + '-后.txt'
           )
@@ -5030,7 +5568,7 @@
             setTimeout(function () {
               saveTextAs(
                 '# APIJSON自动化回归测试-标准\n主页: https://github.com/Tencent/APIJSON'
-                + '\n\n接口名称: \n' + document.method
+                + '\n\n方法名称: \n' + document.method
                 + '\n测试结果: \n' + JSON.stringify(testRecord.compare || '{}', null, '    ')
                 + '\n测试标准: \n' + JSON.stringify(JSON.parse(testRecord.standard || '{}'), null, '    ')
                 , '测试：' + document.method + '-标准.txt'
@@ -5065,6 +5603,7 @@
         }
         else {
           this.currentDocIndex = index
+          this.currentRemoteItem = item
           // this.currentRandomIndex = -1
           // this.currentRandomSubIndex = -1
           document = item.Method = item.Method || {}
@@ -5327,7 +5866,6 @@
                 item.TestRecord = testRecord
 
 
-
                 // if (! isNewRandom) {
                 //   if (isRandom) {
                 //     App.showRandomList(true, App.currentRemoteItem)
@@ -5337,7 +5875,7 @@
                 //   }
                 // }
 
-                App.updateTestRecord(0, list, index, item, currentResponse, isRandom)
+                App.updateTestRecord(0, list, index, item, currentResponse, isRandom, true)
               }
 
             })
@@ -5346,7 +5884,7 @@
         }
       },
 
-      updateTestRecord: function (allCount, list, index, item, response, isRandom) {
+      updateTestRecord: function (allCount, list, index, item, response, isRandom, ignoreTrend) {
         item = item || {}
         var doc = (isRandom ? item.Random : item.Method) || {}
 
@@ -5370,7 +5908,7 @@
           }
 
           item.TestRecord = data.TestRecord
-          App.compareResponse(allCount, list, index, item, response, isRandom, App.currentAccountIndex, true, err);
+          App.compareResponse(allCount, list, index, item, response, isRandom, App.currentAccountIndex, true, err, ignoreTrend);
         })
       },
 
@@ -5406,14 +5944,12 @@
       },
 
       //显示详细信息, :data-hint :data, :hint 都报错，只能这样
-      setTestHint: function (index, item, isRandom, isDuration) {
+      setTestHint: function(index, item, isRandom, isDuration) {
         item = item || {};
         var toId = isRandom ? ((item.Random || {}).toId || 0) : 0;
         var h = isDuration ? item.durationHint : item.hintMessage;
         this.$refs[(isRandom ? (toId <= 0 ? 'testRandomResult' : 'testRandomSubResult') : 'testResult') + (isDuration ? 'Duration' : '') + 'Buttons'][index].setAttribute('data-hint', h || '');
-      },
-
-// APIJSON >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+      }
 
     },
     watch: {
@@ -5613,6 +6149,7 @@
           if (hasTestArg) {
             vUrlComment.value = ""
             vComment.value = ""
+            vWarning.value = ""
           }
 
           App.onChange(false)
@@ -5643,6 +6180,114 @@
 
       }
 
+
+      // 快捷键 CTRL + I 格式化 JSON
+      document.addEventListener('keydown', function(event) {
+        // alert(event.key) 小写字母 i 而不是 KeyI
+        // if (event.ctrlKey && event.keyCode === 73) { // KeyI 无效  event.key === 'KeyI' && event.target == vInput){
+        if (event.ctrlKey || event.metaKey) {
+          var target = event.target;
+          var selectionStart = target.selectionStart;
+          var selectionEnd = target.selectionEnd;
+
+          // 这里拿不到 clipboardData  if (event.keyCode === 86) {
+
+          if (event.keyCode === 73) {  // Ctrl + 'I'  格式化
+            try {
+              if (target == vInput) {
+                var json = JSON.stringify(JSON5.parse(vInput.value), null, '    ');
+                vInput.value = inputted = isSingle ? App.switchQuote(json) : json;
+              }
+              else {
+                var lines = StringUtil.split(target.value, '\n');
+                var newStr = '';
+
+                for (var i = 0; i < lines.length; i ++) {
+                  var l = StringUtil.trim(lines[i]) || '';
+                  if (l.startsWith('//')) {
+                   continue;
+                  }
+
+                  var ind = l.lastIndexOf('  //');
+                  l = ind < 0 ? l : StringUtil.trim(l.substring(0, ind));
+
+                  if (target == vHeader || target == vRandom) {
+                    ind = l.indexOf(':');
+                    if (ind >= 0) {
+                      var left = target == vHeader ? StringUtil.trim(l.substring(0, ind)) : l.substring(0, ind);
+                      l = left + ': ' + StringUtil.trim(l.substring(ind + 1));
+                    }
+                  }
+
+                  if (l.length > 0) {
+                    newStr += '\n' + l;
+                  }
+                }
+
+                target.value = StringUtil.trim(newStr);
+              }
+            } catch (e) {
+              log(e)
+            }
+          }
+          else if (event.keyCode === 191) {  // Ctrl + '/' 注释与取消注释
+            try {
+              var json = StringUtil.get(target.value);
+              var before = json.substring(0, selectionStart);
+              var after = json.substring(selectionEnd);
+
+              var ind = before.lastIndexOf('\n');
+              var start = ind < 0 ? 0 : ind + 1;
+              ind = after.indexOf('\n');
+              var end = ind < 0 ? json.length : selectionEnd + ind - 1;
+
+              var selection = json.substring(start, end);
+              var lines = StringUtil.split(selection, '\n');
+
+              var newStr = json.substring(0, start);
+
+              for (var i = 0; i < lines.length; i ++) {
+                var l = lines[i] || '';
+                if (i > 0) {
+                  newStr += '\n';
+                }
+
+                if (StringUtil.trim(l).startsWith('//')) {
+                  var ind = l.indexOf('//');
+                  var suffix = l.substring(ind + 2);
+                  if (suffix.startsWith('  ')) {
+                    suffix = suffix.substring(2);
+                    selectionEnd -= 2;
+                  }
+
+                  newStr += StringUtil.get(l.substring(0, ind)) + StringUtil.get(suffix)
+                  selectionEnd -= 2;
+                }
+                else {
+                  newStr += '//  ' + l;
+                  selectionEnd += 4;
+                }
+              }
+
+              newStr += json.substring(end);
+
+              target.value = newStr;
+              if (target == vInput) {
+                inputted = newStr;
+              }
+            } catch (e) {
+              log(e)
+            }
+          }
+
+          target.selectionStart = selectionStart;
+          target.selectionEnd = selectionEnd;
+        }
+      })
+
     }
   })
 })()
+
+// APIJSON >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+

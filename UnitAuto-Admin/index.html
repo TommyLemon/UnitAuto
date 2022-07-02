@@ -69,11 +69,9 @@
 
     <img src="img/logo.png" class="logo-img"/>
     <a class="logo" href="http://apijson.cn" target="_blank">
-      <span class="on">APIJSON</span><span >.cn()</span>
+      <span class="on">UnitAuto</span><span >: APIJSON.cn()</span>
     </a>
     <a v-show="isDelayShow" >2s</a>
-
-
     <iframe v-show="User.id == null || User.id <= 0" src="https://ghbtns.com/github-btn.html?user=Tencent&amp;repo=APIJSON&amp;type=star&amp;count=true&amp;size=small" frameborder="0" scrolling="0" width="160px" height="18px"></iframe>
 
     <!--只用60%避免拦截左右两侧View的触摸事件-->
@@ -111,7 +109,7 @@
                   <a style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(! isPreviewEnabled, 10)">预览左侧输入框:  {{ isPreviewEnabled ? '已开启，点击关闭' : '已关闭，点击开启' }}</a>
                   <a v-show="User.id != null && User.id > 0" style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(! isEditResponse, 11)">当前编辑模式:  {{ isEditResponse ? 'Response 后端响应结果' : 'Request 前端请求参数' }}</a>
                   <a style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(StringUtil.isEmpty(host, true), 3)">{{ StringUtil.isEmpty(host, true) ? '隐藏(固定)方法路径: 可用空格隔开' : '显示(编辑)方法路径: \n' + host }}</a>
-                  <a style="border-bottom: #DDD 1px solid;width: 100%;display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden;" href="javascript:void(0)" @click="showConfig(! isRandomShow, 5)">{{ isRandomShow ? '隐藏(固定)随机测试 Random Test' : '显示(编辑)随机测试 Random Test' }}</a>
+                  <a style="border-bottom: #DDD 1px solid;width: 100%;display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden;" href="javascript:void(0)" @click="showConfig(! isRandomShow, 5)">{{ isRandomShow ? '隐藏(固定)参数注入 Random Test' : '显示(编辑)参数注入 Random Test' }}</a>
                   <a style="border-bottom: #DDD 1px solid;width: 100%;display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden;" href="javascript:void(0)" @click="showConfig(! isHeaderShow, 4)">{{ isHeaderShow ? '隐藏(固定)请求头 Request Header' : '显示(编辑)请求头 Request Header' }}</a>
                   <a v-show="User.id != null && User.id > 0" style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(true, 13)">查看、同步方法文档: 可先编辑再上传</a>
                   <a style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(true, 8)">项目服务器地址URL: {{ project || '点击设置' }}</a>
@@ -192,6 +190,8 @@
         <div v-show="! isPreviewEnabled" style="width: 100%;height: 100%;position: absolute;display: flex;flex-grow: 1" >
           <textarea id="vComment" style="width: 100%; height: 100%; position: absolute; z-index: 0; color: darkseagreen; background-color: white;" wrap="off" disabled>
           </textarea>
+          <textarea v-show="! isEditResponse" id="vWarning" style="width: 100%; height: 100%; position: absolute; z-index: 0; color: orangered; background-color: #0000;" wrap="off" disabled>
+          </textarea>
           <textarea id="vInput" @keyup="onChange(true)" style="width: 100%;height: 100%; position: absolute; z-index: 100; background: #0000;" wrap="off" placeholder="{
   'static': false,  // 是否为静态方法，false 时可能会用 constructor & classArgs 来初始化一个类的实例或用 this 直接反序列化成一个类的实例
   'ui': false,  // 放 UI 线程执行，仅 Android 可用
@@ -258,36 +258,39 @@
   ]
 }
 
-
 /*
-  JSON 下方可以写段注释，
-  可以是普通文本或 Markdown 格式文本。
+JSON 右侧可以写行注释，两个空格加两个斜杆 ' //' 开头；
+JSON 下方可以写段注释，'/*' 开头 '*/' 结尾，都在每行最前，
+段注释可以是普通文本或 Markdown 格式文本，一般用于枚举值等额外说明。
 
-  ### 例如一个表格
-  开发流程 | 传统方式 | APIJSON
-     ---  |   ---   |  ---
-  实现接口 | 写代码 + 写文档 | 都不用写
-  兼容旧版 | v2, v3.. 接口  | 都不用写
+### 例如一个表格
+开发流程 | 传统方式 | APIJSON
+   ---  |   ---   |  ---
+实现接口 | 写代码 + 写文档 | 都不用写
+兼容旧版 | v2, v3.. 接口  | 都不用写
 
-  ### 例如一段代码
-  ```js
-  // 前端解析并打印 Response JSON
-  var list = data['[]'] || []
-  for (var i = 0; i < list.length; i ++) {
-     console.log('[]/' + i + '=' + JSON.stringify(list[i]))
-  }
-  ```
+### 例如一段代码
+```js
+// 前端解析并打印 Response JSON
+var list = data['[]'] || []
+for (var i = 0; i < list.length; i ++) {
+   console.log('[]/' + i + '=' + JSON.stringify(list[i]))
+}
+```
 
-  ### 例如一张图片
-  ![](http://apijson.cn/images/logo-big.png)
+### 例如一张图片
+![](http://apijson.cn/images/logo-big.png)
 
-  #### 右上角设置项 > 预览请求输入框，显示对应的预览效果
+## 快捷键
+Ctrl + I 或 Command + I 格式化 JSON，清除所有注释和无效空格、换行等；
+Ctrl + / 或 Command + / 对选中行 新增行注释 或 取消行注释；
 
+#### 右上角设置项 > 预览请求输入框，显示对应的预览效果
 */
 
 
 
-">
+" >
 {
     "static": true,
     "methodArgs": [
@@ -302,7 +305,19 @@
     ]
 }
 
-/* 注释可省略，但如果未省略则前面两个空格必须；清空文本内容可查看规则。 */
+/*
+以上 JSON 文本支持 JSON5 格式。清空文本内容可查看规则。
+注释可省略。行注释前必须有两个空格；段注释必须在 JSON 下方。
+
+## 快捷键
+Ctrl + I 或 Command + I 格式化输入框，清除所有注释和无效空格、换行等；
+Ctrl + / 或 Command + / 对选中行 新增行注释 或 取消行注释；
+
+#### 右上角设置项 > 预览请求输入框，显示对应的预览效果
+*/
+
+
+
           </textarea>
         </div>
         <div id="vRequestMarkdown" v-show="isPreviewEnabled" style="width: 100%;height: 100%;position: relative;"></div>
@@ -313,7 +328,7 @@
             <div class="left-bar" style="border-top: #DDD 1px solid; position: relative">
                 <input v-show="isRandomListShow != true && isRandomSubListShow != true" id="vTestRandomCount" v-model="testRandomCount" style="margin-left: 10px; min-width: 12px; max-width: 30px; width: auto; text-align: center" type="number" />
                 <a v-show="isRandomListShow != true && isRandomSubListShow != true" style="margin-left: 4px;">次</a>
-            <a style="display: flex;flex-grow: 1;padding-left: 10px;padding-right: 2px;font-size: medium;color: black" >{{ (isRandomListShow || StringUtil.isEmpty(randomTestTitle, true) ? '随机测试 Random Test' : randomTestTitle) + (isRandomListShow || isRandomSubListShow ? ' (' + ((isRandomListShow ? randoms : randomSubs) || []).length + ')' : '') }}
+            <a style="display: flex;flex-grow: 1;padding-left: 10px;padding-right: 2px;font-size: medium;color: black" >{{ (isRandomListShow || StringUtil.isEmpty(randomTestTitle, true) ? '参数注入 Random Test' : randomTestTitle) + (isRandomListShow || isRandomSubListShow ? ' (' + ((isRandomListShow ? randoms : randomSubs) || []).length + ')' : '') }}
                 <a style="padding-right: 10px;padding-top: 2px">
                     {{ testRandomProcess }}
                 </a>
@@ -323,7 +338,7 @@
             </a>
                 <a v-show="(currentRemoteItem || {}).Method != null" class="hint--top @cli-tool" data-hint="添加" style="font-size:xx-large; margin-bottom: 2px; color: black;"
                    href="javascript:void(0)" @click="if(isRandomListShow || isRandomSubListShow) { randomTestTitle = null; isRandomListShow = false; isRandomSubListShow = false; } else { showExport(true, true, true) }"> + </a>
-                <a v-show="false" href="javascript:void(0)" style="font-size: small;" class="hint--top"  data-hint="共享"  @click="showExport(true, true)">
+                <a v-show="false" href="javascript:void(0)" style="font-size: small;" class="hint--top"  data-hint="上传/分享"  @click="showExport(true, true)">
                     <svg class="icon">
                         <use xlink:href="svg/icon.svg#share"></use>
                     </svg>
@@ -408,20 +423,21 @@
                             <input id="vRandomCount" v-model="randomCount" style="width: 30px;text-align: center"  type="number" @keyup="doOnKeyUp(event, 'random', true)" />
                             <a >条</a>
                         </div>
-          <textarea id="vRandom" style="width: 100%;height: 100%;" wrap="off"
-                    placeholder="# 常用：
+
+                        <textarea id="vRandom" @copy="doOnCopy" @paste="doOnPaste" style="width: 100%;height: 100%;" wrap="off"
+                                  placeholder="# 常用：
 RANDOM_IN(val0:Any, val1:Any ...)  // 从选项内随机取值
 RANDOM_INT(min:Integer, max:Integer)  // 从范围内随机取整数
-RANDOM_DB(min:Integer, max:Integer)  // 从数据库随机取值
+RANDOM_DB(min:Integer, max:Integer, table:String, column:String)  // 从数据库随机取值
 RANDOM_NUM(min:Number, max:Number, precision:Integer)  // 从范围内随机取小数
 RANDOM_STR(minLength:Integer, maxLength:Integer, regexp:String)  // 从长度范围内随机取字符串
 ORDER_IN(val0:Any, val1:Any ...)  // 从选项内顺序取值
 ORDER_INT(min:Integer, max:Integer)  // 从范围内顺序取整数
-ORDER_DB(min:Integer, max:Integer)  // 从数据库顺序取值
+ORDER_DB(min:Integer, max:Integer, table:String, column:String)  // 从数据库顺序取值
 其中 RANDOM 开头的是随机函数；ORDER 开头的是顺序函数，可以使用 + - 升降序 和 step 跨步，例如 ORDER_IN-(1, 2, 3) 降序取值，ORDER_INT+3(0, 100) 间隔 step = 3 位来升序取整数。
 # 模板：
 format: ORDER_IN(true, false, null, undefined)  // 从选项中顺序取值
-User/id id>: RANDOM_DB()  // 用 id> 替换 User 内的 id，从数据库随机取值
+User/id: RANDOM_DB()  // 从数据库随机取值，等价于 User/id: RANDOM_DB(null, null, 'User', 'id')
 []/page: Math.round(100*Math.random())  // 通过 JavaScript 代码来自定义 [] 内的 page
 ">
 methodArgs/0/type: ORDER_IN('long', 'double', 'Number', 'int', 'Float')  // 顺序取值
@@ -430,7 +446,12 @@ methodArgs/0/value: RANDOM_IN(1, 0.1, -10, 9.99, null)  // 随机取值
 methodArgs/1/type: ORDER_IN('long', 'double', 'Number', 'int', 'Float')  // 顺序取值
 methodArgs/1/value: ORDER_INT(-10, 100)  // 顺序整数
 
-  // 注释可省略，但如果未省略则前面两个空格必须；清空文本内容可查看规则。</textarea>
+  // 注释可省略，但如果未省略则前面两个空格必须；清空文本内容可查看规则。
+
+  // ## 快捷键
+  // Ctrl + I 或 Command + I 格式化文本，清除所有注释和无效空格、换行等；
+  // Ctrl + / 或 Command + / 对选中行 新增行注释 或 取消行注释；
+                        </textarea>
                     </div>
 
 
@@ -443,8 +464,11 @@ methodArgs/1/value: ORDER_INT(-10, 100)  // 顺序整数
                           </svg>
                       </a>
                   </div>
-                  <textarea id="vHeader" @keyup="onChange(true)" style="width: 100%;height: 100%;" wrap="off" placeholder="Authorization: Basic YWRtaW46YWRtaW4=  // 示例，支持单行注释
-My-Header: 'Secret' + Math.random()  // 示例，代码执行结果作为实际值，值为 fun(arg0, arg1..) 等包含函数名与括号的格式 "></textarea>
+                  <textarea id="vHeader" @copy="doOnCopy" @paste="doOnPaste" @keyup="onChange(true)" style="width: 100%;height: 100%;" wrap="off" placeholder="Authorization: Basic YWRtaW46YWRtaW4=  // 示例，支持单行注释
+My-Header: 'Secret' + Math.random()  // 示例，代码执行结果作为实际值，值为 fun(arg0, arg1..) 等包含函数名与括号的格式
+  // ## 快捷键
+  // Ctrl + I 或 Command + I 格式化文本，清除所有注释和无效空格、换行等；
+  // Ctrl + / 或 Command + / 对选中行 新增行注释 或 取消行注释；"></textarea>
               </div>
 
           </div>
@@ -478,7 +502,7 @@ My-Header: 'Secret' + Math.random()  // 示例，代码执行结果作为实际�
                   <use xlink:href="svg/icon.svg#save"></use>
                 </svg>
               </a>
-              <ul class="historys pop" style="width: 240px">
+              <ul class="historys pop" style="width: 304px"> <!-- 没必要太长，遮挡范围过大 // 490 刚好与 URL 输入框左对齐 -->
                   <li v-for="(his, index) in historys">
                     <a href="javascript:void(0)" @click="restore(his, his.response)"  > {{his.name}}</a>
 
@@ -489,16 +513,17 @@ My-Header: 'Secret' + Math.random()  // 示例，代码执行结果作为实际�
               </ul>
           </span>
 
-          <a v-show="isTestCaseShow" class="hint--top" data-hint="隐藏共享用例" href="javascript:void(0)">
+          <a v-show="isTestCaseShow" class="hint--top" data-hint="隐藏用例列表" href="javascript:void(0)">
             <svg class="icon" @click="showTestCase(false, isLocalShow)">
               <use xlink:href="svg/icon.svg#record"></use>
             </svg>
           </a>
-          <a v-show="! isTestCaseShow" class="hint--top" data-hint="查看共享用例" href="javascript:void(0)">
+          <a v-show="! isTestCaseShow" class="hint--top" data-hint="查看用例列表" href="javascript:void(0)">
             <svg class="icon" @click="showTestCase(true, isLocalShow)">
               <use xlink:href="svg/icon.svg#record"></use>
             </svg>
           </a>
+          <img v-show="isLoading" width="15" height="15" src="img/loading.gif" style="margin-bottom: 4px; margin-left: 6px" />
 
         </div>
 
@@ -521,7 +546,7 @@ My-Header: 'Secret' + Math.random()  // 示例，代码执行结果作为实际�
             </svg>
           </a>
 
-          <a href="javascript:void(0)" class="hint--top"  data-hint="共享"   @click="showExport(true, true)">
+          <a href="javascript:void(0)" class="hint--top"  data-hint="上传/分享"   @click="showExport(true, true)">
             <svg class="icon">
               <use xlink:href="svg/icon.svg#share"></use>
             </svg>
@@ -607,12 +632,15 @@ My-Header: 'Secret' + Math.random()  // 示例，代码执行结果作为实际�
 
   <!--弹出下载文本框-->
   <div class="save-box" v-show="isExportShow">
+        <div id="divSaveBoxCheck" v-show="isExportCheckShow && ! isEditResponse" style="position: absolute; width: 120px; height: 30px; padding: 0px; margin: 0px; left: -45px; top: 6px; display: inline-block">
+            <input type="checkbox" style="position: relative; width: 18px; top: 1px; " id="cbSaveBoxCheck" value="first_checkbox"><label id="lblSaveBox" for="cbSaveBoxCheck" style="top: 0px; right: -36px">{{ exTxt.label || '发布简单接口'}}</label>
+        </div>
     <svg class="icon close-icon" @click="showExport(false, isExportRemote)">
       <use xlink:href="svg/icon.svg#close"></use>
     </svg>
 
     <input type="text" placeholder="请输入名称" v-model="exTxt.name" />
-    <button @click="exportTxt()">{{isExportRemote ? '上传' : '下载'}}</button>
+    <div style="display: inline-block; margin-top: 6px; padding-bottom: 0px"><button @click="exportTxt(0)">{{isExportRemote ? '上传' : '下载'}}</button><button v-show="isExportRemote && (isExportRandom != true || isEditResponse != true)" style="margin-left: 6px" @click="exportTxt(1)">{{isExportRandom ? '发布简单接口' : '分享'}}</button></div>
   </div>
 
   <!--弹出设置文本框-->
@@ -821,6 +849,7 @@ My-Header: 'Secret' + Math.random()  // 示例，代码执行结果作为实际�
 <script type="text/javascript" language="JavaScript" charset="UTF-8" src="apijson/JSONResponse.js" ></script>
 <script type="text/javascript" language="JavaScript" charset="UTF-8" src="apijson/CodeUtil.js" ></script>
 <!-- 必须在main.js前 TODO 可能有冲突，代码写入vue文件？ >>>>>>>>>>>>>>>> -->
+<script src="https://unpkg.com/json5@^2.0.0/dist/index.min.js"></script>
 
 
 <script src="js/main.js"></script>
@@ -833,6 +862,7 @@ My-Header: 'Secret' + Math.random()  // 示例，代码执行结果作为实际�
   var vSend = document.getElementById("vSend");
 
   var vInput = document.getElementById("vInput");
+  var vWarning = document.getElementById("vWarning");
   var vComment = document.getElementById("vComment");
   var vHeader = document.getElementById("vHeader");
   var vRandom = document.getElementById("vRandom");
@@ -864,6 +894,8 @@ My-Header: 'Secret' + Math.random()  // 示例，代码执行结果作为实际�
   function onScrollChanged() {
     $(vComment).scrollLeft(vInput.scrollLeft);
     $(vComment).scrollTop(vInput.scrollTop);
+    $(vWarning).scrollLeft(vInput.scrollLeft);
+    $(vWarning).scrollTop(vInput.scrollTop);
   }
 
   //vComment跟随vInput滚动，避免JSON重叠"露馅"
@@ -876,33 +908,6 @@ My-Header: 'Secret' + Math.random()  // 示例，代码执行结果作为实际�
 
   //vURLComment跟随vUrl滚动，避免JSON重叠"露馅"
   $(vUrl).on('scroll', onURLScrollChanged);
-
-
-
-  function markdownToHTML(md, isRequest) {
-    if (isRequest) {
-      vRequestMarkdown.innerHTML = '';
-    }
-    else {
-      vMarkdown.innerHTML = '';
-    }
-    editormd.markdownToHTML(isRequest ? 'vRequestMarkdown' : "vMarkdown", {
-      markdown        : md ,//+ "\r\n" + $("#append-test").text(),
-      //htmlDecode      : true,       // 开启 HTML 标签解析，为了安全性，默认不开启
-      htmlDecode      : "style,script,iframe",  // you can filter tags decode
-      //toc             : false,
-      tocm            : true,    // Using [TOCM]
-      //tocContainer    : "#custom-toc-container", // 自定义 ToC 容器层
-      //gfm             : false,
-      tocDropdown     : true,
-      // markdownSourceCode : true, // 是否保留 Markdown 源码，即是否删除保存源码的 Textarea 标签
-      taskList        : true,
-      tex             : true,  // 默认不解析
-      flowChart       : true,  // 默认不解析
-      sequenceDiagram : true,  // 默认不解析
-    });
-  }
-
 
 </script>
 <script src="md/lib/jquery.min.js"></script>

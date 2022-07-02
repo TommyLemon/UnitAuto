@@ -32,7 +32,7 @@ var StringUtil = {
    * @return
    */
   trim: function(s) {
-    return StringUtil.get(s).trim();
+    return s == null ? '' : s.trim();
   },
 
   /**获取去掉所有空格后的string,为null则返回''
@@ -40,7 +40,7 @@ var StringUtil = {
    * @return
    */
   noBlank: function(s) {
-    return StringUtil.get(s).replace(/ /g, '');
+    return s == null ? '' : s.replace(/ /g, '');
   },
 
   /**判断字符是否为空
@@ -55,11 +55,11 @@ var StringUtil = {
     if (trim) {
       s = s.trim();
     }
-    if (s == '') {
-      return true;
-    }
+    return s.length <= 0;
+  },
 
-    return false;
+  isNotEmpty: function(s, trim) {
+    return ! this.isEmpty(s, trim);
   },
 
   /**判断是否为代码名称，只能包含字母，数字或下划线
@@ -140,13 +140,22 @@ var StringUtil = {
     return s.toLowerCase();
   },
 
-  split: function (s, separator) {
+  split: function (s, separator, trim) {
     if (s == null) {
       return null;
     }
 
     if (separator == null) {
       separator = ',';
+    }
+
+    if (trim) {
+      while (s.startsWith(separator)) {
+        s = s.substring(1);
+      }
+      while (s.endsWith(separator)) {
+        s = s.substring(0, s.length - 1);
+      }
     }
 
     if (s.indexOf(separator) < 0) {
