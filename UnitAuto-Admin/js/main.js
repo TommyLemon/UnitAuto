@@ -2630,7 +2630,7 @@
               'count': this.testCaseCount || 100, //200 条测试直接卡死 0,
               'page': this.testCasePage || 0,
               'Method': {  // 不管是 item.Method.constructor 还是 item.Method['constructor'] 都取到了 js 语言构造器而不是 JSON 中的 value
-                '@column': 'id,userId,static,ui,type,genericType,package,class,constructor:cttr,classArgs,genericClassArgs,method,methodArgs,exceptions,genericExceptions,request,demo,detail,date',
+                '@column': 'id,userId,static,ui,type,genericType,package,class,constructor:cttr,classArgs,genericClassArgs,method,methodArgs,genericMethodArgs,exceptions,genericExceptions,request,demo,detail,date',
                 '@order': 'date-',
                 'userId{}': [0, this.User.id],
                 'arguments()': 'getMethodArguments(genericMethodArgs)',
