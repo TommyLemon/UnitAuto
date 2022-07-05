@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>unitauto.boot</groupId>
-	<artifactId>unitauto-java-demo</artifactId>
+	<artifactId>unitauto-springboot-sdk</artifactId>
 	<version>2.7.2</version>
 	<packaging>jar</packaging>
 
@@ -36,13 +36,6 @@
 		</dependency>
 
 
-		<dependency>
-			<groupId>mysql</groupId>
-			<artifactId>mysql-connector-java</artifactId>
-			<version>8.0.11</version>
-		</dependency>
-
-
 		<!-- UnitAuto 需要的依赖 -->
 		<dependency>
 			<groupId>com.alibaba</groupId>
@@ -54,7 +47,7 @@
 			<artifactId>classgraph</artifactId>
 			<version>4.8.87</version>
 		</dependency>
- 		<dependency>
+		<dependency>
 			<groupId>com.github.TommyLemon</groupId>
 			<artifactId>unitauto-java</artifactId>
 			<version>2.7.2</version>
@@ -64,14 +57,8 @@
 			<artifactId>unitauto-jar</artifactId>
 			<version>2.7.2</version>
 		</dependency>
-    <dependency>
-      <groupId>unitauto.boot</groupId>
-      <artifactId>unitauto-springboot-sdk</artifactId>
-      <version>2.7.2</version>
-      <scope>compile</scope>
-    </dependency>
 
-  </dependencies>
+	</dependencies>
 
 	<build>
 		<plugins>
@@ -93,6 +80,11 @@
 	<!-- Allow access to Spring milestones and snapshots -->
 	<!-- (you don't need this if you are using anything after 0.5.0.RELEASE) -->
 	<repositories>
+		<repository> 
+		    <!-- UnitAuto 必须 -->
+			<id>jitpack.io</id>
+			<url>https://jitpack.io</url>
+		</repository>
 		<repository>
 			<id>spring-snapshots</id>
 			<url>http://repo.spring.io/snapshot</url>
@@ -106,10 +98,6 @@
 			<snapshots>
 				<enabled>true</enabled>
 			</snapshots>
-		</repository>
-		<repository>
-		    <id>jitpack.io</id>
-		    <url>https://jitpack.io</url>
 		</repository>
 	</repositories>
 	<pluginRepositories>

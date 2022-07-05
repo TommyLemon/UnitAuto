@@ -15,26 +15,19 @@ limitations under the License.*/
 
 package unitauto.demo.controller;
 
-import java.lang.reflect.Method;
 import java.util.List;
-
-import javax.servlet.AsyncContext;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.alibaba.fastjson.JSONObject;
 
-import unitauto.Log;
 import unitauto.MethodUtil;
-import unitauto.MethodUtil.InterfaceProxy;
+import unitauto.boot.controller.UnitAutoController;
 import unitauto.demo.domain.User;
 import unitauto.demo.service.DemoService;
 
@@ -43,7 +36,7 @@ import unitauto.demo.service.DemoService;
  */
 @RequestMapping("")
 @RestController
-public class DemoController {
+public class DemoController extends UnitAutoController {  // 继承是因为可能 Application 设置了 Scan 导致 UnitAutoController 未生效
 	private static final String TAG = "DemoController";
 
 	@Autowired
@@ -102,70 +95,6 @@ public class DemoController {
 			return result;
 		} catch (Throwable e) {
 			return MethodUtil.newErrorResult(e);
-		}
-	}
-
-
-
-
-	@PostMapping("method/list")
-	public JSONObject listMethod(@RequestBody String request) {
-		if (Log.DEBUG == false) {
-			return MethodUtil.JSON_CALLBACK.newErrorResult(new IllegalAccessException("非 DEBUG 模式下不允许使用 UnitAuto 单元测试！"));
-		}
-
-		return MethodUtil.listMethod(request);
-	}
-
-	@PostMapping("method/invoke")
-	public void invokeMethod(@RequestBody String request, HttpServletRequest servletRequest) {
-		AsyncContext asyncContext = servletRequest.startAsync();
-
-		final boolean[] called = new boolean[] { false };
-		MethodUtil.Listener<JSONObject> listener = new MethodUtil.Listener<JSONObject>() {
-
-			@Override
-			public void complete(JSONObject data, Method method, InterfaceProxy proxy, Object... extras) throws Exception {
-				Log.w(TAG, "invokeMethod  listener.complete data = " + data + "; method = " + method);
-
-				ServletResponse servletResponse = called[0] ? null : asyncContext.getResponse();
-				if (servletResponse == null) { // TestSDK 总是不响应数据 || servletResponse.isCommitted()) {  // isCommitted 在高并发时可能不准，导致写入多次
-					Log.w(TAG, "invokeMethod  listener.complete  servletResponse == null || servletResponse.isCommitted() >> return;");
-					return;
-				}
-				called[0] = true;
-
-				servletResponse.setCharacterEncoding(servletRequest.getCharacterEncoding());
-				servletResponse.setContentType(servletRequest.getContentType());
-				servletResponse.getWriter().println(data);
-				asyncContext.complete();
-			}
-		};
-
-		if (Log.DEBUG == false) {
-			try {
-				listener.complete(MethodUtil.JSON_CALLBACK.newErrorResult(new IllegalAccessException("非 DEBUG 模式下不允许使用 UnitAuto 单元测试！")));
-			}
-			catch (Exception e1) {
-				e1.printStackTrace();
-				asyncContext.complete();
-			}
-
-			return;
-		}
-
-		try {
-			MethodUtil.invokeMethod(request, null, listener);
-		}
-		catch (Exception e) {
-			Log.e(TAG, "invokeMethod  try { JSONObject req = JSON.parseObject(request); ... } catch (Exception e) { \n" + e.getMessage());
-			try {
-				listener.complete(MethodUtil.JSON_CALLBACK.newErrorResult(e));
-			}
-			catch (Exception e1) {
-				e1.printStackTrace();
-				asyncContext.complete();
-			}
 		}
 	}
 
