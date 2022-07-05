@@ -3530,6 +3530,8 @@
             App.onResponse(url, res, null)
           })
           .catch(function (err) {
+            App.isLoading = false
+
             log('send >> error:\n' + err)
             if (isAdminOperation) {
               App.delegateId = null
