@@ -17,7 +17,7 @@
 ---
 
 机器学习单元测试平台，零代码、全方位、自动化 测试 方法/函数 的正确性、可用性和性能。<br />
-腾讯 IEG(互动娱乐事业群)、WXG(微信事业群) 两大事业群多个部门的多个项目使用中。
+腾讯 IEG(互动娱乐事业群)、WXG(微信事业群) 两大事业群多个部门的多个项目以及快手广告使用中。
 
 已被 互联网教育智能技术及应用国家工程实验室 收录。
 https://github.com/TommyLemon/UnitAuto/issues/15
@@ -30,6 +30,10 @@ UnitAuto 不需要写任何代码，直接读取方法的属性，自动注入�
 2.UnitAuto 这种 Runtime testing 工具无需 Mock 环境(Application, Context 等)，<br />
 更不用为 无法有效地 Mock 环境相关类、第三方登录未提供 Mock 支持 等而头疼，<br />
 只要被测方法满足 有 return 值、有 interface 回调、改变成员变量 field 这 3 点中至少一点就能测。
+
+#### 质效无双线上技术访谈-零代码智能测试工具实践介绍-第11期
+![https://testwo.cn1.quickconnect.cn/vs/sharing/iiP8VK1C#!aG9tZV92aWRlby0xMQ==](https://user-images.githubusercontent.com/5738175/179578082-0c72a715-c9b3-49f7-bf1c-45f963c6eb4f.png)
+
 <br />
 <br />
 
@@ -261,7 +265,7 @@ unitauto.test.TestUtil.divide
             "type": "double",
             "value": 1
         },
-        {
+        {   // 支持各种类型，例如 unitauto.demo.domain.User, List<String>, annotation.Annotation[]，未注册的要写完整全路径
             "type": "double",
             "value": 2
         }
@@ -305,9 +309,9 @@ unitauto.test.TestUtil.divide
 对应调用 Java 方法  <br />
 unitauto.test.TestUtil.divide(double, double)
 ```java
-	public static double divide(double a, double b) {
-		return a / b;
-	}
+    public static double divide(double a, double b) {
+        return a / b;
+    }
 ```
 https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java/src/main/java/unitauto/test/TestUtil.java#L56-L58
 
@@ -362,23 +366,18 @@ https://github.com/TommyLemon/UnitAuto/issues
 
 [APIJSON.NET](https://github.com/liaozb/APIJSON.NET) C# 版 APIJSON ，支持 MySQL, PostgreSQL, SQL Server, Oracle, SQLite
 
-[apijson-go](https://gitee.com/tiangao/apijson-go) Go 版 APIJSON ，支持单表查询、数组查询、多表一对一关联查询、多表一对多关联查询 等
+[apijson-go](https://github.com/j2go/apijson-go) Go 版 APIJSON ，支持单表查询、数组查询、多表一对一关联查询、多表一对多关联查询 等
 
-[APIJSON-php](https://github.com/xianglong111/APIJSON-php) PHP 版 APIJSON，基于 ThinkPHP，支持 MySQL, PostgreSQL, SQL Server, Oracle 等
+[apijson-hyperf](https://github.com/kvnZero/hyperf-APIJSON) PHP 版 APIJSON，基于 Hyperf 支持 MySQL
 
-[apijson-php](https://github.com/qq547057827/apijson-php) PHP 版 APIJSON，基于 ThinkPHP，支持 MySQL, PostgreSQL, SQL Server, Oracle 等
-
-[apijson-node](https://github.com/kevinaskin/apijson-node) 字节跳动工程师开源的 Node.ts 版 APIJSON，提供 nestjs 和 typeorm 的 Demo
+[apijson-node](https://github.com/kevinaskin/apijson-node) Node.ts 版 APIJSON，提供 nestjs 和 typeorm 的 Demo，由字节跳动工程师开发
 
 [uliweb-apijson](https://github.com/zhangchunlin/uliweb-apijson) Python 版 APIJSON，支持 MySQL, PostgreSQL, SQL Server, Oracle, SQLite 等
 
-[APIJSONParser](https://github.com/Zerounary/APIJSONParser) 第三方 APIJSON 解析器，将 JSON 动态解析成 SQL
-
-[APIJSON-ToDo-Demo](https://github.com/jerrylususu/apijson_todo_demo) 一个简单的 todo 示例项目，精简数据，简化上手流程，带自定义鉴权逻辑 
-  
 [apijson-practice](https://github.com/vcoolwind/apijson-practice) BAT 技术专家开源的 APIJSON 参数校验注解 Library 及相关 Demo
 
-[apijson-learn](https://github.com/rainboy-learn/apijson-learn) APIJSON 学习笔记和源码解析
+[Android-ZBLibrary](https://github.com/TommyLemon/Android-ZBLibrary) Android MVP 快速开发框架，Demo 全面，注释详细，使用简单，代码严谨
+
 
 ### 持续更新
 [https://github.com/TommyLemon/UnitAuto/commits/master](https://github.com/TommyLemon/UnitAuto/commits/master)
