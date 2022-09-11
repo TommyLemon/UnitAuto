@@ -32,6 +32,7 @@ UnitAuto 不需要写任何代码，直接读取方法的属性，自动注入�
 只要被测方法满足 有 return 值、有 interface 回调、改变成员变量 field 这 3 点中至少一点就能测。
 
 #### 质效无双线上技术访谈-零代码智能测试工具实践介绍-第11期
+https://testwo.cn1.quickconnect.cn/vs/sharing/iiP8VK1C#!aG9tZV92aWRlby0xMQ==
 ![https://testwo.cn1.quickconnect.cn/vs/sharing/iiP8VK1C#!aG9tZV92aWRlby0xMQ==](https://user-images.githubusercontent.com/5738175/179578082-0c72a715-c9b3-49f7-bf1c-45f963c6eb4f.png)
 
 <br />
@@ -348,6 +349,7 @@ https://github.com/TommyLemon/UnitAuto/issues
 ### 技术交流
 ##### 关于作者
 [https://github.com/TommyLemon](https://github.com/TommyLemon)<br />
+<img width="1279" alt="image" src="https://user-images.githubusercontent.com/5738175/189525500-5fe3ba45-c2b3-4df9-9607-c84120111e3c.png">
 
 ##### QQ群聊
 734652054（新）<a target="_blank" style="bottom:2px;padding-top:4px" href="https://qm.qq.com/cgi-bin/qm/qr?k=rJLwYzITdoQBfiGUOjMrM3eJDyks1tJP&jump_from=webapi"><img border="0" src="http://pub.idqqimg.com/wpa/images/group.png" alt="APIJSON-Free" title="APIJSON技术讨论群" style="bottom:2px;margin-top:4px" /></a>    
@@ -363,6 +365,8 @@ https://github.com/TommyLemon/UnitAuto/issues
 [APIJSON](https://github.com/Tencent/APIJSON) 腾讯零代码、热更新、全自动 ORM 库 🏆 后端接口和文档自动化，前端(客户端) 定制返回 JSON 的数据和结构
 
 [APIAuto](https://github.com/TommyLemon/APIAuto) 敏捷开发最强大易用的 HTTP 接口工具，机器学习零代码测试、生成代码与静态检查、生成文档与光标悬浮注释
+
+[SQLAuto](https://github.com/TommyLemon/SQLAuto) 智能零代码自动化测试 SQL 语句执行结果的数据库工具
 
 [APIJSON.NET](https://github.com/liaozb/APIJSON.NET) C# 版 APIJSON ，支持 MySQL, PostgreSQL, SQL Server, Oracle, SQLite
 
