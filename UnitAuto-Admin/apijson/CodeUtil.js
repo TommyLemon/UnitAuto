@@ -12,6 +12,16 @@
  See the License for the specific language governing permissions and
  limitations under the License.*/
 
+if (typeof window == 'undefined') {
+  try {
+    eval(`
+      var StringUtil = require("./StringUtil");
+      var JSONObject = require("./JSONObject");
+    `)
+  } catch (e) {
+    console.log(e)
+  }
+}
 
 /**util for generate code
  * @author Lemon
@@ -6368,409 +6378,435 @@ var CodeUtil = {
         default:
           break;
       }
+    }
 
+    var typeOfValue = CodeUtil.getType4Request(value);
+    var valuesIsNotString = typeOfValue != 'string';
+    var valuesIsNotInteger = typeOfValue != 'integer';
+    var valuesIsNotNumber = valuesIsNotInteger && typeOfValue != 'number';
+    var valuesIsNotArray = typeOfValue != 'array';
+    var valuesIsNotObject = typeOfValue != 'object';
+    var valuesIsNotStringOrObject = valuesIsNotString && valuesIsNotObject;
+    var valuesIsNotStringOrArray = valuesIsNotString && valuesIsNotArray;
+    var valuesIsNotStringOrNumber = valuesIsNotString && valuesIsNotNumber;
+    var valuesIsNotStringOrNumberOrObject = valuesIsNotStringOrNumber && valuesIsNotObject;
+    var valuesIsNotStringOrArrayOrObject = valuesIsNotString && valuesIsNotArray && valuesIsNotObject;
+    var isValueNotEmpty = valuesIsNotString ? (typeOfValue != 'array' ? value != null : value.length > 0) : StringUtil.isEmpty(value, true) != true;
 
-      var typeOfValue = CodeUtil.getType4Request(value);
-      var valuesIsNotString = typeOfValue != 'string';
-      var valuesIsNotInteger = typeOfValue != 'integer';
-      var valuesIsNotNumber = valuesIsNotInteger && typeOfValue != 'number';
-      var valuesIsNotArray = typeOfValue != 'array';
-      var valuesIsNotObject = typeOfValue != 'object';
-      var valuesIsNotStringOrObject = valuesIsNotString && valuesIsNotObject;
-      var valuesIsNotStringOrArray = valuesIsNotString && valuesIsNotArray;
-      var valuesIsNotStringOrNumber = valuesIsNotString && valuesIsNotNumber;
-      var valuesIsNotStringOrNumberOrObject = valuesIsNotStringOrNumber && valuesIsNotObject;
-      var valuesIsNotStringOrArrayOrObject = valuesIsNotString && valuesIsNotArray && valuesIsNotObject;
-      var isValueNotEmpty = valuesIsNotString ? (typeOfValue != 'array' ? value != null : value.length > 0) : StringUtil.isEmpty(value, true) != true;
+    if (isRestful == true && StringUtil.isEmpty(columnName, true) == false && StringUtil.isEmpty(CodeUtil.thirdParty, true) == false) { // } && CodeUtil.thirdParty == 'YAPI') {
+      var apiMap = CodeUtil.thirdPartyApiMap;
+      if (apiMap == null) {
+        // 用 下方 tableList 兜底  return isWarning ? ' ' : '...';
+      }
+      else {
+        var api = apiMap[(method.startsWith('/') ? '' : '/') + method];
+        var doc = api == null ? null : (isReq ? (api.request || api.parameters) : api.response);
+        if (doc != null) {
+          var parentDoc = api;
 
-      if (isRestful == true && StringUtil.isEmpty(columnName, true) == false && StringUtil.isEmpty(CodeUtil.thirdParty, true) == false) { // } && CodeUtil.thirdParty == 'YAPI') {
-        var apiMap = CodeUtil.thirdPartyApiMap;
-        if (apiMap == null) {
-          // 用 下方 tableList 兜底  return isWarning ? ' ' : '...';
-        } else {
-          var api = apiMap[(method.startsWith('/') ? '' : '/') + method];
-          var doc = api == null ? null : (isReq ? (api.request || api.parameters) : api.response);
-          if (doc != null) {
-            var parentDoc = api;
+          if (pathKeys != null && pathKeys.length > 0) {
+            for (var i = 0; i < pathKeys.length; i++) {
+              var p = pathKeys[i];
 
-            if (pathKeys != null && pathKeys.length > 0) {
-              for (var i = 0; i < pathKeys.length; i++) {
-                var p = pathKeys[i];
+              if (doc instanceof Array) {
+                var find = false;
+                for (var j = 0; j < doc.length; j++) {
+                  var d = doc[j];
+                  if (d != null && d.name == p) {
+                    // parentDoc = doc;
+                    doc = d;
+                    find = true;
+                    break;
+                  }
+                }
+
+                if (find == false) {
+                  doc = null;
+                }
+              }
+              else if (doc instanceof Object) {
+                if ((doc.type == 'object' || doc.type == null) && JSONResponse.getType(doc) == 'object') {
+                  parentDoc = doc;
+                  doc = doc.properties || parentDoc.parameters;
+                }
+                else if (doc.type == 'array') {
+                  parentDoc = doc;
+                  doc = doc.items;
+
+                  try {
+                    if (p != null && p != '' && Number.isNaN(+p)) {
+                      i--;
+                    }
+                  } catch (e) {
+                  }
+
+                  continue;
+                }
+
+                if (doc.type != 'object') {
+                  parentDoc = doc;
+                }
 
                 if (doc instanceof Array) {
-                  var find = false;
-                  for (var j = 0; j < doc.length; j++) {
-                    var d = doc[j];
-                    if (d != null && d.name == p) {
-                      // parentDoc = doc;
-                      doc = d;
-                      find = true;
-                      break;
-                    }
-                  }
-
-                  if (find == false) {
-                    doc = null;
-                  }
-                } else if (doc instanceof Object) {
-                  if ((doc.type == 'object' || doc.type == null) && JSONResponse.getType(doc) == 'object') {
-                    parentDoc = doc;
-                    doc = doc.properties || parentDoc.parameters;
-                  } else if (doc.type == 'array') {
-                    parentDoc = doc;
-                    doc = doc.items;
-
-                    try {
-                      if (p != null && p != '' && Number.isNaN(+p)) {
-                        i--;
-                      }
-                    } catch (e) {
-                    }
-
-                    continue;
-                  }
-
-                  if (doc.type != 'object') {
-                    parentDoc = doc;
-                  }
-
-                  if (doc instanceof Array) {
-                  } else if (properties instanceof Object) {
-                    doc = doc[p];
-                  }
+                }
+                else if (properties instanceof Object) {
+                  doc = doc[p];
                 }
               }
-            } else if (doc instanceof Array) {
-              doc = null;
             }
+          }
+          else if (doc instanceof Array) {
+            doc = null;
+          }
 
-            if (doc == null && parentDoc != null) {
-              var properties = parentDoc.properties || parentDoc.parameters;
-              var required = parentDoc.required;
+          if (doc == null && parentDoc != null) {
+            var properties = parentDoc.properties || parentDoc.parameters;
+            var required = parentDoc.required;
 
-              var cols = '';
-              if (properties instanceof Array) {
-                var first = true;
-                for (var i = 0; i < properties.length; i++) {
+            var cols = '';
+            if (properties instanceof Array) {
+              var first = true;
+              for (var i = 0; i < properties.length; i ++) {
 
-                  var para = properties[i];
-                  var pn = para == null ? null : para.name;
+                var para = properties[i];
+                var pn = para == null ? null : para.name;
 
-                  if (StringUtil.isEmpty(pn, true) == false) {
-                    cols += (first ? '' : ',') + pn;
-                    first = false;
-                  }
+                if (StringUtil.isEmpty(pn, true) == false) {
+                  cols += (first ? '' : ',') + pn;
+                  first = false;
                 }
-              } else if (properties instanceof Object) {
-                cols = Object.keys(properties).join();
-              }
-
-              var musts = required == null ? '' : required.join();
-
-              return ' ! 字段 ' + columnName + ' 不存在！只能是 [' + cols + '] 中的一个！' + (StringUtil.isEmpty(musts, true) ? '' : '其中 [' + musts + '] 必传！');
-            }
-
-            var t = doc == null ? null : doc.type;
-            var c = doc == null ? null : CodeUtil.getType4Language(language, t, true) + (doc.required ? ', ' : '? ') + StringUtil.trim(doc.description || doc.title);
-            if (t == null) {
-              // 避免崩溃
-            } else if (t.endsWith('[]')) {
-              t = 'array';
-            } else if (t == 'integer') {
-              t = 'number';
-            }
-
-            if (CodeUtil.isTypeMatch(t, CodeUtil.getType4Request(value)) != true) {
-              c = ' ! value必须是' + CodeUtil.getType4Language(language, t) + '类型！' + (isWarning ? ' ' : CodeUtil.getComment(c, false, '  '))
-              if (ignoreError != true) {
-                throw new Error(c);
-              }
-              return c;
-            } else {
-              if (c != null) {  // 可能存在但只是没注释  StringUtil.isEmpty(c, true) == false) {
-                return isWarning ? ' ' : c;
               }
             }
+            else if (properties instanceof Object) {
+              cols = Object.keys(properties).join();
+            }
 
+            var musts = required == null ? '' : required.join();
+
+            return ' ! 字段 ' + columnName + ' 不存在！只能是 [' + cols + '] 中的一个！' + (StringUtil.isEmpty(musts, true) ? '' : '其中 [' + musts + '] 必传！');
+          }
+
+          var t = doc == null ? null : doc.type;
+          var c = doc == null ? null : CodeUtil.getType4Language(language, t, true) + (doc.required ? ', ' : '? ') + StringUtil.trim(doc.description || doc.title);
+          if (t == null) {
+            // 避免崩溃
+          }
+          else if (t.endsWith('[]')) {
+            t = 'array';
+          }
+          else if (t == 'integer') {
+            t = 'number';
+          }
+
+          if (CodeUtil.isTypeMatch(t, CodeUtil.getType4Request(value)) != true) {
+            c = ' ! value必须是' + CodeUtil.getType4Language(language, t) + '类型！' + (isWarning ? ' ' : CodeUtil.getComment(c, false, '  '))
+            if (ignoreError != true) {
+              throw new Error(c);
+            }
+            return c;
+          }
+          else {
+            if (c != null) {  // 可能存在但只是没注释  StringUtil.isEmpty(c, true) == false) {
+              return isWarning ? ' ' : c;
+            }
           }
 
         }
 
       }
 
-      if (tableList == null || tableList.length <= 0) {
-        return isWarning ? ' ' : '...';
-      }
-
-      var item;
-
-      var table;
-      var columnList;
-      var column;
-      for (var i = 0; i < tableList.length; i++) {
-        item = tableList[i];
-
-        //Table
-        table = item == null ? null : (database != 'SQLSERVER' ? item.Table : item.SysTable);
-        if (table == null || tableName != CodeUtil.getModelName(table.table_name)) {
-          continue;
-        }
-        log('getDoc [] for i=' + i + ': table = \n' + format(JSON.stringify(table)));
-
-        if (StringUtil.isEmpty(columnName)) {
-          return /*没必要，常识，太占地方，而且自动生成代码就有  CodeUtil.getType4Object(language) + ', ' + */ (
-            database == 'POSTGRESQL'
-              ? (item.PgClass || {}).table_comment
-              : (database == 'SQLSERVER'
-                  ? (item.ExtendedProperty || {}).table_comment
-                  : table.table_comment
-              )
-          );
-        }
-
-        var at = '';
-        var fun = '';
-        var key;
-        var logic = '';
-
-        var verifyType = isSubquery != true && value != null;
-
-        if (onlyTableAndColumn) {
-          key = new String(columnName);
-        } else {
-
-          //功能符 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-          if (columnName.endsWith("()")) {//方法，查询完后处理，先用一个Map<key,function>保存？
-            if (['GET', 'HEAD'].indexOf(method) < 0) {
-              return ' ! 远程函数只能用于 GET,HEAD 请求！！';
-            }
-
-            if (value != null && valuesIsNotString) {
-              return ' ! value必须是String类型！';
-            }
-            if (value != null) {
-              var startIndex = value.indexOf("(");
-              if (startIndex <= 0 || value.endsWith(")") == false) {
-                return ' ! value必须符合 fun(arg0,arg1..) 这种格式！且不要有任何多余的空格！';
-              }
-              var fun = value.substring(0, startIndex);
-              if (StringUtil.isName(fun) != true) {
-                return '! 函数名' + fun + '不合法！value必须符合 fun(arg0,arg1..) 这种格式！且不要有任何多余的空格！';
-              }
-            }
-
-            if (isWarning) {
-              return ' ';
-            }
-
-            var priority = '';
-            if (columnName.endsWith("-()")) {
-              priority = ' < 在解析所在对象前优先执行';
-            } else if (columnName.endsWith("+()")) {
-              priority = ' < 在解析所在对象后滞后执行';
-            } else {
-              priority = '，执行时机在解析所在对象后，解析子对象前，可以在 () 前用 + - 设置优先级，例如 key-() 优先执行';
-            }
-
-            return '远程函数' + (isValueNotEmpty ? '，触发调用后端对应的方法/函数' + priority : '，例如 "isContain(praiseUserIdList,userId)"');
-          }
-
-          var hasAt = false;
-          if (columnName.endsWith("@")) {//引用，引用对象查询完后处理。fillTarget中暂时不用处理，因为非GET请求都是由给定的id确定，不需要引用
-            // 没传 value 进来，不好解析，而且太长导致后面的字段属性被遮住
-            // var lastIndex = value.lastIndexOf('/');
-            // var refLastPath =
-            // at = '引用赋值: ' + tableName + '.' + columnName + '=' + ;
-            hasAt = true;
-
-            at = '引用赋值' + (isValueNotEmpty ? (value.startsWith('/') ? '，从对象父级开始的相对(缺省)路径' : '，从最外层开始的绝对(完整)路径') : '，例如 "User/id" "[]/Moment/id" 等');
-            columnName = columnName.substring(0, columnName.length - 1);
-
-            if (value != null && valuesIsNotStringOrObject) {
-              return ' ! value必须是String或Object类型！';
-            }
-
-            verifyType = false;
-          }
-
-          if (columnName.endsWith("$")) {//搜索，查询时处理
-            if (verifyType && hasAt != true && valuesIsNotStringOrArray) {
-              return ' ! value必须是String或Array类型！';
-            }
-
-            fun = '模糊搜索' + (isValueNotEmpty ? '' : '，例如 "%c%" "S%" "%end" 等');
-            key = columnName.substring(0, columnName.length - 1);
-          } else if (columnName.endsWith("~")) {//匹配正则表达式，查询时处理
-            if (verifyType && hasAt != true && valuesIsNotStringOrArray) {
-              return ' ! value必须是String或Array类型！';
-            }
-
-            fun = '正则匹配' + (isValueNotEmpty ? '' : '，例如 "C" "^[0-9]+$" "^[a-zA-Z]+$" 等');
-            key = columnName.substring(0, columnName.length - 1);
-            if (key.endsWith("*")) {
-              key = key.substring(0, key.length - 1);
-              fun += '(忽略大小写)';
-            }
-          } else if (columnName.endsWith("%")) {//连续范围 BETWEEN AND，查询时处理
-            if (verifyType && hasAt != true && valuesIsNotStringOrArray) {
-              return ' ! value必须是String或Array类型！';
-            }
-
-            fun = '连续范围' + (isValueNotEmpty ? '' : '，例如 "82001,82020" "2018-01-01,2020-01-01" ["1-10", "90-100"] 等');
-            key = columnName.substring(0, columnName.length - 1);
-          } else if (columnName.endsWith("{}")) {//被包含，或者说key对应值处于value的范围内。查询时处理
-            if (verifyType && hasAt != true && valuesIsNotStringOrArray) {
-              return ' ! value必须是String或Array类型！';
-            }
-
-            fun = '匹配 选项/条件' + (isValueNotEmpty ? '' : '，例如 ' + (valuesIsNotString ? '[1, 2, 3] ["%c%", "S%", "%end"] 等' : '">100" "%2=0;<=100000" 等'));
-            key = columnName.substring(0, columnName.length - 2);
-
-            verifyType = false;
-          } else if (columnName.endsWith("<>")) {//包含，或者说value处于key对应值的范围内。查询时处理
-            fun = '包含选项' + (isValueNotEmpty ? '' : '，例如 1 "Test" [82001, 82002] 等');
-            key = columnName.substring(0, columnName.length - 2);
-
-            verifyType = false;
-          } else if (columnName.endsWith("}{")) {//存在，EXISTS。查询时处理
-            if (verifyType && hasAt != true && isSubquery != true) {
-              return ' ! key}{ 后面必须接 @，写成 key}{@:{} 格式！';
-            }
-            if (verifyType && valuesIsNotObject) {
-              return ' ! value必须是Object类型！';
-            }
-
-            fun = '是否存在' + (isValueNotEmpty ? '' : '，例如 { "from":"Comment", "Comment":{ "@column":"userId" } }');
-            key = columnName.substring(0, columnName.length - 2);
-
-            verifyType = false;
-          } else if (columnName.endsWith("+")) {//延长，PUT查询时处理
-            if (method != 'PUT') {//不为PUT就抛异常
-              return ' ! 功能符 + - 只能用于PUT请求！';
-            }
-            fun = '增加/扩展' + (isValueNotEmpty ? '' : '，例如 1 9.9 "a" [82001, 82002] 等');
-            key = columnName.substring(0, columnName.length - 1);
-          } else if (columnName.endsWith("-")) {//缩减，PUT查询时处理
-            if (method != 'PUT') {//不为PUT就抛异常
-              return ' ! 功能符 + - 只能用于PUT请求！';
-            }
-            fun = '减少/去除' + (isValueNotEmpty ? '' : '，例如 1 9.9 "a" [82001, 82002] 等');
-            key = columnName.substring(0, columnName.length - 1);
-          } else if (columnName.endsWith(">=")) {//大于或等于
-            if (verifyType && hasAt != true && valuesIsNotStringOrNumber) {
-              return ' ! value必须是String或Number类型！';
-            }
-
-            fun = '大于或等于' + (isValueNotEmpty ? '' : '，例如 1 9.9 "2020-01-01" 等');
-            key = columnName.substring(0, columnName.length - 2);
-          } else if (columnName.endsWith("<=")) {//小于或等于
-            if (verifyType && hasAt != true && valuesIsNotStringOrNumber) {
-              return ' ! value必须是String或Number类型！';
-            }
-
-            fun = '小于或等于' + (isValueNotEmpty ? '' : '，例如 1 9.9 "2020-01-01" 等');
-            key = columnName.substring(0, columnName.length - 2);
-          } else if (columnName.endsWith(">")) {//大于
-            if (verifyType && hasAt != true && valuesIsNotStringOrNumber) {
-              return ' ! value必须是String或Number类型！';
-            }
-
-            fun = '大于' + (isValueNotEmpty ? '' : '，例如 1 9.9 "2020-01-01" 等');
-            key = columnName.substring(0, columnName.length - 1);
-          } else if (columnName.endsWith("<")) {//小于
-            if (verifyType && hasAt != true && valuesIsNotStringOrNumber) {
-              return ' ! value必须是String或Number类型！';
-            }
-
-            fun = '小于' + (isValueNotEmpty ? '' : '，例如 1 9.9 "2020-01-01" 等');
-            key = columnName.substring(0, columnName.length - 1);
-          } else {
-            fun = '';
-            key = new String(columnName);
-          }
-
-
-          if (key.endsWith("&")) {
-            if (fun.length <= 0) {
-              return ' ! 逻辑运算符 & | 后面必须接其它功能符！';
-            }
-            logic = '符合全部';
-          } else if (key.endsWith("|")) {
-            if (fun.length <= 0) {
-              return ' ! 逻辑运算符 & | 后面必须接其它功能符！';
-            }
-            logic = '符合任意';
-          } else if (key.endsWith("!")) {
-            logic = '都不符合';
-          } else {
-            logic = '';
-          }
-
-          if (logic.length > 0) {
-            if (['GET', 'HEAD', 'GETS', 'HEADS', 'PUT', 'DELETE'].indexOf(method) < 0) {//逻辑运算符仅供GET,HEAD方法使用
-              return ' ! 逻辑运算符 & | ! 只能用于 GET,HEAD,GETS,HEADS,PUT,DELETE 请求！';
-            }
-            key = key.substring(0, key.length - 1);
-          }
-
-          if (StringUtil.isName(key) == false) {
-            return ' ! 字符 ' + key + ' 不合法！';
-          }
-
-          //功能符 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-        }
-
-        columnList = item['[]'];
-        if (columnList == null) {
-          continue;
-        }
-        log('getDoc [] for ' + i + ': columnList = \n' + format(JSON.stringify(columnList)));
-
-        var name;
-        var columnNames = []
-        for (var j = 0; j < columnList.length; j++) {
-          column = (columnList[j] || {}).Column;
-          name = column == null ? null : column.column_name;
-          if (name == null || key != name) {
-            if (name != null) {
-              columnNames.push(name)
-            }
-            continue;
-          }
-
-          var p = (at.length <= 0 ? '' : at + ' < ')
-            + (fun.length <= 0 ? '' : fun + ' < ')
-            + (logic.length <= 0 ? '' : logic + ' < ');
-
-          var o = database == 'POSTGRESQL'
-            ? (columnList[j] || {}).PgAttribute
-            : (database == 'SQLSERVER'
-                ? (columnList[j] || {}).ExtendedProperty
-                : column
-            );
-
-          column.column_type = CodeUtil.getColumnType(column, database);
-          var t = CodeUtil.getType4Language(language, column.column_type, true);
-          var c = (p.length <= 0 ? '' : p + key + ': ') + t + (column.is_nullable == 'YES' ? '? ' : ', ') + (o || {}).column_comment;
-
-          var ct = CodeUtil.getType4Language(CodeUtil.LANGUAGE_JAVA_SCRIPT, column.column_type, false);
-          if (verifyType && t != null && CodeUtil.isTypeMatch(ct, CodeUtil.getType4Language(CodeUtil.LANGUAGE_JAVA_SCRIPT, typeOfValue)) != true) {
-            // c = ' ! value必须是' + t + '类型！' + CodeUtil.getComment(c, false, '  ')
-            // if (ignoreError != true) {
-            //   throw new Error(c);
-            // }
-            return ' ! value必须是' + t + '类型！' + (isWarning ? ' ' : CodeUtil.getComment(c, false, '  '));
-          }
-
-          return isWarning ? ' ' : c;
-        }
-
-        return onlyTableAndColumn ? '' : ' ! 字段 ' + key + ' 不存在！只能是 [' + columnNames.join() + '] 中的一个！';
-      }
-
-      return '';
     }
+
+    if (tableList == null || tableList.length <= 0) {
+      return isWarning ? ' ' : '...';
+    }
+
+    var item;
+
+    var table;
+    var columnList;
+    var column;
+    for (var i = 0; i < tableList.length; i++) {
+      item = tableList[i];
+
+      //Table
+      table = item == null ? null : (database != 'SQLSERVER' ? item.Table : item.SysTable);
+      if (table == null || tableName != CodeUtil.getModelName(table.table_name)) {
+        continue;
+      }
+      log('getDoc [] for i=' + i + ': table = \n' + format(JSON.stringify(table)));
+
+      if (StringUtil.isEmpty(columnName)) {
+        return /*没必要，常识，太占地方，而且自动生成代码就有  CodeUtil.getType4Object(language) + ', ' + */ (
+          database == 'POSTGRESQL'
+            ? (item.PgClass || {}).table_comment
+            : (database == 'SQLSERVER'
+              ? (item.ExtendedProperty || {}).table_comment
+              : table.table_comment
+          )
+        );
+      }
+
+      var at = '';
+      var fun = '';
+      var key;
+      var logic = '';
+
+      var verifyType = isSubquery != true && value != null;
+
+      if (onlyTableAndColumn) {
+        key = new String(columnName);
+      }
+      else {
+
+        //功能符 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+        if (columnName.endsWith("()")) {//方法，查询完后处理，先用一个Map<key,function>保存？
+          if (['GET', 'HEAD'].indexOf(method) < 0) {
+            return ' ! 远程函数只能用于 GET,HEAD 请求！！';
+          }
+
+          if (value != null && valuesIsNotString) {
+            return ' ! value必须是String类型！';
+          }
+          if (value != null) {
+            var startIndex = value.indexOf("(");
+            if (startIndex <= 0 || value.endsWith(")") == false) {
+              return ' ! value必须符合 fun(arg0,arg1..) 这种格式！且不要有任何多余的空格！';
+            }
+            var fun = value.substring(0, startIndex);
+            if (StringUtil.isName(fun) != true) {
+              return '! 函数名' + fun + '不合法！value必须符合 fun(arg0,arg1..) 这种格式！且不要有任何多余的空格！';
+            }
+          }
+
+          if (isWarning) {
+            return ' ';
+          }
+
+          var priority = '';
+          if (columnName.endsWith("-()")) {
+            priority = ' < 在解析所在对象前优先执行';
+          }
+          else if (columnName.endsWith("+()")) {
+            priority = ' < 在解析所在对象后滞后执行';
+          }
+          else {
+            priority = '，执行时机在解析所在对象后，解析子对象前，可以在 () 前用 + - 设置优先级，例如 key-() 优先执行';
+          }
+
+          return '远程函数' + (isValueNotEmpty ? '，触发调用后端对应的方法/函数' + priority : '，例如 "isContain(praiseUserIdList,userId)"');
+        }
+
+        var hasAt = false;
+        if (columnName.endsWith("@")) {//引用，引用对象查询完后处理。fillTarget中暂时不用处理，因为非GET请求都是由给定的id确定，不需要引用
+          // 没传 value 进来，不好解析，而且太长导致后面的字段属性被遮住
+          // var lastIndex = value.lastIndexOf('/');
+          // var refLastPath =
+          // at = '引用赋值: ' + tableName + '.' + columnName + '=' + ;
+          hasAt = true;
+
+          at = '引用赋值' + (isValueNotEmpty ? (value.startsWith('/') ? '，从对象父级开始的相对(缺省)路径' : '，从最外层开始的绝对(完整)路径') : '，例如 "User/id" "[]/Moment/id" 等');
+          columnName = columnName.substring(0, columnName.length - 1);
+
+          if (value != null && valuesIsNotStringOrObject) {
+            return ' ! value必须是String或Object类型！';
+          }
+
+          verifyType = false;
+        }
+
+        if (columnName.endsWith("$")) {//搜索，查询时处理
+          if (verifyType && hasAt != true && valuesIsNotStringOrArray) {
+              return ' ! value必须是String或Array类型！';
+            }
+
+          fun = '模糊搜索' + (isValueNotEmpty ? '' : '，例如 "%c%" "S%" "%end" 等');
+          key = columnName.substring(0, columnName.length - 1);
+        }
+        else if (columnName.endsWith("~")) {//匹配正则表达式，查询时处理
+          if (verifyType && hasAt != true && valuesIsNotStringOrArray) {
+            return ' ! value必须是String或Array类型！';
+          }
+
+          fun = '正则匹配' + (isValueNotEmpty ? '' : '，例如 "C" "^[0-9]+$" "^[a-zA-Z]+$" 等');
+          key = columnName.substring(0, columnName.length - 1);
+          if (key.endsWith("*")) {
+            key = key.substring(0, key.length - 1);
+            fun += '(忽略大小写)';
+          }
+        }
+        else if (columnName.endsWith("%")) {//连续范围 BETWEEN AND，查询时处理
+          if (verifyType && hasAt != true && valuesIsNotStringOrArray) {
+            return ' ! value必须是String或Array类型！';
+          }
+
+          fun = '连续范围' + (isValueNotEmpty ? '' : '，例如 "82001,82020" "2018-01-01,2020-01-01" ["1-10", "90-100"] 等');
+          key = columnName.substring(0, columnName.length - 1);
+        }
+        else if (columnName.endsWith("{}")) {//被包含，或者说key对应值处于value的范围内。查询时处理
+          if (verifyType && hasAt != true && valuesIsNotStringOrArray) {
+            return ' ! value必须是String或Array类型！';
+          }
+
+          fun = '匹配 选项/条件' + (isValueNotEmpty ? '' : '，例如 ' + (valuesIsNotString ? '[1, 2, 3] ["%c%", "S%", "%end"] 等' : '">100" "%2=0;<=100000" 等'));
+          key = columnName.substring(0, columnName.length - 2);
+
+          verifyType = false;
+        }
+        else if (columnName.endsWith("<>")) {//包含，或者说value处于key对应值的范围内。查询时处理
+          fun = '包含选项' + (isValueNotEmpty ? '' : '，例如 1 "Test" [82001, 82002] 等');
+          key = columnName.substring(0, columnName.length - 2);
+
+          verifyType = false;
+        }
+        else if (columnName.endsWith("}{")) {//存在，EXISTS。查询时处理
+          if (verifyType && hasAt != true && isSubquery != true) {
+            return ' ! key}{ 后面必须接 @，写成 key}{@:{} 格式！';
+          }
+          if (verifyType && valuesIsNotObject) {
+            return ' ! value必须是Object类型！';
+          }
+
+          fun = '是否存在' + (isValueNotEmpty ? '' : '，例如 { "from":"Comment", "Comment":{ "@column":"userId" } }');
+          key = columnName.substring(0, columnName.length - 2);
+
+          verifyType = false;
+        }
+        else if (columnName.endsWith("+")) {//延长，PUT查询时处理
+          if (method != 'PUT') {//不为PUT就抛异常
+            return ' ! 功能符 + - 只能用于PUT请求！';
+          }
+          fun = '增加/扩展' + (isValueNotEmpty ? '' : '，例如 1 9.9 "a" [82001, 82002] 等');
+          key = columnName.substring(0, columnName.length - 1);
+        }
+        else if (columnName.endsWith("-")) {//缩减，PUT查询时处理
+          if (method != 'PUT') {//不为PUT就抛异常
+            return ' ! 功能符 + - 只能用于PUT请求！';
+          }
+          fun = '减少/去除' + (isValueNotEmpty ? '' : '，例如 1 9.9 "a" [82001, 82002] 等');
+          key = columnName.substring(0, columnName.length - 1);
+        }
+        else if (columnName.endsWith(">=")) {//大于或等于
+          if (verifyType && hasAt != true && valuesIsNotStringOrNumber) {
+            return ' ! value必须是String或Number类型！';
+          }
+
+          fun = '大于或等于' + (isValueNotEmpty ? '' : '，例如 1 9.9 "2020-01-01" 等');
+          key = columnName.substring(0, columnName.length - 2);
+        }
+        else if (columnName.endsWith("<=")) {//小于或等于
+          if (verifyType && hasAt != true && valuesIsNotStringOrNumber) {
+            return ' ! value必须是String或Number类型！';
+          }
+
+          fun = '小于或等于' + (isValueNotEmpty ? '' : '，例如 1 9.9 "2020-01-01" 等');
+          key = columnName.substring(0, columnName.length - 2);
+        }
+        else if (columnName.endsWith(">")) {//大于
+          if (verifyType && hasAt != true && valuesIsNotStringOrNumber) {
+            return ' ! value必须是String或Number类型！';
+          }
+
+          fun = '大于' + (isValueNotEmpty ? '' : '，例如 1 9.9 "2020-01-01" 等');
+          key = columnName.substring(0, columnName.length - 1);
+        }
+        else if (columnName.endsWith("<")) {//小于
+          if (verifyType && hasAt != true && valuesIsNotStringOrNumber) {
+            return ' ! value必须是String或Number类型！';
+          }
+
+          fun = '小于' + (isValueNotEmpty ? '' : '，例如 1 9.9 "2020-01-01" 等');
+          key = columnName.substring(0, columnName.length - 1);
+        }
+        else {
+          fun = '';
+          key = new String(columnName);
+        }
+
+
+        if (key.endsWith("&")) {
+          if (fun.length <= 0) {
+            return ' ! 逻辑运算符 & | 后面必须接其它功能符！';
+          }
+          logic = '符合全部';
+        }
+        else if (key.endsWith("|")) {
+          if (fun.length <= 0) {
+            return ' ! 逻辑运算符 & | 后面必须接其它功能符！';
+          }
+          logic = '符合任意';
+        }
+        else if (key.endsWith("!")) {
+          logic = '都不符合';
+        }
+        else {
+          logic = '';
+        }
+
+        if (logic.length > 0) {
+          if (['GET', 'HEAD', 'GETS', 'HEADS', 'PUT', 'DELETE'].indexOf(method) < 0) {//逻辑运算符仅供GET,HEAD方法使用
+            return ' ! 逻辑运算符 & | ! 只能用于 GET,HEAD,GETS,HEADS,PUT,DELETE 请求！';
+          }
+          key = key.substring(0, key.length - 1);
+        }
+
+        if (StringUtil.isName(key) == false) {
+          return ' ! 字符 ' + key + ' 不合法！';
+        }
+
+        //功能符 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+      }
+
+      columnList = item['[]'];
+      if (columnList == null) {
+        continue;
+      }
+      log('getDoc [] for ' + i + ': columnList = \n' + format(JSON.stringify(columnList)));
+
+      var name;
+      var columnNames = []
+      for (var j = 0; j < columnList.length; j++) {
+        column = (columnList[j] || {}).Column;
+        name = column == null ? null : column.column_name;
+        if (name == null || key != name) {
+          if (name != null) {
+            columnNames.push(name)
+          }
+          continue;
+        }
+
+        var p = (at.length <= 0 ? '' : at + ' < ')
+          + (fun.length <= 0 ? '' : fun + ' < ')
+          + (logic.length <= 0 ? '' : logic + ' < ');
+
+        var o = database == 'POSTGRESQL'
+          ? (columnList[j] || {}).PgAttribute
+          : (database == 'SQLSERVER'
+              ? (columnList[j] || {}).ExtendedProperty
+              : column
+          );
+
+        column.column_type = CodeUtil.getColumnType(column, database);
+        var t = CodeUtil.getType4Language(language, column.column_type, true);
+        var c = (p.length <= 0 ? '' : p + key + ': ') + t + (column.is_nullable == 'YES' ? '? ' : ', ') + (o || {}).column_comment;
+
+        var ct = CodeUtil.getType4Language(CodeUtil.LANGUAGE_JAVA_SCRIPT, column.column_type, false);
+        if (verifyType && t != null && CodeUtil.isTypeMatch(ct, CodeUtil.getType4Language(CodeUtil.LANGUAGE_JAVA_SCRIPT, typeOfValue)) != true) {
+          // c = ' ! value必须是' + t + '类型！' + CodeUtil.getComment(c, false, '  ')
+          // if (ignoreError != true) {
+          //   throw new Error(c);
+          // }
+          return ' ! value必须是' + t + '类型！' + (isWarning ? ' ' : CodeUtil.getComment(c, false, '  '));
+        }
+
+        return isWarning ? ' ' : c;
+      }
+
+      return onlyTableAndColumn ? '' : ' ! 字段 ' + key + ' 不存在！只能是 [' + columnNames.join() + '] 中的一个！';
+    }
+
+    return '';
   },
 
   getType4Request: function (value) {
@@ -6791,4 +6827,8 @@ var CodeUtil = {
     return (targetType == 'number' && realType == 'integer') || (targetType == 'string' && ['date', 'time', 'datetime'].indexOf(realType) >= 0);
   }
 
+};
+
+if (typeof module == 'object') {
+  module.exports = CodeUtil;
 }
