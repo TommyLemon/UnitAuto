@@ -4900,7 +4900,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             allCount += (random == null || random.count == null ? 0 : random.count)
           }
 
-          App.testRandomAllCount = allCount
+          App.randomAllCount = allCount
           App.randomDoneCount = 0
 
           if (allCount <= 0) {
@@ -4946,7 +4946,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
             App[testSubList ? 'currentRandomSubIndex' : 'currentRandomIndex'] = index
             this.testRandomSingle(show, false, itemAllCount > 1 && ! testSubList, item, this.type, url, json, header, isCross, function (url, res, err) {
-              App.randomDoneCount += itemAllCount // ++
+              // 已经在 onTestReponse 中加了 App.randomDoneCount += itemAllCount // ++
               App.testRandomProcess = App.randomDoneCount >= allCount ? '' : ('正在测试: ' + App.randomDoneCount + '/' + allCount)
               if (res instanceof Object) {  // 可能通过 onTestResponse 返回的是 callback(true, 18, null)
                 try {
@@ -5476,7 +5476,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           if (isCrossDone) {
             this.testProcess = (this.isMLEnabled ? '机器学习:已开启' : '机器学习:已关闭')
             if (accountIndex == accounts.length) {
-              // this.currentAccountIndex = accounts.length - 1
+              this.currentAccountIndex = accounts.length - 1  // -1 导致最后右侧显示空对象
               if (callback) {
                 callback('已完成账号交叉测试: 退出登录状态 和 每个账号登录状态')
               } else {
@@ -5514,9 +5514,14 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         //   return
         // }
 
-        const list = this.remotes || []
+        const list = (isRandom ? this.randoms : this.remotes) || []
         const allCount = list.length
         App.doneCount = 0
+        App.deepAllCount = 0
+        App.randomDoneCount = 0
+        if (isRandom != true) {
+          App.allCount = allCount
+        }
 
         if (allCount <= 0) {
           if (callback) {
@@ -5561,13 +5566,21 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           const item = list[i]
           const document = item == null ? null : item.Method
           if (document == null || document.method == null) {
-            App.doneCount ++
+            if (isRandom) {
+              App.randomDoneCount ++
+            } else {
+              App.doneCount ++
+            }
             continue
           }
           var method = (document.method || '').toLowerCase()
           if (method.indexOf('login') >= 0 || method.indexOf('logout') >= 0) { //login会导致登录用户改变为默认的但UI上还显示原来的，单独测试OWNER权限时能通过很困惑
             this.log("startTest  method.indexOf('login') >= 0 || method.indexOf('logout') >= 0 >> continue")
-            App.doneCount ++
+            if (isRandom) {
+              App.randomDoneCount ++
+            } else {
+              App.doneCount ++
+            }
             continue
           }
           this.log('test  document = ' + JSON.stringify(document, null, '  '))
@@ -5630,7 +5643,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               App.log('test  App.request >> } catch (e) {\n' + e.message)
             }
 
-            App.compareResponse(allCount, list, index, item, res.data, isRandom, accountIndex, false, err, null, isCross)
+            App.compareResponse(allCount, list, index, item, res.data, isRandom, accountIndex, false, err, null, isCross, callback)
           })
         }
 
@@ -5679,7 +5692,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           var rsp = JSON.parse(JSON.stringify(this.removeDebugInfo(response) || {}))
           rsp = JSONResponse.array2object(rsp, 'methodArgs', ['methodArgs'], true)
 
-          tr.compare = JSONResponse.compareResponse(standard, rsp, '', this.isMLEnabled, null, ['call()[]']) || {}
+          tr.compare = JSONResponse.compareResponse(standard, rsp, '', this.isMLEnabled, null, ['call()[]'], ignoreTrend) || {}
           tr.compare.duration = it.durationHint
         }
 
@@ -5744,10 +5757,8 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
         if (isRandom) {
           App.randomDoneCount ++
-          App.randomAllCount = allCount
         } else {
           App.doneCount ++
-          App.allCount = allCount
         }
 
         var doneCount = isRandom ? App.randomDoneCount : App.doneCount
@@ -5809,28 +5820,38 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
       startRandomTest4Doc: function (list, indexes, position, deepAllCount, accountIndex, isCross) {
         const accInd = accountIndex
         var callback = function (isRandom, allCount) {
+          if (App.randomDoneCount < App.randomAllCount) {
+            return
+          }
+          App.randomDoneCount = 0
+          // App.randomAllCount = 0
+
+          App.deepDoneCount ++
+          const deepDoneCount = App.deepDoneCount
+          const autoTestCallback = App.autoTestCallback
+
+          App.testProcess = deepDoneCount < deepAllCount ? ('正在深度测试: ' + deepDoneCount + '/' + deepAllCount) : (App.isMLEnabled ? '机器学习:已开启' : '机器学习:已关闭')
+
           setTimeout(function () {
             App.isTestCaseShow = true
 
-            App.deepDoneCount ++
-            App.testProcess = App.deepDoneCount < deepAllCount ? ('正在深度测试: ' + App.deepDoneCount + '/' + deepAllCount) : (App.isMLEnabled ? '机器学习:已开启' : '机器学习:已关闭')
-            if (typeof App.autoTestCallback == 'function') {
-              App.autoTestCallback('正在深度测试')
+            if (typeof autoTestCallback == 'function') {
+              autoTestCallback('正在深度测试')
             }
 
-            if (App.deepDoneCount < deepAllCount) {
+            if (deepDoneCount < deepAllCount) {
               setTimeout(function () {
                 App.startRandomTest4Doc(list, indexes, position + 1, deepAllCount, accInd, isCross)
               }, IS_NODE ? 1000 : 1000)
             } else if (isCross) {
-              if (App.deepDoneCount == deepAllCount) {
+              if (deepDoneCount == deepAllCount) {
                 App.test(false, accInd + 1, isCross)
               }
             } else {
-              if (App.deepDoneCount == deepAllCount) {
+              if (deepDoneCount == deepAllCount) {
                 alert('已完成回归测试')
-                if (typeof App.autoTestCallback == 'function') {
-                  App.autoTestCallback('已完成回归测试')
+                if (typeof autoTestCallback == 'function') {
+                  autoTestCallback('已完成回归测试')
                 }
               }
             }
@@ -6311,7 +6332,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           }
 
           item.TestRecord = data.TestRecord
-          App.compareResponse(allCount, list, index, item, response, isRandom, App.currentAccountIndex, true, err, ignoreTrend, isCross);
+          App.compareResponse(allCount, list, index, item, response, isRandom, accountIndex, true, err, ignoreTrend, isCross);
         })
       },
 
