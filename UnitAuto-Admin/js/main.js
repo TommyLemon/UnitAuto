@@ -840,8 +840,8 @@
       randomDoneCount: 0,
       randomAllCount: 0
     },
-    methods: {
 
+    methods: {
       // 全部展开
       expandAll: function () {
         if (this.view != 'code') {
@@ -4946,8 +4946,6 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
             App[testSubList ? 'currentRandomSubIndex' : 'currentRandomIndex'] = index
             this.testRandomSingle(show, false, itemAllCount > 1 && ! testSubList, item, this.type, url, json, header, isCross, function (url, res, err) {
-              // 已经在 onTestReponse 中加了 App.randomDoneCount += itemAllCount // ++
-              App.testRandomProcess = App.randomDoneCount >= allCount ? '' : ('正在测试: ' + App.randomDoneCount + '/' + allCount)
               if (res instanceof Object) {  // 可能通过 onTestResponse 返回的是 callback(true, 18, null)
                 try {
                   App.onResponse(url, res, err)
@@ -5475,6 +5473,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           this.crossProcess = isCrossDone ? '交叉账号:已开启' : ('交叉账号: ' + (accountIndex + 1) + '/' + accounts.length)
           if (isCrossDone) {
             this.testProcess = (this.isMLEnabled ? '机器学习:已开启' : '机器学习:已关闭')
+            this.testRandomProcess = ''
             if (accountIndex == accounts.length) {
               this.currentAccountIndex = accounts.length - 1  // -1 导致最后右侧显示空对象
               if (callback) {
@@ -5762,8 +5761,12 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         }
 
         var doneCount = isRandom ? App.randomDoneCount : App.doneCount
+        if (isRandom) {
+          this.testRandomProcess = doneCount >= allCount ? '' : ('正在测试: ' + doneCount + '/' + allCount)
+        } else {
+          this.testProcess = doneCount >= allCount ? (this.isMLEnabled ? '机器学习:已开启' : '机器学习:已关闭') : '正在测试: ' + doneCount + '/' + allCount
+        }
 
-        this.testProcess = doneCount >= allCount ? (this.isMLEnabled ? '机器学习:已开启' : '机器学习:已关闭') : '正在测试: ' + doneCount + '/' + allCount
         if (doneCount < allCount && callback != this.autoTestCallback && typeof this.autoTestCallback == 'function') {
           this.autoTestCallback('正在测试')
         }
@@ -5831,6 +5834,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           const autoTestCallback = App.autoTestCallback
 
           App.testProcess = deepDoneCount < deepAllCount ? ('正在深度测试: ' + deepDoneCount + '/' + deepAllCount) : (App.isMLEnabled ? '机器学习:已开启' : '机器学习:已关闭')
+          App.testRandomProcess = App.randomDoneCount >= App.randomAllCount ? '' : ('正在测试: ' + App.randomDoneCount + '/' + App.randomAllCount)
 
           setTimeout(function () {
             App.isTestCaseShow = true
@@ -5843,15 +5847,18 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               setTimeout(function () {
                 App.startRandomTest4Doc(list, indexes, position + 1, deepAllCount, accInd, isCross)
               }, IS_NODE ? 1000 : 1000)
-            } else if (isCross) {
-              if (deepDoneCount == deepAllCount) {
-                App.test(false, accInd + 1, isCross)
-              }
             } else {
-              if (deepDoneCount == deepAllCount) {
-                alert('已完成回归测试')
-                if (typeof autoTestCallback == 'function') {
-                  autoTestCallback('已完成回归测试')
+              App.testRandomProcess = ''
+              if (isCross) {
+                if (deepDoneCount == deepAllCount) {
+                  App.test(false, accInd + 1, isCross)
+                }
+              } else {
+                if (deepDoneCount == deepAllCount) {
+                  alert('已完成回归测试')
+                  if (typeof autoTestCallback == 'function') {
+                    autoTestCallback('已完成回归测试')
+                  }
                 }
               }
             }
