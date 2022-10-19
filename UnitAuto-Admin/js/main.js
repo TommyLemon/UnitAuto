@@ -842,8 +842,8 @@
       randomDoneCount: 0,
       randomAllCount: 0
     },
-    methods: {
 
+    methods: {
       // 全部展开
       expandAll: function () {
         if (this.view != 'code') {
