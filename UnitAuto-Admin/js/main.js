@@ -10,7 +10,7 @@
         var alert = function(msg) {console.log('alert: ' + msg)};
         // var console = {log: function(msg) {}};
 
-        var vUrl = {value: 'http://localhost:8080/get'};
+        var vUrl = {value: 'unitauto.test.TestUtil.divide'};
         var vUrlComment = {value: ''};
         var vTransfer = {value: '', disabled: false};
         var vType = {value: 'JSON'};
@@ -76,6 +76,8 @@
         // var jsonlint = require('./jsonlint');
         // var parse = require('./parse');
         // var uuid = require('./uuid');
+
+        var URL_BASE = 'unitauto.test';  // JSONRequest.URL_BASE;
 
         var axios = require('axios');
         var editormd = null;
@@ -2798,7 +2800,8 @@
                 '@having': this.isMLEnabled ? (this.database == 'SQLSERVER' ? 'len(standard)>2' : 'length(standard)>2') : null  //用 MySQL 5.6   '@having': this.isMLEnabled ? 'json_length(standard)>0' : null
               }
             },
-            '@role': IS_NODE ? null : 'LOGIN'
+            '@role': IS_NODE ? null : 'LOGIN',
+            key: IS_NODE ? this.key : undefined  // 突破常规查询数量限制
           }
 
           if (IS_BROWSER) {
@@ -2893,7 +2896,8 @@
                   '@order': 'date-'
                 }
               }
-            }
+            },
+            key: IS_NODE ? this.key : undefined  // 突破常规查询数量限制
           }
 
           if (IS_BROWSER) {
@@ -3033,10 +3037,12 @@
           version: 1, // 全局默认版本号，非必须
           remember: vRemember.checked,
           format: false,
-          // 后端决定
-          // defaults: {
-          //   '@database': this.database,
-          //   '@schema': this.schema
+          defaults: isAdminOperation ? {
+            key: IS_NODE ? this.key : undefined  // 突破常规查询数量限制
+          } : undefined  // 后端决定
+          // {
+          //  '@database': StringUtil.isEmpty(this.database, true) ? undefined : this.database,
+          //  '@schema': StringUtil.isEmpty(this.schema, true) ? undefined : this.schema
           // }
         }
 
@@ -3051,7 +3057,7 @@
           })
         }
         else {
-          if (callback == null) {
+          if (IS_BROWSER && callback == null) {
             var item
             for (var i in this.accounts) {
               item = this.accounts[i]
@@ -3066,7 +3072,9 @@
           }
 
           this.showTestCase(false, this.isLocalShow)
-          this.onChange(false)
+          if (IS_BROWSER) {
+            this.onChange(false)
+          }
           this.request(isAdminOperation, REQUEST_TYPE_JSON, this.project + '/login', req, this.getHeader(vHeader.value), function (url, res, err) {
             if (callback) {
               callback(url, res, err)
@@ -4946,8 +4954,6 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
             App[testSubList ? 'currentRandomSubIndex' : 'currentRandomIndex'] = index
             this.testRandomSingle(show, false, itemAllCount > 1 && ! testSubList, item, this.type, url, json, header, isCross, function (url, res, err) {
-              // 已经在 onTestReponse 中加了 App.randomDoneCount += itemAllCount // ++
-              App.testRandomProcess = App.randomDoneCount >= allCount ? '' : ('正在测试: ' + App.randomDoneCount + '/' + allCount)
               if (res instanceof Object) {  // 可能通过 onTestResponse 返回的是 callback(true, 18, null)
                 try {
                   App.onResponse(url, res, err)
@@ -4958,6 +4964,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               }
 
               App.compareResponse(allCount, list, index, item, res.data, true, App.currentAccountIndex, false, err, null, isCross, callback)
+              return true
             })
           }
         }
@@ -5475,6 +5482,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           this.crossProcess = isCrossDone ? '交叉账号:已开启' : ('交叉账号: ' + (accountIndex + 1) + '/' + accounts.length)
           if (isCrossDone) {
             this.testProcess = (this.isMLEnabled ? '机器学习:已开启' : '机器学习:已关闭')
+            this.testRandomProcess = ''
             if (accountIndex == accounts.length) {
               this.currentAccountIndex = accounts.length - 1  // -1 导致最后右侧显示空对象
               if (callback) {
@@ -5658,8 +5666,12 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         var bdt = tr.duration || 0
         it.durationBeforeShowStr = bdt <= 0 ? '' : (bdt < 1000 ? bdt + 'ms' : (bdt < 1000*60 ? (bdt/1000).toFixed(1) + 's' : (bdt <= 1000*60*60 ? (bdt/1000/60).toFixed(1) + 'm' : '>1h')))
         try {
-          var durationInfo = response['time:start|duration|end']
+          var durationInfo = response == null ? null : response['time:start|duration|end']
           it.durationInfo = durationInfo
+          if (durationInfo == null) {
+            throw new Error("response['time:start|duration|end|parse|sql'] is null!");
+          }
+
           var di = durationInfo.substring(durationInfo.indexOf('\|') + 1)
           it.duration = di.substring(0, di.indexOf('\|') || di.length) || 0
           var dt = + it.duration
@@ -5673,7 +5685,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               : (dt > max ? '有点慢：比以往 [' + min + 'ms, ' + max + 'ms] 最慢还更慢' : '正常：在以往 [' + min + 'ms, ' + max + 'ms] 最快和最慢之间')))
         }
         catch (e) {
-          log(e)
+          // log(e)
           it.durationShowStr = it.durationShowStr || it.duration
           it.durationHint = it.durationHint || '最外层缺少字段 "time:start|duration|end"，无法对比耗时'
         }
@@ -5762,8 +5774,12 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         }
 
         var doneCount = isRandom ? App.randomDoneCount : App.doneCount
+        if (isRandom) {
+          this.testRandomProcess = doneCount >= allCount ? '' : ('正在测试: ' + doneCount + '/' + allCount)
+        } else {
+          this.testProcess = doneCount >= allCount ? (this.isMLEnabled ? '机器学习:已开启' : '机器学习:已关闭') : '正在测试: ' + doneCount + '/' + allCount
+        }
 
-        this.testProcess = doneCount >= allCount ? (this.isMLEnabled ? '机器学习:已开启' : '机器学习:已关闭') : '正在测试: ' + doneCount + '/' + allCount
         if (doneCount < allCount && callback != this.autoTestCallback && typeof this.autoTestCallback == 'function') {
           this.autoTestCallback('正在测试')
         }
@@ -5795,12 +5811,13 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         }
 
         this.tests[accountIndexStr] = tests
-        this.log('tests = ' + JSON.stringify(tests, null, '    '))
+        if (DEBUG) {
+          this.log('tests = ' + JSON.stringify(tests, null, '    '))
+        }
         // this.showTestCase(true)
 
         if (doneCount >= allCount) {  // 导致不继续测试  App.doneCount == allCount) {
-          if (callback != null) {
-            callback(isRandom, allCount)
+          if (callback != null && callback(isRandom, allCount)) {
             return
           }
 
@@ -5811,7 +5828,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           if (isRandom != true && deepAllCount > 0) { // 自动给非 红色 报错的接口跑参数注入
             App.deepDoneCount = 0;
             this.startRandomTest4Doc(list, this.toTestDocIndexes, 0, deepAllCount, accountIndex, isCross)
-          } else if (isCross && doneCount == allCount) {
+          } else if (isCross && doneCount == allCount && accountIndex <= this.accounts.length) {
             this.test(false, accountIndex + 1, isCross)
           }
         }
@@ -5821,8 +5838,9 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         const accInd = accountIndex
         var callback = function (isRandom, allCount) {
           if (App.randomDoneCount < App.randomAllCount) {
-            return
+            return true
           }
+
           App.randomDoneCount = 0
           // App.randomAllCount = 0
 
@@ -5831,6 +5849,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           const autoTestCallback = App.autoTestCallback
 
           App.testProcess = deepDoneCount < deepAllCount ? ('正在深度测试: ' + deepDoneCount + '/' + deepAllCount) : (App.isMLEnabled ? '机器学习:已开启' : '机器学习:已关闭')
+          App.testRandomProcess = App.randomDoneCount >= App.randomAllCount ? '' : ('正在测试: ' + App.randomDoneCount + '/' + App.randomAllCount)
 
           setTimeout(function () {
             App.isTestCaseShow = true
@@ -5842,30 +5861,37 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             if (deepDoneCount < deepAllCount) {
               setTimeout(function () {
                 App.startRandomTest4Doc(list, indexes, position + 1, deepAllCount, accInd, isCross)
-              }, IS_NODE ? 1000 : 1000)
-            } else if (isCross) {
-              if (deepDoneCount == deepAllCount) {
-                App.test(false, accInd + 1, isCross)
-              }
+              }, IS_NODE ? 200 : 1000)
             } else {
-              if (deepDoneCount == deepAllCount) {
-                alert('已完成回归测试')
-                if (typeof autoTestCallback == 'function') {
-                  autoTestCallback('已完成回归测试')
+              App.testRandomProcess = ''
+              if (isCross) {
+                if (deepDoneCount == deepAllCount) {
+                  App.test(false, accInd + 1, isCross)
+                }
+              } else {
+                if (deepDoneCount == deepAllCount) {
+                  alert('已完成回归测试')
+                  if (typeof autoTestCallback == 'function') {
+                    autoTestCallback('已完成回归测试')
+                  }
                 }
               }
             }
-          }, IS_NODE ? 1000 : 1000)
+          }, IS_NODE ? 200 : 1000)
+
+          return true
         }
 
         try {
           var index = indexes[position]
           var it = list[index] || {}
 
-          try {
-            document.getElementById('docItem' + index).scrollIntoView()
-          } catch (e) {
-            console.log(e)
+          if (IS_BROWSER) {
+            try {
+              document.getElementById('docItem' + index).scrollIntoView()
+            } catch (e) {
+              console.log(e)
+            }
           }
 
           this.restoreRemote(index, it, false)
@@ -5942,6 +5968,8 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           delete obj["depth:count|max"]
           delete obj["time:start|duration|end"]
           delete obj["time:start|duration|end|parse|sql"]
+          // 保留 delete obj["throw"]
+          // 保留 delete obj["trace:throw"]
           delete obj["trace:stack"]
           delete obj["stack"]
           delete obj["debug:info|help"]
@@ -6412,6 +6440,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
       autoTest: function(callback, delayTime, isTest, rawReq, setting) {
         this.autoTestCallback = callback
+        this.currentAccountIndex = -1
 
         if (delayTime == null) {
           delayTime = 0
@@ -6425,7 +6454,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           rawReq = {
             send: true,
             type: REQUEST_TYPE_JSON,
-            url: 'http://localhost:8080/get'
+            url: 'unitauto.test.TestUtil.divide'
           }
         }
 
@@ -6442,9 +6471,9 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             isRandomSubListShow: false,
             isMLEnabled: true,
             isCrossEnabled: true,
-            testCaseCount: 100,
+            // testCaseCount: 100,
             testCasePage: 0,
-            randomCount: 100,
+            // randomCount: 100,
             randomPage: 0,
           }
         }
@@ -6458,11 +6487,11 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         this.isRandomSubListShow = setting.isRandomSubListShow
         this.isMLEnabled = setting.isMLEnabled
         this.isCrossEnabled = setting.isCrossEnabled
-        this.testCaseCount = setting.testCaseCount
+        // this.testCaseCount = setting.testCaseCount
         this.testCasePage = setting.testCasePage
-        this.randomCount = setting.randomCount
+        // this.randomCount = setting.randomCount
         this.randomPage = setting.randomPage
-        this.server = this.getBaseUrl()
+        this.server = 'http://localhost:8080' // this.getBaseUrl()
 
         this.login(true, function (url, res, err) {
           if (setting.isRandomShow && setting.isRandomListShow) {
@@ -6492,6 +6521,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
             App.showTestCase(true, setting.isLocalShow, function (url, res, err) {
               App.onTestCaseListResponse(IS_BROWSER, url, res, err)
+              App.isTestCaseShow = true
               App.handleTestArg(isTest, rawReq, delayTime, callback)
             })
           }

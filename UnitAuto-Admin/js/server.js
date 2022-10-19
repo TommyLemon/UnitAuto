@@ -4,7 +4,9 @@ const {getRequestFromURL, App} = require('./main');
 // const { createBundleRenderer } = require('vue-server-renderer')
 
 // const JSONResponse = require('../apijson/JSONResponse');
+const StringUtil = require('../apijson/StringUtil');
 
+var isCrossEnabled = true; // false;
 var isLoading = false;
 var startTime = 0;
 var endTime = 0;
@@ -42,7 +44,7 @@ function update() {
   var accountDoneCount = App.currentAccountIndex + 1;
   var accountAllCount = App.accounts.length;
 
-  accountProgress = accountDoneCount >= accountAllCount ? 1 : (accountDoneCount/accountAllCount).toFixed(2);
+  accountProgress = isCrossEnabled != true || accountAllCount <= 0 || accountDoneCount >= accountAllCount ? 1 : (accountDoneCount/accountAllCount).toFixed(2);
   testCaseProgress = App.doneCount >= App.allCount ? 1 : (App.doneCount/App.allCount).toFixed(2);
   deepProgress = App.deepDoneCount >= App.deepAllCount ? 1 : (App.deepDoneCount/App.deepAllCount).toFixed(2);
   randomProgress = App.randomDoneCount >= App.randomAllCount ? 1 : (App.randomDoneCount/App.randomAllCount).toFixed(2);
@@ -66,13 +68,14 @@ const app = new Koa();
 app.use(async ctx => {
   console.log(ctx)
 
-  if (ctx.path == '/start' || (isLoading != true && ctx.path == '/')) {
-    if (isLoading && ctx.path == '/start') {
+  if (ctx.path == '/test/start' || (isLoading != true && ctx.path == '/test')) {
+    if (isLoading && ctx.path == '/test/start') {
       ctx.body = 'Already started auto testing in node, please wait for minutes...';
       ctx.status = 200
       return
     }
 
+    isCrossEnabled = App.isCrossEnabled;
     isLoading = true;
     startTime = (new Date()).getTime();
     endTime = startTime;
@@ -89,22 +92,31 @@ app.use(async ctx => {
 
     update();
 
+    App.key = ctx.query.key;
+    if (StringUtil.isNotEmpty(App.key, true)) {
+      App.testCaseCount = App.data.testCaseCount = 1000;
+      App.randomCount = App.data.randomCount = 200;
+      App.randomSubCount = App.data.randomSubCount = 500;
+    }
+
     App.autoTest(function (msg, err) {
       message = msg;
       error = err;
       update();
       console.log('autoTest callback(' + msg + ')' + timeMsg + progressMsg);
-    })
+      return Number.isNaN(progress) != true && progress >= 1;
+    });
     isLoading = true;
+    isCrossEnabled = App.isCrossEnabled;
 
     ctx.status = ctx.response.status = 200; // 302;
     ctx.body = 'Auto testing in node...';
 
     // setTimeout(function () {  // 延迟无效
-    ctx.redirect('/status');
+    ctx.redirect('/test/status');
     // }, 1000)
   }
-  else if (ctx.path == '/status' || (isLoading && ctx.path == '/')) {
+  else if (ctx.path == '/test/status' || (isLoading && ctx.path == '/test')) {
     update();
     if (isLoading) {
       // ctx.response.header['refresh'] = "1";
@@ -116,4 +128,4 @@ app.use(async ctx => {
   }
 });
 
-app.listen(3000);
+app.listen(3001);
