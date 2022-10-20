@@ -1,4 +1,4 @@
-/*Copyright ©2017 TommyLemon(https://github.com/TommyLemon/APIAuto)
+/*Copyright ©2017 TommyLemon(https://github.com/TommyLemon/UnitAuto)
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use CodeUtil file except in compliance with the License.
@@ -3826,7 +3826,7 @@ var CodeUtil = {
 
 
         doc += '/**'
-          + '\n *APIAuto 自动生成 JavaBean\n *主页: https://github.com/TommyLemon/APIAuto'
+          + '\n *UnitAuto 自动生成 JavaBean\n *主页: https://github.com/TommyLemon/UnitAuto'
           + '\n *使用方法：\n *1.修改包名 package \n *2.import 需要引入的类，可使用快捷键 Ctrl+Shift+O '
           + '\n */'
           + '\npackage apijson.demo.server.model;\n\n\n'
@@ -3945,7 +3945,7 @@ var CodeUtil = {
 
 
         doc += '/**'
-          + '\n *APIAuto 自动生成 C++ Struct\n *主页: https://github.com/TommyLemon/APIAuto'
+          + '\n *UnitAuto 自动生成 C++ Struct\n *主页: https://github.com/TommyLemon/UnitAuto'
           + '\n *使用方法：\n *1.修改包名 namespace \n *2.#include 需要引入的类，可使用快捷键 Ctrl+Shift+O '
           + '\n */\n'
           + '\n#include <string>'
@@ -4063,7 +4063,7 @@ var CodeUtil = {
 
 
         doc += '/**'
-          + '\n *APIAuto 自动生成 JavaBean\n *主页: https://github.com/TommyLemon/APIAuto'
+          + '\n *UnitAuto 自动生成 JavaBean\n *主页: https://github.com/TommyLemon/UnitAuto'
           + '\n *使用方法：\n *1.修改包名 package \n *2.import 需要引入的类，可使用快捷键 Ctrl+Shift+O '
           + '\n */'
           + '\npackage apijson.demo.server.model;\n\n\n'
@@ -4184,7 +4184,7 @@ var CodeUtil = {
 
         doc += '<?php'
           + '\n/**'
-          + '\n *APIAuto 自动生成 PHP 实体类代码\n *主页: https://github.com/TommyLemon/APIAuto'
+          + '\n *UnitAuto 自动生成 PHP 实体类代码\n *主页: https://github.com/TommyLemon/UnitAuto'
           + '\n *使用方法：\n *1.修改包名 namespace \n *2.use 需要引入的类，可使用快捷键 Ctrl+Shift+O '
           + '\n */'
           + '\n\nnamespace apijson\\demo\\server\\model;\n\n\n'
@@ -4303,7 +4303,7 @@ var CodeUtil = {
 
 
         doc += '/**'
-          + '\n *APIAuto 自动生成 JavaBean\n *主页: https://github.com/TommyLemon/APIAuto'
+          + '\n *UnitAuto 自动生成 JavaBean\n *主页: https://github.com/TommyLemon/UnitAuto'
           + '\n *使用方法：\n *1.修改包名 package \n *2.import 需要引入的类，可使用快捷键 Ctrl+Shift+O '
           + '\n */'
           + '\npackage model\n\n\n'
@@ -4386,7 +4386,7 @@ var CodeUtil = {
 
 
         doc += '/**'
-          + '\n *APIAuto 自动生成 C# Bean\n *主页: https://github.com/TommyLemon/APIAuto'
+          + '\n *UnitAuto 自动生成 C# Bean\n *主页: https://github.com/TommyLemon/UnitAuto'
           + '\n *使用方法：\n *1.修改包名 namespace \n *2. using 需要引入的类，可使用快捷键 Ctrl+Shift+O '
           + '\n */\n'
           + '\nnamespace apijson.demo.server.model'
@@ -4479,7 +4479,7 @@ var CodeUtil = {
 
 
         doc += '/**'
-          + '\n *APIAuto 自动生成 TypeScript Entity\n *主页: https://github.com/TommyLemon/APIAuto'
+          + '\n *UnitAuto 自动生成 TypeScript Entity\n *主页: https://github.com/TommyLemon/UnitAuto'
           + '\n */\n\n\n'
           + CodeUtil.getComment(database != 'POSTGRESQL' ? table.table_comment : (item.PgClass || {}).table_comment, true)
           + '\n@MethodAccess'
@@ -4562,7 +4562,7 @@ var CodeUtil = {
 
 
         doc += '/**'
-          + '\n *APIAuto 自动生成 Python Entity\n *主页: https://github.com/TommyLemon/APIAuto'
+          + '\n *UnitAuto 自动生成 Python Entity\n *主页: https://github.com/TommyLemon/UnitAuto'
           + '\n *使用方法：\n *1.修改包名 package \n *2.import 需要引入的类，可使用快捷键 Ctrl+Shift+O '
           + '\n */'
           + '\npackage apijson.demo.server.model;\n\n\n'
@@ -4676,7 +4676,7 @@ var CodeUtil = {
 
 
         doc += '/**'
-          + '\n *APIAuto 自动生成 Swift Struct\n *主页: https://github.com/TommyLemon/APIAuto'
+          + '\n *UnitAuto 自动生成 Swift Struct\n *主页: https://github.com/TommyLemon/UnitAuto'
           + '\n *使用方法：\n *1.修改包名 package \n *2.import 需要引入的类，可使用快捷键 Ctrl+Shift+O '
           + '\n */'
           + '\npackage apijson.demo.server.model\n\n\n'
@@ -4753,7 +4753,7 @@ var CodeUtil = {
 
 
         doc += '/**'
-          + '\n *APIAuto 自动生成 JavaScript Entity\n *主页: https://github.com/TommyLemon/APIAuto'
+          + '\n *UnitAuto 自动生成 JavaScript Entity\n *主页: https://github.com/TommyLemon/UnitAuto'
           + '\n */\n\n\n'
           + CodeUtil.getComment(database != 'POSTGRESQL' ? table.table_comment : (item.PgClass || {}).table_comment, true)
           + '\n@MethodAccess'
@@ -4847,7 +4847,7 @@ var CodeUtil = {
 
 
         doc += '/**'
-          + '\n *APIAuto 自动生成 Kotlin Data Class\n *主页: https://github.com/TommyLemon/APIAuto'
+          + '\n *UnitAuto 自动生成 Kotlin Data Class\n *主页: https://github.com/TommyLemon/UnitAuto'
           + '\n *使用方法：\n *1.修改包名 package \n *2.import 需要引入的类，可使用快捷键 Ctrl+Shift+O '
           + '\n */'
           + '\npackage apijson.demo.server.model\n\n\n'

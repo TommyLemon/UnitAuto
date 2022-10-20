@@ -1116,7 +1116,7 @@
 
             var val = item2.substring(index + 1, item2.length)
 
-            var ind = val.indexOf('(')  //一定要有函数是为了避免里面是一个简短单词和 APIAuto 代码中变量冲突
+            var ind = val.indexOf('(')  //一定要有函数是为了避免里面是一个简短单词和 UnitAuto 代码中变量冲突
             if (ind > 0 && val.indexOf(')') > ind) {  //不从 0 开始是为了保证是函数，且不是 (1) 这种单纯限制作用域的括号
               try {
                 val = eval(val)
@@ -1133,7 +1133,7 @@
         return header
       },
 
-      // 分享 APIAuto 特有链接，打开即可还原分享人的 JSON 参数、设置项、搜索关键词、分页数量及页码等配置
+      // 分享 UnitAuto 特有链接，打开即可还原分享人的 JSON 参数、设置项、搜索关键词、分页数量及页码等配置
       shareLink: function (isRandom) {
         var jsonStr = null
         if (this.isTestCaseShow != true) {
@@ -1981,6 +1981,7 @@
             //
             //   commentObj = JSONResponse.updateStandard({}, mapReq2);
             // }
+
             const extName = App.exTxt.name;
             const baseUrl = App.getBaseUrl();
             const url = App.server + (isExportRandom || isEditResponse || did == null ? '/post' : '/put')
@@ -3355,7 +3356,8 @@
 
           vSend.disabled = false;
           if (this.isEditResponse != true) {
-            // vOutput.value = output = 'OK，请点击 [运行方法] 按钮来测试。[点击这里查看视频教程](https://www.bilibili.com/video/BV1Tk4y1R7Yo)'; // + code;
+            vOutput.value = output = '登录后点 ↑ 上方左侧最后图标按钮可查看用例列表，点上方右侧中间图标按钮可上传用例并且添加到列表中 ↑ \nOK，请点左上方 [远程执行] 按钮来测试。[点击这里查看视频教程](https://i.youku.com/i/UNTg1NzI1MjQ4MA==/videos?spm=a2hzp.8244740.0.0)' + code;
+
             this.showDoc()
           }
 
@@ -3685,6 +3687,19 @@
             header = {};
           }
           header['Apijson-Delegate-Id'] = this.delegateId
+        }
+        
+        var curUser = isAdminOperation ? null : this.getCurrentAccount()
+        if (curUser != null) {
+          if (req == null) {
+            req = {}
+          }
+          if (req.account == null) {
+            req.account = curUser.phone
+          }
+          if (req.password == null) {
+            req.password = curUser.password
+          }
         }
 
 
@@ -5669,7 +5684,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           var durationInfo = response == null ? null : response['time:start|duration|end']
           it.durationInfo = durationInfo
           if (durationInfo == null) {
-            throw new Error("response['time:start|duration|end|parse|sql'] is null!");
+            throw new Error("response['time:start|duration|end'] is null!");
           }
 
           var di = durationInfo.substring(durationInfo.indexOf('\|') + 1)
@@ -5964,8 +5979,8 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
       removeDebugInfo: function (obj) {
         if (obj != null) {
           delete obj["trace"]
-          delete obj["sql:generate|cache|execute|maxExecute"]
-          delete obj["depth:count|max"]
+          // 保留 delete obj["sql:generate|cache|execute|maxExecute"]
+          // 保留 delete obj["depth:count|max"]
           delete obj["time:start|duration|end"]
           delete obj["time:start|duration|end|parse|sql"]
           // 保留 delete obj["throw"]
@@ -6403,7 +6418,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         this.$refs[(isRandom ? (toId <= 0 ? 'testRandomResult' : 'testRandomSubResult') : 'testResult') + (isDuration ? 'Duration' : '') + 'Buttons'][index].setAttribute('data-hint', h || '');
       },
 
-      handleTestArg(hasTestArg, rawReq, delayTime, callback) {
+      handleTestArg: function(hasTestArg, rawReq, delayTime, callback) {
         if (hasTestArg && IS_BROWSER) {
           vUrlComment.value = ""
           vComment.value = ""
@@ -6647,7 +6662,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         setTimeout(function () {
           isSingle = ! isSingle
 
-          var hasTestArg = false  // 避免 http://localhost:63342/APIAuto/index.html?_ijt=fh8di51h7qip2d1s3r3bqn73nt 这种无意义参数
+          var hasTestArg = false  // 避免 http://localhost:63342/UnitAuto/index.html?_ijt=fh8di51h7qip2d1s3r3bqn73nt 这种无意义参数
           if (StringUtil.isEmpty(rawReq.type, true) == false) {
             hasTestArg = true
             App.type = StringUtil.toUpperCase(rawReq.type, true)

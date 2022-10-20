@@ -82,13 +82,16 @@
         </div>
 
         <div class="top-right">
-
-            <a v-show="User.id == null || User.id <= 0" href="https://git.code.tencent.com/Tencent_Open_Source/APIJSON" target="_blank" >
-                <img class="ui inline black image" height="24" src="http://apijson.cn/images/tencent_open_logo.png">
+            <a style="padding: 6px" v-show="User.id == null || User.id <= 0" href="https://git.code.tencent.com/Tencent_Open_Source/APIJSON" target="_blank" >
+              <img class="ui inline black image" height="24" src="http://apijson.cn/images/tencent_open_logo.png">
             </a>
 
-            <a v-show="User.id == null || User.id <= 0" href="https://gitee.com/Tencent/APIJSON" target="_blank">
-                <img class="ui inline black image" height="24" src="https://gitee.com/logo-black.svg?20171024" width="60">
+            <a style="padding: 6px" v-show="User.id == null || User.id <= 0" href="https://gitee.com/Tencent/APIJSON" target="_blank">
+              <img class="ui inline black image" height="24" src="https://gitee.com/logo-black.svg?20171024" width="60">
+            </a>
+
+            <a style="padding-left: 6px" v-show="User.id == null || User.id <= 0" href="https://gitee.com/Tencent/APIJSON" target="_blank">
+              <img style="margin-bottom: -1px" height="18" src="https://gitee.com/Tencent/APIJSON/badge/star.svg?theme=gvp">
             </a>
 
             <a v-show="User.id != null && User.id > 0" href="javascript:void(0)" @click="logout(true)">
@@ -133,7 +136,7 @@
            <input class="url" id="vUrlComment" :disabled="isEditResponse" type="text" style="width: 100%; position: absolute; z-index: -100; color: darkseagreen;background: #0000;"  />
            <input class="url" id="vUrl" :disabled="isEditResponse" type="text" @keyup="doOnKeyUp(event)" placeholder="请输入请求的接口地址" style="z-index: 0; background: #0000;" />
       </div>
-      <button class="send" id="vSend" @click="onClickSend()">{{ isEditResponse ? '模拟返回' : '运行方法' }}</button>
+      <button class="send" id="vSend" @click="onClickSend()">{{ isEditResponse ? '模拟返回' : '远程执行' }}</button>
     </div>
     <div v-show="isTestCaseShow" class="left-bar">
       <!--<svg class="icon" style="margin-left: 10px">-->
@@ -445,9 +448,9 @@ methodArgs/0/value: RANDOM_IN(1, 0.1, -10, 9.99, null)  // 随机取值
 
 methodArgs/1/type: ORDER_IN('long', 'double', 'Number', 'int', 'Float')  // 顺序取值
 methodArgs/1/value: ORDER_INT(-10, 100)  // 顺序整数
-  
+
   // 从数据库随机取值  methodArgs/1/value: RANDOM_DB(0, 1000, 'Random', 'count')
-  
+
   // 注释可省略，但如果未省略则前面两个空格必须；清空文本内容可查看规则。
 
   // ## 快捷键
