@@ -1,6 +1,6 @@
 
 (function () {
-  const DEBUG = true
+  const DEBUG = false // true
   const IS_NODE = typeof window == 'undefined'
   const IS_BROWSER = typeof window == 'object'
 
@@ -2705,6 +2705,28 @@
         this.showLogin(true, false)
       },
 
+      showCompare4TestCaseList: function (show) {
+        var testCases = show ? App.testCases : null
+        var allCount = testCases == null ? 0 : testCases.length
+        App.allCount = allCount
+        if (allCount > 0) {
+          var accountIndex = (this.accounts[this.currentAccountIndex] || {}).isLoggedIn ? this.currentAccountIndex : -1
+          this.currentAccountIndex = accountIndex  //解决 onTestResponse 用 -1 存进去， handleTest 用 currentAccountIndex 取出来为空
+
+          var tests = this.tests[String(accountIndex)]
+          if (tests != null && JSONObject.isEmpty(tests) != true) {
+            for (var i = 0; i < allCount; i++) {
+              var item = testCases[i]
+              var d = item == null ? null : item.Method
+              if (d == null || d.id == null) {
+                continue
+              }
+
+              this.compareResponse(allCount, testCases, i, item, (tests[d.id] || {})[0], false, accountIndex, true)
+            }
+          }
+        }
+      },
 
       //显示远程的测试用例文档
       showTestCase: function (show, isLocal, callback) {
@@ -2727,27 +2749,13 @@
           var allCount = testCases == null ? 0 : testCases.length
           App.allCount = allCount
           if (allCount > 0) {
-            var accountIndex = (this.accounts[this.currentAccountIndex] || {}).isLoggedIn ? this.currentAccountIndex : -1
-            this.currentAccountIndex = accountIndex  //解决 onTestResponse 用 -1 存进去， handleTest 用 currentAccountIndex 取出来为空
-
-            var tests = this.tests[String(accountIndex)] || {}
-            if (tests != null && JSONObject.isEmpty(tests) != true) {
-              for (var i = 0; i < allCount; i++) {
-                var item = testCases[i]
-                if (item == null) {
-                  continue
-                }
-                var d = item.Method || {}
-                this.compareResponse(allCount, testCases, i, item, (tests[d.id] || {})[0], false, accountIndex, true)
-              }
-            }
+            this.showCompare4TestCaseList(show)
             return;
           }
 
           this.isTestCaseShow = false
 
           var search = StringUtil.isEmpty(this.testCaseSearch, true) ? null : StringUtil.trim(this.testCaseSearch)
-
 
           var host = StringUtil.get(this.host);
           var pkg = this.getPackage()
@@ -2798,7 +2806,7 @@
                 'randomId': 0,
                 '@order': 'date-',
                 '@column': 'id,userId,documentId,testAccountId,duration,minDuration,maxDuration,response' + (this.isMLEnabled ? ',standard' : ''),
-                '@having': this.isMLEnabled ? (this.database == 'SQLSERVER' ? 'len(standard)>2' : 'length(standard)>2') : null  //用 MySQL 5.6   '@having': this.isMLEnabled ? 'json_length(standard)>0' : null
+                'standard{}': this.isMLEnabled ? (this.database == 'SQLSERVER' ? 'len(standard)>2' : 'length(standard)>2') : null  //用 MySQL 5.6   '@having': this.isMLEnabled ? 'json_length(standard)>0' : null
               }
             },
             '@role': IS_NODE ? null : 'LOGIN',
@@ -2836,6 +2844,8 @@
             App.showDoc()
           }
 
+          App.showCompare4TestCaseList(show)
+
           //App.onChange(false)
         }
       },
@@ -2853,8 +2863,8 @@
           vOutput.value = show ? '' : (output || '')
           this.showDoc()
         }
-
         this.randoms = this.randoms || []
+        this.showCompare4RandomList(show, isSub)
 
         if (show && this.isRandomShow && this.randoms.length <= 0 && item != null && item.id != null) {
           this.isRandomListShow = false
@@ -2941,6 +2951,8 @@
             vOutput.value = show ? '' : (output || '')
             App.showDoc()
           }
+
+          App.showCompare4RandomList(show, isSub)
 
           //App.onChange(false)
         }
@@ -3688,23 +3700,10 @@
           }
           header['Apijson-Delegate-Id'] = this.delegateId
         }
-        
-        var curUser = isAdminOperation ? null : this.getCurrentAccount()
-        if (curUser != null) {
-          if (req == null) {
-            req = {}
-          }
-          if (req.account == null) {
-            req.account = curUser.phone
-          }
-          if (req.password == null) {
-            req.password = curUser.password
-          }
-        }
 
 
         if (IS_NODE) {
-          console.log('req = ' + JSON.stringify(req, null, '  '))
+          log('req = ' + JSON.stringify(req, null, '  '))
           // 低版本 node 报错 cannot find module 'node:url' ，高版本报错 TypeError: axiosCookieJarSupport is not a function
           //   const axiosCookieJarSupport = require('axios-cookiejar-support').default;
           //   const tough = require('tough-cookie');
@@ -6047,6 +6046,51 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
       },
 
+      showCompare4RandomList: function (show, isSub) {
+        // this.resetCount(this.currentRandomItem)
+
+        var randoms = show ? (isSub ? this.randomSubs : this.randoms) : null
+        var randomCount = randoms == null ? 0 : randoms.length
+        if (randomCount > 0) {
+          var accountIndex = (this.accounts[this.currentAccountIndex] || {}).isLoggedIn ? this.currentAccountIndex : -1
+          this.currentAccountIndex = accountIndex  //解决 onTestResponse 用 -1 存进去， handleTest 用 currentAccountIndex 取出来为空
+          var docId = ((this.currentRemoteItem || {}).Method || {}).id
+
+          var tests = (this.tests[String(accountIndex)] || {})[docId]
+          if (tests != null && JSONObject.isEmpty(tests) != true) {
+            this.resetCount(this.currentRandomItem)
+
+            for (var i = 0; i < randomCount; i++) {
+              var item = randoms[i]
+              var r = item == null ? null : item.Random
+              if (r == null || r.id == null) {
+                continue
+              }
+
+              this.resetCount(item)
+
+              var subCount = r.count || 0
+              if (subCount == 1) {
+                this.compareResponse(randomCount, randoms, i, item, tests[r.id], true, accountIndex, true)
+              }
+              else if (subCount > 1) {
+                var subRandoms = item['[]'] || []
+                var subSize = Math.min(subRandoms.length, subCount)
+                for (var j = 0; j < subSize; j++) {
+                  var subItem = subRandoms[j]
+                  var sr = subItem == null ? null : subItem.Random
+                  if (sr == null || sr.id == null) {
+                    continue
+                  }
+
+                  this.compareResponse(subSize, subRandoms, j, subItem, tests[sr.id > 0 ? sr.id : (sr.toId + '' + sr.id)], true, accountIndex, true)
+                }
+              }
+            }
+          }
+        }
+      },
+
       /**
        * @param index
        * @param item
@@ -6363,7 +6407,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             'host': this.getBaseUrl(),
             '@order': 'date-',
             '@column': 'id,userId,testAccountId,documentId,randomId,duration,minDuration,maxDuration,response' + (this.isMLEnabled ? ',standard' : ''),
-            '@having': this.isMLEnabled ? (this.database == 'SQLSERVER' ? 'len(standard)>2' : 'length(standard)>2') : null  // '@having': this.isMLEnabled ? 'json_length(standard)>0' : null
+            'standard{}': this.isMLEnabled ? (this.database == 'SQLSERVER' ? 'len(standard)>2' : 'length(standard)>2') : null  // '@having': this.isMLEnabled ? 'json_length(standard)>0' : null
           }
         }, {}, function (url, res, err) {
           App.onResponse(url, res, err)
@@ -6455,7 +6499,6 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
       autoTest: function(callback, delayTime, isTest, rawReq, setting) {
         this.autoTestCallback = callback
-        this.currentAccountIndex = -1
 
         if (delayTime == null) {
           delayTime = 0
@@ -6507,6 +6550,10 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         // this.randomCount = setting.randomCount
         this.randomPage = setting.randomPage
         this.server = 'http://localhost:8080' // this.getBaseUrl()
+
+        // if (this.isCrossEnabled) {
+        //   this.currentAccountIndex = -1
+        // }
 
         this.login(true, function (url, res, err) {
           if (setting.isRandomShow && setting.isRandomListShow) {
@@ -6853,12 +6900,12 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
   }
   else {
     var data = App.data
-    if (data instanceof Object && data instanceof Array == false) {
+    if (data instanceof Object && (data instanceof Array == false)) {
       App = Object.assign(App, data)
     }
 
     var methods = App.methods
-    if (methods instanceof Object && methods instanceof Array == false) {
+    if (methods instanceof Object && (methods instanceof Array == false)) {
       App = Object.assign(App, methods)
     }
 

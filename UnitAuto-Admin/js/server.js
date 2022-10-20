@@ -49,8 +49,8 @@ function update() {
   deepProgress = App.deepDoneCount >= App.deepAllCount ? 1 : (App.deepDoneCount/App.deepAllCount).toFixed(2);
   randomProgress = App.randomDoneCount >= App.randomAllCount ? 1 : (App.randomDoneCount/App.randomAllCount).toFixed(2);
   // progress = accountProgress*testCaseProgress*deepProgress*randomProgress;
-  progress = accountProgress >= 1 ? 1 : (accountProgress + (accountAllCount <= 0 ? 1 : 1/accountAllCount)*(testCaseProgress
-    + (App.allCount <= 0 ? 1 : 1/App.allCount)*(deepProgress + (App.deepAllCount <= 0 ? 1 : 1/App.deepAllCount)*randomProgress)));
+  progress = accountProgress >= 1 ? 1 : (accountProgress + (accountAllCount <= 0 ? 1 : 1/accountAllCount*(testCaseProgress
+    + (App.allCount <= 0 ? 1 : 1/App.allCount*(deepProgress + (App.deepAllCount <= 0 ? 1 : 1/App.deepAllCount*randomProgress))))));
 
   if (progress >= 1) {
     isLoading = false;
@@ -75,7 +75,9 @@ app.use(async ctx => {
       return
     }
 
-    isCrossEnabled = App.isCrossEnabled;
+    App.isCrossEnabled = isCrossEnabled;
+    App.currentAccountIndex = -1;
+    // isCrossEnabled = App.isCrossEnabled;
     isLoading = true;
     startTime = (new Date()).getTime();
     endTime = startTime;
