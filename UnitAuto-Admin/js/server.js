@@ -6,7 +6,7 @@ const {getRequestFromURL, App} = require('./main');
 // const JSONResponse = require('../apijson/JSONResponse');
 const StringUtil = require('../apijson/StringUtil');
 
-var isCrossEnabled = true; // false;
+var isCrossEnabled = false; // true; //
 var isLoading = false;
 var startTime = 0;
 var endTime = 0;
@@ -63,6 +63,7 @@ function update() {
     + '\nRandom & Order: ' + App.randomDoneCount + ' / ' + App.randomAllCount + ' = ' + (100*randomProgress) + '%';
 };
 
+const PORT = 3001;
 
 const app = new Koa();
 app.use(async ctx => {
@@ -75,9 +76,11 @@ app.use(async ctx => {
       return
     }
 
-    App.isCrossEnabled = isCrossEnabled;
-    App.currentAccountIndex = -1;
-    // isCrossEnabled = App.isCrossEnabled;
+    App.isCrossEnabled = isCrossEnabled; // isCrossEnabled = App.isCrossEnabled;
+    if (isCrossEnabled) {
+      App.currentAccountIndex = -1;
+    }
+
     isLoading = true;
     startTime = (new Date()).getTime();
     endTime = startTime;
@@ -130,4 +133,10 @@ app.use(async ctx => {
   }
 });
 
-app.listen(3001);
+app.listen(PORT);
+
+console.log(`已启动 Node HTTP 服务，可以
+GET http://localhost:${PORT}/test/start
+来启动后台回归测试，或者
+GET http://localhost:${PORT}/test/status
+来查询测试进度。`);

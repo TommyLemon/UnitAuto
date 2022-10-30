@@ -5875,7 +5875,7 @@ var CodeUtil = {
     OWNER: '拥有者',
     ADMIN: '管理员'
   },
-  DATABASE_KEYS: ['MYSQL', 'POSTGRESQL', 'SQLSERVER', 'ORACLE', 'DB2', 'CLICKHOUSE', 'SQLITE'],
+  DATABASE_KEYS: ['MYSQL', 'POSTGRESQL', 'SQLSERVER', 'ORACLE', 'DB2', 'DAMENG', 'CLICKHOUSE', 'SQLITE', 'TDENGINE'],
 
   /**获取请求JSON的注释
    * @param tableList
