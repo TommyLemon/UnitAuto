@@ -350,7 +350,7 @@ npm i xxx
 
 启动成功后会有提示，点击链接或者复制到浏览器输入框打开即可。<br /><br />
 如果托管服务是用 [APIJSONBoot-MultiDataSource](https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server/APIJSONBoot-MultiDataSource) 部署的，<br />
-链接 host 后可以加上 /api，例如 http://localhost:3001/api/test/start <br />
+链接 host 后可以加上 /unit，例如 http://localhost:3001/unit/test/start <br />
 通过这个接口来放宽前端执行时查询测试用例、参数配置等列表的条数，一次可批量执行更多用例。
 
 <br /><br />
