@@ -209,7 +209,7 @@ dependencies {
 
 ### 部署后台管理工具
 可以直接[下载源码](https://github.com/TommyLemon/UnitAuto/archive/master.zip)解压后用浏览器打开 [UnitAuto-Admin](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Admin)/index.html，建议用 Chrome 或 火狐 (Safari、Edge、IE 等可能有兼容问题)。<br />
-也可以直接访问官网的线上环境 http://apijson.cn/unit 或开发环境 http://apijson.org:8000/unit 。<br />
+也可以直接访问官网的环境 http://apijson.cn/unit <br />
 <br />
 点右上角设置项 "项目服务器地址 URL"，把输入框内基地址改为你主机的地址(例如 http://192.168.0.102:8080 )<br />
 <br />
