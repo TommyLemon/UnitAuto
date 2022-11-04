@@ -379,7 +379,7 @@ https://github.com/TommyLemon/APIAuto/issues
 ### 技术交流
 ##### 关于作者
 [https://github.com/TommyLemon](https://github.com/TommyLemon)<br />
-<img width="1279" alt="image" src="https://user-images.githubusercontent.com/5738175/189525500-5fe3ba45-c2b3-4df9-9607-c84120111e3c.png">
+<img width="1279" alt="image" src="https://user-images.githubusercontent.com/5738175/199979403-ace8b574-cd64-4582-8c19-b51571945214.png">
 
 ##### QQ群聊
 如果有什么问题或建议可以 [去 APIAuto 提 issue](https://github.com/TommyLemon/APIAuto/issues)，交流技术，分享经验。<br >
@@ -389,11 +389,11 @@ https://github.com/TommyLemon/APIAuto/issues
 
 ### 其它项目
 
-[APIJSON](https://github.com/Tencent/APIJSON) 腾讯零代码、热更新、全自动 ORM 库 🏆 后端接口和文档自动化，前端(客户端) 定制返回 JSON 的数据和结构
+[APIJSON](https://github.com/Tencent/APIJSON) 腾讯零代码、全功能、强安全 ORM 库，后端接口和文档零代码，前端(客户端) 定制返回 JSON 的数据和结构
 
-[APIAuto](https://github.com/TommyLemon/APIAuto) 敏捷开发最强大易用的 HTTP 接口工具，机器学习零代码测试、生成代码与静态检查、生成文档与光标悬浮注释
+[APIAuto](https://github.com/TommyLemon/APIAuto) 敏捷开发最强大易用的 HTTP 接口工具，机器学习零代码测试、生成代码与静态检查、生成文档与光标悬浮注释，集 文档、测试、Mock、调试、管理 于一体的一站式体验
 
-[SQLAuto](https://github.com/TommyLemon/SQLAuto) 智能零代码自动化测试 SQL 语句执行结果的数据库工具，任意增删改查、任意 SQL 模板变量
+[SQLAuto](https://github.com/TommyLemon/SQLAuto) 智能零代码自动化测试 SQL 语句执行结果的数据库工具，任意增删改查、任意 SQL 模板变量、一键批量生成参数组合、快速构造大量测试数据
 
 [apijson-doc](https://github.com/vincentCheng/apijson-doc) APIJSON 官方文档，提供排版清晰、搜索方便的文档内容展示，包括设计规范、图文教程等
 
