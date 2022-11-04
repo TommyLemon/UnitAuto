@@ -20,7 +20,7 @@
 腾讯 IEG(互动娱乐事业群)、WXG(微信事业群) 两大事业群多个部门的多个项目以及快手广告使用中。
 
 已被 互联网教育智能技术及应用国家工程实验室 收录。
-https://github.com/TommyLemon/UnitAuto/issues/15
+https://github.com/TommyLemon/APIAuto/issues/19
 
 ### 特点优势
 相比 JUnit, JTest, Mockito, Mockk 等一堆 Compiling testing 工具：<br />
@@ -226,7 +226,7 @@ dependencies {
 <br />
 <br />
 <br />
-自动管理测试用例 这个功能 需要部署APIJSON后端，见 <br /> 
+自动管理测试用例 这个功能 需要部署 APIJSONBoot ，见 <br /> 
 https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server
 <br />
 <br />
