@@ -376,6 +376,10 @@ https://github.com/TommyLemon/APIAuto/issues
 <br />
 <br />
 
+### 感谢开源
+* jsonon
+* editor.md
+* vue.js
 
 ### 技术交流
 ##### 关于作者
