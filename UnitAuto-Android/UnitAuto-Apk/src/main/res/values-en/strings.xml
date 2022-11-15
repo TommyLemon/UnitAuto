@@ -7,5 +7,8 @@
     <string name="screen">Screen: </string>
     <string name="horizontal">Horizontal</string>
     <string name="vertical">Vertical</string>
-    <string name="please_send_request_with_unit_auto">Please send request to this device with UnitAuto \nhttp://apijson.org/unit</string>
+    <string name="please_send_request_with_unit_auto">Please send request to this device with UnitAuto \nhttp://apijson.cn/unit</string>
+    <string name="ip_maybe_wrong_please_share_hotspot_and_use_another_device_to_view" >
+        The local IP maybe wrong, please share hotspot and use \nanother device(Computer, Phone, etc) to connect it, then view router IP
+    </string>
 </resources>

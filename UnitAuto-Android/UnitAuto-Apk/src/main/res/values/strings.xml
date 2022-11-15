@@ -8,6 +8,9 @@
     <string name="screen">屏幕：</string>
     <string name="horizontal">横向</string>
     <string name="vertical">纵向</string>
-    <string name="please_send_request_with_unit_auto">请用 UnitAuto 向这个设备发送请求 \nhttp://apijson.org/unit</string>
+    <string name="please_send_request_with_unit_auto">请用 UnitAuto 向这个设备发送请求 \nhttp://apijson.cn/unit</string>
+    <string name="ip_maybe_wrong_please_share_hotspot_and_use_another_device_to_view" >
+        获取到的 IP 地址可能错误，请分享热点，\n然后用另一台设备(电脑、手机等)连接后查看路由器 IP 地址
+    </string>
 
 </resources>
