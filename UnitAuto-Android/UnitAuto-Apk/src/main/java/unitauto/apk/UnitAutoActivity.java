@@ -43,7 +43,12 @@ import com.koushikdutta.async.http.server.AsyncHttpServerResponse;
 import com.koushikdutta.async.http.server.HttpServerRequestCallback;
 
 import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.lang.reflect.Method;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.regex.Pattern;
 
 import unitauto.JSON;
 import unitauto.MethodUtil;
@@ -105,8 +110,8 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
         cache = getSharedPreferences(TAG, Context.MODE_PRIVATE);
         port = cache.getString(KEY_PORT, "");
 
-        tvUnitIP.setText(IPUtil.getIpAddress(context) + ":");
         etUnitPort.setText(port);
+        setIp();
 
         getWindow().getDecorView().addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
             @Override
@@ -115,15 +120,15 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
             }
         });
 
-
-      parentDirectory = getExternalFilesDir(Environment.DIRECTORY_PICTURES); // new File(screenshotDirPath);
-      if (parentDirectory.exists() == false) {
-        try {
-          parentDirectory.mkdir();
-        } catch (Throwable e) {
-          e.printStackTrace();
+        parentDirectory = getExternalFilesDir(Environment.DIRECTORY_PICTURES); // new File(screenshotDirPath);
+        if (parentDirectory.exists() == false) {
+            try {
+                parentDirectory.mkdir();
+            } catch (Throwable e) {
+                e.printStackTrace();
+            }
         }
-      }
+
     }
 
     @Override
@@ -131,9 +136,9 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
         super.onResume();
         onConfigurationChanged(getResources().getConfiguration());
 
-        tvUnitIP.setText(IPUtil.getIpAddress(context) + ":");
         etUnitPort.setEnabled(! mAsyncServer.isRunning());
         pbUnit.setVisibility(mAsyncServer.isRunning() ? View.VISIBLE : View.GONE);
+        setIp();
     }
 
 
@@ -154,10 +159,64 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
     }
 
     public void ip(View v) {
-        String ip = IPUtil.getIpAddress(context);
-        tvUnitIP.setText(ip + ":");
+        setIp(true);
+    }
 
-        copyText(context, "http://" + ip + ":" + getPort());
+    private Pattern pattern = Pattern.compile("^[0-9\\.]+$");
+    public void setIp() {
+        setIp(false);
+    }
+    public void setIp(final boolean copy) {
+        String ip = IPUtil.getIpAddress(context);
+        if (StringUtil.isNotEmpty(ip, true) && "0.0.0.0".equals(ip) == false
+                && "192.168.0.1".equals(ip) == false && pattern.matcher(ip).matches()) {
+            tvUnitIP.setText(ip + ":");
+            if (copy) {
+                copyText(context, "http://" + ip + ":" + getPort());
+            }
+            return;
+        }
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if (isAlive == false) {
+                    return;
+                }
+
+                try {
+                    HttpURLConnection conn = (HttpURLConnection) new URL("https://api4.ipify.org").openConnection();
+                    InputStream in = conn.getInputStream();
+                    InputStreamReader isw = new InputStreamReader(in);
+
+                    String s = "";
+                    int data = isw.read();
+                    while (data != -1) {
+                        char current = (char) data;
+                        data = isw.read();
+                        System.out.print(current);
+                        s += current;
+                    }
+
+                    final String ip = s;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (isAlive == false) {
+                                return;
+                            }
+
+                            tvUnitIP.setText(ip + ":");
+                            if (copy) {
+                                copyText(context, "http://" + ip + ":" + getPort());
+                            }
+                        }
+                    });
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
     }
 
 
