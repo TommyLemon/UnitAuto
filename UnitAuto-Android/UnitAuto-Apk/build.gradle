@@ -6,8 +6,6 @@ android {
     defaultConfig {
         minSdkVersion 26
         targetSdkVersion 29
-        versionCode 1
-        versionName "1.0"
     }
     buildTypes {
         release {
@@ -20,14 +18,13 @@ android {
 //        targetCompatibility JavaVersion.VERSION_1_8
 //        sourceCompatibility JavaVersion.VERSION_1_8
 //    }
-    buildToolsVersion '29.0.0'
 }
 
 dependencies {
     api fileTree(include: ['*.jar'], dir: 'libs')
     api 'com.android.support:support-v4:27.1.1'
-    api 'com.alibaba:fastjson:1.2.74'
+    api 'com.alibaba:fastjson:1.2.83'
     api 'com.koushikdutta.async:androidasync:2.+'
     // 本地或远程依赖，二选一
-    api files('libs/unitauto-2.7.2.jar')
+    api files('libs/unitauto-java-2.8.0.jar')
 }
