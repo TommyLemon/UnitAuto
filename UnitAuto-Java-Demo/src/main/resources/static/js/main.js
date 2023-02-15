@@ -820,7 +820,7 @@
       branch: 'countArray',
       database: undefined,  // 后端决定 'MYSQL',// 'POSTGRESQL',
       schema: undefined,  // 后端决定 'admin',  // 'sys'
-      server: 'http://apijson.cn:8080',  //apijson.cn
+      server: 'http://apijson.cn:9090',  //'http://apijson.cn:8080',  //apijson.cn
       // server: 'http://47.74.39.68:9090',  // apijson.org
       project: 'http://localhost:8081',  // 'http://apijson.cn:8080', //
       language: CodeUtil.LANGUAGE_KOTLIN,
