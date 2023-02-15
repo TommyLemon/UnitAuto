@@ -42,8 +42,8 @@ UnitAuto Jar Library for remote dependencies with Maven, Gradle, etc.
 ```
 <br />
 
-#### 2. 在项目某个 module 目录(例如 `app`) build.gradle 中添加 apijson-orm 依赖
-#### 2. Add the apijson-orm dependency in one of your modules(such as `app`)
+#### 2. 在项目某个 module 目录(例如 `app`) build.gradle 中添加 unitauto-jar 依赖
+#### 2. Add the unitauto-jar dependency in one of your modules(such as `app`)
 ```gradle
 	dependencies {
 	        implementation 'com.github.TommyLemon:unitauto-jar:latest'

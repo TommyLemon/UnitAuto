@@ -519,10 +519,12 @@ public class MethodUtil {
 						public void complete(Object data, Method method, InterfaceProxy proxy, Object... extras) throws Exception {
 							Log.d(TAG, "invokeMethod  LISTENER_QUEUE.poll " + method);
 							if (isCb && listener != null) {
-								JSONObject result = JSON_CALLBACK.newSuccessResult();
-								result.putAll(finalReq);
-								result.putAll(globalProxy);
-								listener.complete(result, method, proxy, extras);
+								//									JSONObject result = new JSONObject();
+								//									result.put(method == null ? null : method.toString(), data);
+								//									listener.complete(result, method, proxy, extras);
+
+								finalReq.putAll(globalProxy);
+								listener.complete(finalReq, method, proxy, extras);
 							}
 						}
 					});
@@ -640,7 +642,7 @@ public class MethodUtil {
 
 
 	public static List<Argument> getArgList(JSONObject req, String arrKey) {
-		JSONArray arr = req == null ? null : req.getJSONArray(arrKey);  // 导致 @type 转换后的类型又被还原为 HashMap   JSON.parseArray(req.getString(arrKey));
+		JSONArray arr = req == null ? null : JSON.parseArray(req.getString(arrKey));
 
 		List<Argument> list = null;
 		if (arr != null && arr.isEmpty() == false) {
@@ -657,7 +659,7 @@ public class MethodUtil {
 					list.add(new Argument(type, value));
 				}
 				else { //null 合法，也要加，按顺序调用的
-					list.add(item == null ? null : parseObject(JSON.toJSONString(item), Argument.class));
+					list.add(item == null ? null : JSON.parseObject(JSON.toJSONString(item), Argument.class));
 				}
 			}
 		}
@@ -1226,7 +1228,7 @@ public class MethodUtil {
 					//					else if (type.isAnnotation()) {
 					//					} 
 					else if (type.isInterface()) {
-						InterfaceProxy proxy = parseObject(JSON.toJSONString(value), InterfaceProxy.class);
+						InterfaceProxy proxy = JSON.parseObject(JSON.toJSONString(value), InterfaceProxy.class);
 						proxy.$_setType(type);
 						value = proxy;
 					}
@@ -1593,7 +1595,7 @@ public class MethodUtil {
 	public static JSONObject parseJSON(String type, Object value) {
 		JSONObject o = new JSONObject(true);
 		o.put(KEY_TYPE, type);
-		if (value == null || unitauto.JSON.isBooleanOrNumberOrString(value) || value instanceof JSON || value instanceof Enum) {
+		if (value == null || unitauto.JSON.isBooleanOrNumberOrString(value) || value instanceof Enum) {
 			o.put(KEY_VALUE, value);
 		}
 		else {
@@ -1977,16 +1979,7 @@ public class MethodUtil {
 	 * @return
 	 */
 	public static JSONObject parseObject(String json) {
-		return parseObject(json, JSONObject.class);
-	}
-	/**JSON 字符串转有序 JSONObject
-	 * @param json
-	 * @return
-	 */
-	public static <T> T parseObject(String json, Class<T> clazz) {
-		int features = com.alibaba.fastjson.JSON.DEFAULT_PARSER_FEATURE;
-		features |= Feature.OrderedField.getMask();
-		return JSON.parseObject(json, clazz, features);
+		return JSON.parseObject(json, JSONObject.class, JSON.DEFAULT_PARSER_FEATURE | Feature.OrderedField.getMask());
 	}
 
 
