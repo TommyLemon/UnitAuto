@@ -21,9 +21,11 @@ import java.util.List;
 import javax.naming.Context;
 
 import org.springframework.beans.BeansException;
+import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -59,10 +61,17 @@ public class UnitAutoApplication implements ApplicationContextAware {
 		return APPLICATION_CONTEXT;
 	}
 
+	public static void main(String[] args) throws Exception {
+		ConfigurableApplicationContext context = SpringApplication.run(UnitAutoApplication.class, args);
+		Log.DEBUG = true;
+		System.out.println("这个 main 方法仅为 Jitpack 成功打包，实际应该在子类执行对应的 main 方法");
+	}
+
 	@Override
 	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
 		init(applicationContext);
 	}
+
 
 	/**如果已继承这个类，则不需要调用，直接通过 SpringBoot 内部调用 setApplicationContext 来初始化 APPLICATION_CONTEXT
 	 * @param context
