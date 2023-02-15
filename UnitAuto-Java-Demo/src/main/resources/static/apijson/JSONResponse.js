@@ -1,4 +1,4 @@
-/*Copyright ©2017 TommyLemon(https://github.com/TommyLemon/APIAuto)
+/*Copyright ©2017 TommyLemon(https://github.com/TommyLemon/UnitAuto)
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use JSONResponse file except in compliance with the License.
@@ -17,6 +17,17 @@
  * @author Lemon
  */
 
+if (typeof window == 'undefined') {
+  try {
+    eval(`
+      var StringUtil = require("./StringUtil");
+      var JSONObject = require("./JSONObject");
+      var CodeUtil = require("./CodeUtil");
+    `)
+  } catch (e) {
+    console.log(e)
+  }
+}
 
 //状态信息，非GET请求获得的信息<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -59,8 +70,19 @@ var JSONResponse = {
    * @param code
    * @return
    */
-  isSuccess: function(code) {
-    return code == CODE_SUCCESS;
+  isSuccess: function(obj) {
+    if (obj == null) {
+      return false
+    }
+
+    if (typeof obj == 'number') {
+      return obj == CODE_SUCCESS;
+    }
+    if (obj instanceof Object && obj instanceof Array == false) {
+      return obj.code == CODE_SUCCESS;
+    }
+
+    return false
   },
 
   /**校验服务端是否存在table
@@ -1544,4 +1566,8 @@ var JSONResponse = {
     return value;
   }
 
+};
+
+if (typeof module == 'object') {
+  module.exports = JSONResponse;
 }

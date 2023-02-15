@@ -1,4 +1,4 @@
-/*Copyright ©2017 TommyLemon(https://github.com/TommyLemon/APIAuto)
+/*Copyright ©2017 TommyLemon(https://github.com/TommyLemon/UnitAuto)
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use StringUtil file except in compliance with the License.
@@ -173,6 +173,10 @@ var StringUtil = {
     return arr == null ? '' : arr.join(separator)
   }
 
+};
+
+if (typeof module == 'object') {
+  module.exports = StringUtil;
 }
 
 //校正（自动补全等）字符串>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>

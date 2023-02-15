@@ -1,5 +1,98 @@
 
 (function () {
+  const DEBUG = false // true
+  const IS_NODE = typeof window == 'undefined'
+  const IS_BROWSER = typeof window == 'object'
+
+  if (IS_NODE) {  // 解决在 Node 环境下缺少相关变量/常量/函数导致报错
+    try {
+      eval(`
+        var alert = function(msg) {console.log('alert: ' + msg)};
+        // var console = {log: function(msg) {}};
+
+        var vUrl = {value: 'unitauto.test.TestUtil.divide'};
+        var vUrlComment = {value: ''};
+        var vTransfer = {value: '', disabled: false};
+        var vType = {value: 'JSON'};
+        var vSend = {value: '', disabled: false};
+
+        var vInput = {value: ''};
+        var vWarning = {value: ''};
+        var vComment = {value: ''};
+        var vHeader = {value: ''};
+        var vRandom = {value: ''};
+        var vOutput = {value: ''};
+
+        var vAccount = {value: ''};
+        var vPassword = {value: ''};
+        var vVerify = {value: ''};
+        var vRemember = {checked: true}
+
+        var vRequestMarkdown = {value: ''};
+        var vMarkdown = {value: ''};
+        var vPage = {value: '0'};
+        var vCount = {value: '100'};
+        var vSearch = {value: ''};
+        var vTestCasePage = {value: '0'};
+        var vTestCaseCount = {value: '100'};
+        var vTestCaseSearch = {value: ''};
+        var vRandomPage = {value: '0'};
+        var vRandomCount = {value: '100'};
+        var vRandomSearch = {value: ''};
+        var vRandomSubPage = {value: '0'};
+        var vRandomSubCount = {value: '100'};
+        var vRandomSubSearch = {value: ''};
+
+        var Vue = require('vue');
+        var StringUtil = require('../apijson/StringUtil');
+        var CodeUtil = require('../apijson/CodeUtil');
+        var JSONObject = require('../apijson/JSONObject');
+        var JSONResponse = require('../apijson/JSONResponse');
+        var JSONRequest = require('../apijson/JSONRequest');
+        var localforage = require('./localforage.min');
+        var clipboard = require('./clipboard.min');
+        var jsonlint = require('./jsonlint');
+        var JSON5 = require('json5');
+        // var window = {};
+        // var $ = require('./jquery').jQuery;
+        // var $ = {
+        //   isEmptyObject: function (obj) {
+        //     return obj == null || Object.keys(obj).length <= 0;
+        //   }
+        // };
+
+        // var LocalStorage = require('node-localstorage').LocalStorage;
+        // var localStorage = new LocalStorage('./scratch');
+        var localStorage = {
+          getItem: function (key) {},
+          setItem: function (key, value) {}
+        }
+        // var difflib = require('./difflib');
+        // var diffview = require('./diffview');
+        // var editor = require('./editor');
+        // var FileSaver = require('./FileSaver');
+        // var helper = require('./helper');
+        // var jquery = require('./jquery');
+        // var jsonlint = require('./jsonlint');
+        // var parse = require('./parse');
+        // var uuid = require('./uuid');
+
+        var URL_BASE = 'unitauto.test';  // JSONRequest.URL_BASE;
+
+        var axios = require('axios');
+        var editormd = null;
+      `)
+    } catch (e) {
+      console.log(e)
+    }
+  }
+
+  function log(msg) {
+    if (DEBUG) {
+      console.log(msg)
+    }
+  }
+
   Vue.component('vue-item', {
     props: ['jsondata', 'theme'],
     template: '#item-template'
@@ -346,8 +439,6 @@
   })
 
 
-  var DEBUG = false
-
   var initJson = {}
 
 // 主题 [key, String, Number, Boolean, Null, link-link, link-hover]
@@ -561,11 +652,10 @@
 
   var isSingle = true
 
-  var doneCount
 
 // APIJSON >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-  var App = new Vue({
+  var App = {
     el: '#app',
     data: {
       baseview: 'formater',
@@ -586,6 +676,7 @@
       randomSubs: [],
       account: '13000082001',
       password: '123456',
+      logoutSummary: {},
       accounts: [
         {
           'isLoggedIn': false,
@@ -606,6 +697,7 @@
           'password': '123456'
         }
       ],
+      allSummary: {},
       currentAccountIndex: 0,
       currentDocIndex: -1,
       currentRandomIndex: -1,
@@ -728,7 +820,7 @@
       branch: 'countArray',
       database: undefined,  // 后端决定 'MYSQL',// 'POSTGRESQL',
       schema: undefined,  // 后端决定 'admin',  // 'sys'
-      server: 'http://apijson.cn:9090',  //'http://apijson.cn:8080',  //
+      server: 'http://apijson.cn:8080',  //apijson.cn
       // server: 'http://47.74.39.68:9090',  // apijson.org
       project: 'http://localhost:8081',  // 'http://apijson.cn:8080', //
       language: CodeUtil.LANGUAGE_KOTLIN,
@@ -744,10 +836,16 @@
       randomSearch: '',
       randomSubPage: 0,
       randomSubCount: 50,
-      randomSubSearch: ''
+      randomSubSearch: '',
+      doneCount: 0,
+      allCount: 0,
+      deepDoneCount: 0,
+      deepAllCount: 0,
+      randomDoneCount: 0,
+      randomAllCount: 0
     },
-    methods: {
 
+    methods: {
       // 全部展开
       expandAll: function () {
         if (this.view != 'code') {
@@ -1020,7 +1118,7 @@
 
             var val = item2.substring(index + 1, item2.length)
 
-            var ind = val.indexOf('(')  //一定要有函数是为了避免里面是一个简短单词和 APIAuto 代码中变量冲突
+            var ind = val.indexOf('(')  //一定要有函数是为了避免里面是一个简短单词和 UnitAuto 代码中变量冲突
             if (ind > 0 && val.indexOf(')') > ind) {  //不从 0 开始是为了保证是函数，且不是 (1) 这种单纯限制作用域的括号
               try {
                 val = eval(val)
@@ -1037,7 +1135,7 @@
         return header
       },
 
-      // 分享 APIAuto 特有链接，打开即可还原分享人的 JSON 参数、设置项、搜索关键词、分页数量及页码等配置
+      // 分享 UnitAuto 特有链接，打开即可还原分享人的 JSON 参数、设置项、搜索关键词、分页数量及页码等配置
       shareLink: function (isRandom) {
         var jsonStr = null
         if (this.isTestCaseShow != true) {
@@ -1414,7 +1512,7 @@
           var rpObj = res.data || {}
 
           if (isDeleteRandom) {
-            if (rpObj.Random != null && rpObj.Random.code == CODE_SUCCESS) {
+            if (rpObj.Random != null && JSONResponse.isSuccess(rpObj.Random)) {
               if (((item.Random || {}).toId || 0) <= 0) {
                 App.randoms.splice(item.index, 1)
               }
@@ -1424,7 +1522,7 @@
               // App.showRandomList(true, App.currentRemoteItem)
             }
           } else {
-            if (rpObj.Method != null && rpObj.Method.code == CODE_SUCCESS) {
+            if (rpObj.Method != null && JSONResponse.isSuccess(rpObj.Method)) {
               App.remotes.splice(item.index, 1)
               App.showTestCase(true, App.isLocalShow)
             }
@@ -1489,6 +1587,7 @@
 
       // 根据参数注入用例恢复数据
       restoreRandom: function (index, item) {
+        this.currentRandomIndex = index
         this.currentRandomItem = item
         this.isRandomListShow = false
         this.isRandomSubListShow = false
@@ -1716,7 +1815,7 @@
           const isReleaseRESTful = isExportRandom && btnIndex == 1 && ! isEditResponse
 
           const method = App.getMethod();
-          const methodInfo = isReleaseRESTful ? (CodeUtil.parseUri(method, true) || {}) : {};
+          const methodInfo = isReleaseRESTful ? (JSONObject.parseUri(method, true) || {}) : {};
           if (isReleaseRESTful) {
             var isRestful = methodInfo.isRestful;
             var tag = methodInfo.tag;
@@ -1741,8 +1840,8 @@
             return
           }
 
-          var doc = (this.currentRemoteItem || {}).Method || {}
-          var tr = (this.currentRemoteItem || {}).TestRecord || {}
+          const doc = (this.currentRemoteItem || {}).Method || {}
+          const tr = (this.currentRemoteItem || {}).TestRecord || {}
           const did = isExportRandom && btnIndex == 1 ? null : doc.id
           if (isExportRandom && btnIndex <= 0 && did == null) {
             alert('请先共享测试用例！')
@@ -1851,77 +1950,112 @@
 
             commentObj = JSONResponse.updateStandard({}, mapReq2);
           }
-          const extName = App.exTxt.name;
-          const baseUrl = App.getBaseUrl();
-          var url = this.server + (isExportRandom || isEditResponse || did == null ? '/post' : '/put')
-          var req = isExportRandom ? {
-            format: false,
-            'Random': {
-              toId: 0,
-              documentId: did,
-              count: this.requestCount,
-              name: this.exTxt.name,
-              config: vRandom.value
-            },
-            'TestRecord': {
-              'response': JSON.stringify(currentResponse),
-              'standard': isML ? JSON.stringify(stddObj) : null
-            },
-            'tag': 'Random'
-          } : {
-            format: false,
-            'Method': isEditResponse ? null : {
-              'id': did == null ? undefined : did,
-              'testAccountId': currentAccountId,
-              'method': this.getMethod(),
-              'detail': this.exTxt.name,
-              'type': (currentResponse.type || this.type) || null,
-              'genericType': (currentResponse.type || this.type) || null,
-              'class': this.getClass(),
-              'package': this.getPackage(),
-              'methodArgs': JSON.stringify(currentResponse.methodArgs),
-              'genericMethodArgs': JSON.stringify(this.getRequest(vInput.value, {}).methodArgs),
-              'request': this.toDoubleJSON(inputted)
-            },
-            'TestRecord': isEditResponse != true && did != null ? null : {
-              'documentId': isEditResponse ? did : undefined,
-              'randomId': 0,
-              'host': this.getBaseUrl(),
-              'testAccountId': currentAccountId,
-              'response': JSON.stringify(isEditResponse ? inputObj : currentResponse),
-              'standard': isML || isEditResponse ? JSON.stringify(isEditResponse ? commentObj : stddObj) : undefined
-            },
-            'tag': isEditResponse ? 'TestRecord' : 'Method'
-          }
 
-          this.request(true, REQUEST_TYPE_JSON, url, req, {}, function (url, res, err) {
-            App.onResponse(url, res, err)
 
-            var rpObj = res.data || {}
+          var callback = function (randomName, constConfig, constJson) {
+            // 用现成的测试过的更好，Response 与 Request 严格对应
+            // var mapReq = {};
+            // if (isExportRandom && btnIndex == 1) {
+            //
+            //   var mapReq2 = {}
+            //   var cfgLines = StringUtil.split(constConfig, '\n', true);
+            //   if (cfgLines != null) {
+            //     for (var i = 0; i < cfgLines.length; i++) {
+            //       var cfgLine = cfgLines[i];
+            //       var ind = cfgLine == null ? -1 : cfgLine.indexOf(': ');
+            //       if (ind <= 0) {
+            //         continue;
+            //       }
+            //
+            //       var k = cfgLine.substring(0, ind).replace(/\//g, '.'); // .trim();
+            //       var v = cfgLine.substring(ind + 1).trim();
+            //       try {
+            //         v = JSON.parse(v);
+            //       }
+            //       catch (e) {
+            //         log(e)
+            //       }
+            //
+            //       mapReq[k] = v
+            //       mapReq2[k] = v
+            //     }
+            //   }
+            //
+            //   commentObj = JSONResponse.updateStandard({}, mapReq2);
+            // }
+
+            const extName = App.exTxt.name;
+            const baseUrl = App.getBaseUrl();
+            const url = App.server + (isExportRandom || isEditResponse || did == null ? '/post' : '/put')
+            const req = isExportRandom && btnIndex <= 0 ? {
+              format: false,
+              'Random': {
+                toId: 0,
+                documentId: did,
+                count: App.requestCount,
+                name: App.exTxt.name,
+                config: config
+              },
+              'TestRecord': {
+                'response': JSON.stringify(currentResponse),
+                'standard': isML ? JSON.stringify(stddObj) : null
+              },
+              'tag': 'Random'
+            } : {
+              format: false,
+              'Method': isEditResponse ? null : {
+                'id': did == null ? undefined : did,
+//                'testAccountId': currentAccountId,
+                'method': App.getMethod(),
+                'detail': App.exTxt.name,
+                'type': (currentResponse.type || App.type) || null,
+                'genericType': (currentResponse.type || App.type) || null,
+                'class': App.getClass(),
+                'package': App.getPackage(),
+                'methodArgs': JSON.stringify(currentResponse.methodArgs),
+                'genericMethodArgs': JSON.stringify(App.getRequest(vInput.value, {}).methodArgs),
+                'request': this.toDoubleJSON(inputted)
+              },
+              'TestRecord': isEditResponse != true && did != null ? null : {
+                'documentId': isEditResponse ? did : undefined,
+                'randomId': 0,
+                'host': App.getBaseUrl(),
+//                'testAccountId': currentAccountId,
+                'response': JSON.stringify(isEditResponse ? inputObj : currentResponse),
+                'standard': isML || isEditResponse ? JSON.stringify(isEditResponse ? commentObj : stddObj) : undefined
+                // 没必要，直接都在请求中说明，查看也方便 'detail': (isEditResponse ? App.getExtraComment() : null) || ((App.currentRemoteItem || {}).TestRecord || {}).detail,
+              },
+              'tag': isEditResponse ? 'TestRecord' : 'Method'
+            }
+
+            App.request(true, REQUEST_TYPE_JSON, url, req, {}, function (url, res, err) {
+              App.onResponse(url, res, err)
+
+              var rpObj = res.data || {}
 
               if (isExportRandom && btnIndex <= 0) {
-              if (rpObj.code == CODE_SUCCESS) {
-                App.randoms = []
-                App.showRandomList(true, (App.currentRemoteItem || {}).Method)
-              }
-            }
-            else {
-              var isPut = url.indexOf('/put') >= 0
-
-              if (rpObj.code != CODE_SUCCESS) {
-                if (isPut) {  // 修改失败就转为新增
-                  App.currentRemoteItem = null;
-                  alert('修改失败，请重试(自动转为新增)！' + StringUtil.trim(rpObj.msg))
+                if (JSONResponse.isSuccess(rpObj)) {
+                  App.randoms = []
+                  App.showRandomList(true, (App.currentRemoteItem || {}).Method)
                 }
               }
               else {
-                App.remotes = []
-                App.showTestCase(true, false)
+                var isPut = url.indexOf('/put') >= 0
 
-                if (isPut) {  // 修改失败就转为新增
-                  alert('修改成功')
-                  return
+                if (JSONResponse.isSuccess(rpObj) != true) {
+                  if (isPut) {  // 修改失败就转为新增
+                    App.currentRemoteItem = null;
+                    alert('修改失败，请重试(自动转为新增)！' + StringUtil.trim(rpObj.msg))
+                  }
                 }
+                else {
+                  App.remotes = []
+                  App.showTestCase(true, false)
+
+                  if (isPut) {  // 修改失败就转为新增
+                    alert('修改成功')
+                    return
+                  }
 
                   if (isReleaseRESTful) {
                     var structure = {"MUST": mustKeys.join(), "TYPE": typeObj, "REFUSE": refuseKeys.join()};
@@ -1938,7 +2072,7 @@
                     };
 
                     App.request(true, REQUEST_TYPE_JSON, baseUrl + '/post', reqObj, {}, function (url, res, err) {
-                      if (res.data != null && res.data.Request != null && res.data.Request.code == CODE_SUCCESS) {
+                      if (res.data != null && res.data.Request != null && JSONResponse.isSuccess(res.data.Request)) {
                         alert('已自动生成并上传 Request 表校验规则配置:\n' + JSON.stringify(reqObj.Request, null, '  '))
                       }
                       else {
@@ -1963,33 +2097,43 @@
                     }
                   }
 
-                App.request(true, REQUEST_TYPE_JSON, (isReleaseRESTful ? baseUrl : App.server + '/post'), {
-                  format: false,
-                  'Random': {
-                    documentId: rpObj.Method.id,
-                    count: App.requestCount,
-                    name: '默认配置' + (isGenerate ? '(上传测试用例时自动生成)' : ''),
-                    config: config
-                  },
-                  TestRecord: {
-                    host: baseUrl,
-                    response: ''
-                  },
-                  'tag': 'Random'
-                }, {}, function (url, res, err) {
-                  if (res.data != null && res.data.Random != null && res.data.Random.code == CODE_SUCCESS) {
-                    alert('已' + (isGenerate ? '自动生成并' : '') + '上传随机配置:\n' + config)
-                    App.isRandomListShow = true
-                  }
-                  else {
-                    alert((isGenerate ? '已自动生成，但' : '') + '上传以下随机配置失败:\n' + config)
-                    vRandom.value = config
-                  }
-                  App.onResponse(url, res, err)
-                })
+                  App.request(true, REQUEST_TYPE_JSON, App.server + '/post', {
+                    format: false,
+                    'Random': {
+                      documentId: rpObj.Method.id,
+                      count: App.requestCount,
+                      name: '默认配置' + (isGenerate ? '(上传测试用例时自动生成)' : ''),
+                      config: config
+                    },
+                    TestRecord: {
+                      host: baseUrl,
+                      response: ''
+                    },
+                    'tag': 'Random'
+                  }, {}, function (url, res, err) {
+                    if (res.data != null && res.data.Random != null && JSONResponse.isSuccess(res.data.Random)) {
+                      alert('已' + (isGenerate ? '自动生成并' : '') + '上传随机配置:\n' + config)
+                      App.isRandomListShow = true
+                    }
+                    else {
+                      alert((isGenerate ? '已自动生成，但' : '') + '上传以下随机配置失败:\n' + config)
+                      vRandom.value = config
+                    }
+                    App.onResponse(url, res, err)
+                  })
+                }
               }
-            }
-          })
+            })
+          };
+
+          if (btnIndex == 1) {
+            // this.parseRandom(inputObj, config, null, true, true, false, callback)
+            callback(null, null, inputObj)
+          }
+          else {
+            callback(null, null, inputObj)
+          }
+
         }
       },
 
@@ -2293,8 +2437,8 @@
             },
             'tag': 'Method'
           }, {}, function (url, res, err) {
-            App.onResponse(url, res, err)
-            if (res.data != null && res.data.Method != null && res.data.Method.code == CODE_SUCCESS) {
+          //太卡 App.onResponse(url, res, err)
+            if (res.data != null && res.data.Method != null && JSONResponse.isSuccess(res.data.Method)) {
               App.uploadDoneCount ++
             } else {
               App.uploadFailCount ++
@@ -2464,6 +2608,32 @@
 
       onClickAccount: function (index, item, callback) {
         this.isTestCaseShow = false
+        var accounts = this.accounts
+        var num = accounts == null ? 0 : accounts.length
+        if (index < 0 || index >= num) {
+          item = this.getCurrentAccount()
+          if (item != null && item.isLoggedIn) {
+            //logout FIXME 没法自定义退出，浏览器默认根据url来管理session的
+            this.logout(false, function (url, res, err) {
+              App.onResponse(url, res, err)
+
+              item.isLoggedIn = false
+              App.saveCache(App.getBaseUrl(), 'currentAccountIndex', App.currentAccountIndex)
+              App.saveCache(App.getBaseUrl(), 'accounts', App.accounts)
+
+              if (callback != null) {
+                callback(false, index, err)
+              }
+            });
+          } else {
+            if (callback != null) {
+              callback(false, index)
+            }
+          }
+
+          this.currentAccountIndex = index
+          return
+        }
 
         if (this.currentAccountIndex == index) {
           if (item == null) {
@@ -2489,6 +2659,8 @@
                   callback(false, index, err)
                 }
               });
+
+              this.currentAccountIndex = -1
             }
             else {
               //login
@@ -2496,7 +2668,7 @@
                 App.onResponse(url, res, err)
 
                 var data = res.data || {}
-                var user = data.code == CODE_SUCCESS ? data.user : null
+                var user = JSONResponse.isSuccess(data) ? data.user : null
                 if (user == null) {
                   if (callback != null) {
                     callback(false, index, err)
@@ -2563,38 +2735,53 @@
         this.showLogin(true, false)
       },
 
+      showCompare4TestCaseList: function (show) {
+        var testCases = show ? App.testCases : null
+        var allCount = testCases == null ? 0 : testCases.length
+        App.allCount = allCount
+        if (allCount > 0) {
+          var accountIndex = (this.accounts[this.currentAccountIndex] || {}).isLoggedIn ? this.currentAccountIndex : -1
+          this.currentAccountIndex = accountIndex  //解决 onTestResponse 用 -1 存进去， handleTest 用 currentAccountIndex 取出来为空
+
+          var tests = this.tests[String(accountIndex)]
+          if (tests != null && JSONObject.isEmpty(tests) != true) {
+            for (var i = 0; i < allCount; i++) {
+              var item = testCases[i]
+              var d = item == null ? null : item.Method
+              if (d == null || d.id == null) {
+                continue
+              }
+
+              this.compareResponse(allCount, testCases, i, item, (tests[d.id] || {})[0], false, accountIndex, true)
+            }
+          }
+        }
+      },
 
       //显示远程的测试用例文档
-      showTestCase: function (show, isLocal) {
+      showTestCase: function (show, isLocal, callback) {
         this.isTestCaseShow = show
         this.isLocalShow = isLocal
 
-        vOutput.value = show ? '' : (output || '')
-        this.showDoc()
+        if (IS_BROWSER) {
+          vOutput.value = show ? '' : (output || '')
+          this.showDoc()
+        }
 
         if (isLocal) {
           this.testCases = this.locals || []
           return
         }
         this.testCases = this.remotes || []
+        this.getCurrentSummary().summaryType = 'total' // this.onClickSummary('total', true)
 
         if (show) {
           var testCases = this.testCases
           var allCount = testCases == null ? 0 : testCases.length
+          App.allCount = allCount
           if (allCount > 0) {
-            var accountIndex = (this.accounts[this.currentAccountIndex] || {}).isLoggedIn ? this.currentAccountIndex : -1
-            this.currentAccountIndex = accountIndex  //解决 onTestResponse 用 -1 存进去， handleTest 用 currentAccountIndex 取出来为空
-
-            var tests = this.tests[String(accountIndex)] || {}
-            if (tests != null && $.isEmptyObject(tests) != true) {
-              for (var i = 0; i < allCount; i++) {
-                var item = testCases[i]
-                if (item == null) {
-                  continue
-                }
-                var d = item.Method || {}
-                this.compareResponse(allCount, testCases, i, item, (tests[d.id] || {})[0], false, accountIndex, true)
-              }
+            if (! (this.isAllSummaryShow() || this.isCurrentSummaryShow())) {
+              this.showCompare4TestCaseList(show)
             }
             return;
           }
@@ -2602,7 +2789,6 @@
           this.isTestCaseShow = false
 
           var search = StringUtil.isEmpty(this.testCaseSearch, true) ? null : StringUtil.trim(this.testCaseSearch)
-
 
           var host = StringUtil.get(this.host);
           var pkg = this.getPackage()
@@ -2649,37 +2835,164 @@
               'TestRecord': {
                 'documentId@': '/Method/id',
                 'userId': this.User.id,
-                'testAccountId': this.getCurrentAccountId(),
+//                'testAccountId': this.getCurrentAccountId(),
                 'randomId': 0,
                 '@order': 'date-',
-                '@column': 'id,userId,documentId,duration,minDuration,maxDuration,response' + (this.isMLEnabled ? ',standard' : ''),
-                '@having': this.isMLEnabled ? 'length(standard)>2' : null  //用 MySQL 5.6   '@having': this.isMLEnabled ? 'json_length(standard)>0' : null
+                '@column': 'id,userId,documentId,testAccountId,duration,minDuration,maxDuration,response' + (this.isMLEnabled ? ',standard' : ''),
+                'standard{}': this.isMLEnabled ? (this.database == 'SQLSERVER' ? 'len(standard)>2' : 'length(standard)>2') : null  //用 MySQL 5.6   '@having': this.isMLEnabled ? 'json_length(standard)>0' : null
               }
             },
-            '@role': 'LOGIN'
+            '@role': IS_NODE ? null : 'LOGIN',
+            key: IS_NODE ? this.key : undefined  // 突破常规查询数量限制
           }
 
-          this.onChange(false)
+          if (IS_BROWSER) {
+            this.onChange(false)
+          }
           this.request(true, REQUEST_TYPE_JSON, this.server + '/get', req, {}, function (url, res, err) {
-            App.onResponse(url, res, err)
-
-            var rpObj = res.data
-
-            if (rpObj != null && rpObj.code === CODE_SUCCESS) {
-              App.isTestCaseShow = true
-              App.isLocalShow = false
-              App.testCases = App.remotes = rpObj['[]']
-              vOutput.value = show ? '' : (output || '')
-              App.showDoc()
-
-              //App.onChange(false)
+            if (callback) {
+              callback(url, res, err)
+              return
             }
+
+            App.onTestCaseListResponse(show, url, res, err)
           })
+        } else if (callback != null) {
+          callback(null, {}, null)
+        }
+      },
+
+      onTestCaseListResponse: function(show, url, res, err) {
+        this.onResponse(url, res, err)
+
+        var rpObj = res.data
+
+        if (JSONResponse.isSuccess(rpObj)) {
+          this.isTestCaseShow = true
+          this.isLocalShow = false
+          this.testCases = App.remotes = rpObj['[]']
+          this.getCurrentRandomSummary().summaryType = 'total' // App.onClickSummary('total', true)
+
+          if (IS_BROWSER) {
+            vOutput.value = show ? '' : (output || '')
+            this.showDoc()
+          }
+
+          this.showCompare4TestCaseList(show)
+
+          //this.onChange(false)
+        }
+      },
+
+      onClickLogoutSummary: function (color) {
+        this.onClickSummary(color, false, -1)
+      },
+      onClickAllSummary: function (color) {
+        this.onClickSummary(color, false, this.accounts.length) // this.currentAccountIndex)
+      },
+      onClickCurrentSummary: function (color) {
+        this.onClickSummary(color, false, this.currentAccountIndex)
+      },
+      onClickSummary: function (color, isRandom, accountIndex) {
+        if (this.currentAccountIndex != accountIndex) {
+          this.onClickAccount(accountIndex, accountIndex < 0 ? this.logoutSummary : this.accounts[accountIndex])
+        }
+        // this.currentAccountIndex = accountIndex
+        // this.isTestCaseShow = false
+
+        var isSub = this.isRandomSubListShow
+        var arr = isRandom ? (isSub ? this.currentRandomItem.subs : this.currentRemoteItem.randoms) : this.remotes;
+        var list = []
+        if (color == null || color == 'total') {
+          list = arr
+        } else if (arr != null) {
+          for (var i = 0; i < arr.length; i++) {
+            var obj = arr[i]
+            if (obj == null) {
+              continue
+            }
+
+            var count = isRandom && obj != null && obj.Random != null ? obj.Random.count : null
+            if (count != null && count > 1) {
+              var sum = obj[color + 'Count']
+              if (sum != null && sum > 0) {
+                list.push(obj)
+              }
+              continue
+            }
+
+            if (obj.compareColor == color) {
+              list.push(obj)
+            }
+          }
+        }
+
+        if (isRandom) {
+          if (isSub) {
+            this.currentRandomItem.summaryType = color
+            this.randomSubs = list
+          } else {
+            this.currentRemoteItem.summaryType = color
+            this.randoms = list
+          }
+        } else {
+          var summary = this.getSummary(accountIndex) || {}
+          summary.summaryType = color
+          this.testCases = list
+          this.isTestCaseShow = true
+          // this.showTestCase(true, false)
+        }
+      },
+
+      showCompare4RandomList: function (show, isSub) {
+        this.getCurrentRandomSummary().summaryType = 'total'
+
+        var randoms = show ? (isSub ? this.randomSubs : this.randoms) : null
+        var randomCount = randoms == null ? 0 : randoms.length
+        if (randomCount > 0) {
+          var accountIndex = (this.accounts[this.currentAccountIndex] || {}).isLoggedIn ? this.currentAccountIndex : -1
+          this.currentAccountIndex = accountIndex  //解决 onTestResponse 用 -1 存进去， handleTest 用 currentAccountIndex 取出来为空
+          var docId = ((this.currentRemoteItem || {}).Method || {}).id
+
+          var tests = (this.tests[String(accountIndex)] || {})[docId]
+          if (tests != null && JSONObject.isEmpty(tests) != true) {
+            if (! isSub) {
+              this.resetCount(this.currentRemoteItem, true, accountIndex)
+            }
+
+            for (var i = 0; i < randomCount; i++) {
+              var item = randoms[i]
+              var r = item == null ? null : item.Random
+              if (r == null || r.id == null) {
+                continue
+              }
+
+              this.resetCount(item, true, accountIndex)
+
+              var subCount = r.count || 0
+              if (subCount == 1) {
+                this.compareResponse(randomCount, randoms, i, item, tests[r.id], true, accountIndex, true)
+              }
+              else if (subCount > 1) {
+                var subRandoms = item['[]'] || []
+                var subSize = Math.min(subRandoms.length, subCount)
+                for (var j = 0; j < subSize; j++) {
+                  var subItem = subRandoms[j]
+                  var sr = subItem == null ? null : subItem.Random
+                  if (sr == null || sr.id == null) {
+                    continue
+                  }
+
+                  this.compareResponse(subSize, subRandoms, j, subItem, tests[sr.id > 0 ? sr.id : (sr.toId + '' + sr.id)], true, accountIndex, true)
+                }
+              }
+            }
+          }
         }
       },
 
       //显示远程的随机配置文档
-      showRandomList: function (show, item, isSub) {
+      showRandomList: function (show, item, isSub, callback) {
         this.isRandomEditable = false
         this.isRandomListShow = show && ! isSub
         this.isRandomSubListShow = show && isSub
@@ -2687,10 +3000,16 @@
           this.randomSubs = []
         }
 
-        vOutput.value = show ? '' : (output || '')
-        this.showDoc()
+        if (IS_BROWSER) {
+          vOutput.value = show ? '' : (output || '')
+          this.showDoc()
+        }
 
-        this.randoms = this.randoms || []
+        this.randoms = (this.currentRemoteItem || {}).randoms || []
+        this.getCurrentRandomSummary().summaryType = 'total' // this.onClickSummary('total', true)
+        if (! this.isRandomSummaryShow()) {
+          this.showCompare4RandomList(show, isSub)
+        }
 
         if (show && this.isRandomShow && this.randoms.length <= 0 && item != null && item.id != null) {
           this.isRandomListShow = false
@@ -2713,7 +3032,7 @@
               },
               'TestRecord': {
                 'randomId@': '/Random/id',
-                'testAccountId': this.getCurrentAccountId(),
+//                'testAccountId': this.getCurrentAccountId(),
                 'host': this.getBaseUrl(),
                 '@order': 'date-'
               },
@@ -2728,42 +3047,67 @@
                 },
                 'TestRecord': {
                   'randomId@': '/Random/id',
-                  'testAccountId': this.getCurrentAccountId(),
+//                  'testAccountId': this.getCurrentAccountId(),
                   'host': this.getBaseUrl(),
                   '@order': 'date-'
                 }
               }
-            }
+            },
+            key: IS_NODE ? this.key : undefined  // 突破常规查询数量限制
           }
 
-          this.onChange(false)
+          if (IS_BROWSER) {
+            this.onChange(false)
+          }
+
           this.request(true, REQUEST_TYPE_JSON, url, req, {}, function (url, res, err) {
-            App.onResponse(url, res, err)
-
-            var rpObj = res.data
-
-            if (rpObj != null && rpObj.code === CODE_SUCCESS) {
-              App.isRandomListShow = ! isSub
-              App.isRandomSubListShow = isSub
-              if (isSub) {
-                if (App.currentRandomItem == null) {
-                  App.currentRandomItem = {}
-                }
-                App.randomSubs = App.currentRandomItem.subs = App.currentRandomItem['[]'] = rpObj['[]']
-              }
-              else {
-                App.randoms = rpObj['[]']
-              }
-
-              vOutput.value = show ? '' : (output || '')
-              App.showDoc()
-
-              //App.onChange(false)
+            if (callback) {
+              callback(url, res, err)
+              return
             }
+            App.onRandomListResponse(show, isSub, url, res, err)
           })
+        } else if (callback) {
+          callback(null, {}, null)
         }
       },
 
+      onRandomListResponse: function (show, isSub, url, res, err) {
+        res = res || {}
+
+        App.onResponse(url, res, err)
+
+        var rpObj = res.data
+
+        if (JSONResponse.isSuccess(rpObj)) {
+          App.isRandomListShow = ! isSub
+          App.isRandomSubListShow = isSub
+          if (isSub) {
+            if (App.currentRandomItem == null) {
+              App.currentRandomItem = {}
+            }
+            App.randomSubs = App.currentRandomItem.subs = App.currentRandomItem['[]'] = rpObj['[]']
+          }
+          else {
+            if (App.currentRemoteItem == null) {
+              App.currentRemoteItem = {}
+            }
+            App.randoms = App.currentRemoteItem.randoms = rpObj['[]']
+          }
+          this.getCurrentRandomSummary().summaryType = 'total' // App.onClickSummary('total', true)
+
+          if (IS_BROWSER) {
+            vOutput.value = show ? '' : (output || '')
+            App.showDoc()
+          }
+
+          // if (! this.isRandomSummaryShow()) {
+            App.showCompare4RandomList(show, isSub)
+          // }
+
+          //App.onChange(false)
+        }
+      },
 
       // 设置文档
       showDoc: function () {
@@ -2852,15 +3196,18 @@
 
         const req = {
           type: 0, // 登录方式，非必须 0-密码 1-验证码
+          // asDBAccount: ! isAdminOperation,  // 直接 /execute 接口传 account, password
           phone: this.account,
           password: this.password,
           version: 1, // 全局默认版本号，非必须
           remember: vRemember.checked,
           format: false,
-          // 后端决定
-          // defaults: {
-          //   '@database': this.database,
-          //   '@schema': this.schema
+          defaults: isAdminOperation ? {
+            key: IS_NODE ? this.key : undefined  // 突破常规查询数量限制
+          } : undefined  // 后端决定
+          // {
+          //  '@database': StringUtil.isEmpty(this.database, true) ? undefined : this.database,
+          //  '@schema': StringUtil.isEmpty(this.schema, true) ? undefined : this.schema
           // }
         }
 
@@ -2871,41 +3218,11 @@
               return
             }
 
-            var rpObj = res.data || {}
-
-            if (rpObj.code != CODE_SUCCESS) {
-              alert('登录失败，请检查网络后重试。\n' + rpObj.msg + '\n详细信息可在浏览器控制台查看。')
-              App.onResponse(url, res, err)
-            }
-            else {
-              var user = rpObj.user || {}
-
-              if (user.id > 0) {
-                user.remember = rpObj.remember
-                user.phone = req.phone
-                user.password = req.password
-                App.User = user
-              }
-
-              //保存User到缓存
-              App.saveCache(App.server, 'User', user)
-
-              if (App.currentAccountIndex == null || App.currentAccountIndex < 0) {
-                App.currentAccountIndex = 0
-              }
-              var item = App.accounts[App.currentAccountIndex]
-              item.isLoggedIn = false
-              App.onClickAccount(App.currentAccountIndex, item) //自动登录测试账号
-
-              if (user.id > 0) {
-                App.showTestCase(true, false)
-              }
-            }
-
+            App.onLoginResponse(isAdminOperation, req, url, res, err);
           })
         }
         else {
-          if (callback == null) {
+          if (IS_BROWSER && callback == null) {
             var item
             for (var i in this.accounts) {
               item = this.accounts[i]
@@ -2920,39 +3237,81 @@
           }
 
           this.showTestCase(false, this.isLocalShow)
-          this.onChange(false)
+          if (IS_BROWSER) {
+            this.onChange(false)
+          }
           this.request(isAdminOperation, REQUEST_TYPE_JSON, this.project + '/login', req, this.getHeader(vHeader.value), function (url, res, err) {
             if (callback) {
               callback(url, res, err)
               return
             }
 
-            App.onResponse(url, res, err)
-
-            //由login按钮触发，不能通过callback回调来实现以下功能
-            var data = res.data || {}
-            if (data.code == CODE_SUCCESS) {
-              var user = data.user || {}
-              App.accounts.push({
-                isLoggedIn: true,
-                id: user.id,
-                name: user.name,
-                phone: req.phone,
-                password: req.password,
-                remember: data.remember
-              })
-
-              var lastItem = App.accounts[App.currentAccountIndex]
-              if (lastItem != null) {
-                lastItem.isLoggedIn = false
-              }
-
-              App.currentAccountIndex = App.accounts.length - 1
-
-              App.saveCache(App.getBaseUrl(), 'currentAccountIndex', App.currentAccountIndex)
-              App.saveCache(App.getBaseUrl(), 'accounts', App.accounts)
-            }
+            App.onLoginResponse(isAdminOperation, req, url, res, err)
           })
+        }
+      },
+
+      onLoginResponse: function(isAdmin, req, url, res, err) {
+        res = res || {}
+        if (isAdmin) {
+          var rpObj = res.data || {}
+
+          if (JSONResponse.isSuccess(rpObj) != true) {
+            alert('登录失败，请检查网络后重试。\n' + rpObj.msg + '\n详细信息可在浏览器控制台查看。')
+            App.onResponse(url, res, err)
+          }
+          else {
+            var user = rpObj.user || {}
+
+            if (user.id > 0) {
+              user.remember = rpObj.remember
+              user.phone = req.phone
+              user.password = req.password
+              user.cookie = res.cookie || (res.headers || {}).cookie
+              App.User = user
+            }
+
+            //保存User到缓存
+            App.saveCache(App.server, 'User', user)
+
+            if (App.currentAccountIndex == null || App.currentAccountIndex < 0) {
+              App.currentAccountIndex = 0
+            }
+            var item = App.accounts[App.currentAccountIndex]
+            item.isLoggedIn = false
+            App.onClickAccount(App.currentAccountIndex, item) //自动登录测试账号
+
+            if (user.id > 0) {
+              App.showTestCase(true, false)
+            }
+          }
+        } else {
+          App.onResponse(url, res, err)
+
+          //由login按钮触发，不能通过callback回调来实现以下功能
+          var data = res.data || {}
+          if (JSONResponse.isSuccess(data)) {
+            var user = data.user || {}
+            App.accounts.push({
+              isLoggedIn: true,
+              id: user.id,
+              name: user.name,
+              phone: req.phone,
+              password: req.password,
+              remember: data.remember,
+              cookie: res.cookie || (res.headers || {}).cookie
+            })
+
+            var lastItem = App.accounts[App.currentAccountIndex]
+            if (lastItem != null) {
+              lastItem.isLoggedIn = false
+            }
+
+            App.currentAccountIndex = App.accounts.length - 1
+
+            App.saveCache(App.getBaseUrl(), 'currentAccountIndex', App.currentAccountIndex)
+            App.saveCache(App.getBaseUrl(), 'accounts', App.accounts)
+          }
         }
       },
 
@@ -2973,7 +3332,7 @@
 
           var rpObj = res.data
 
-          if (rpObj != null && rpObj.code === CODE_SUCCESS) {
+          if (JSONResponse.isSuccess(rpObj)) {
             alert('注册成功')
 
             var privacy = rpObj.Privacy || {}
@@ -2998,7 +3357,7 @@
 
           var rpObj = res.data
 
-          if (rpObj != null && rpObj.code === CODE_SUCCESS) {
+          if (JSONResponse.isSuccess(rpObj)) {
             alert('重置密码成功')
 
             var privacy = rpObj.Privacy || {}
@@ -3058,7 +3417,7 @@
           App.onResponse(url, res, err)
 
           var data = res.data || {}
-          var obj = data.code == CODE_SUCCESS ? data.verify : null
+          var obj = JSONResponse.isSuccess(data) ? data.verify : null
           var verify = obj == null ? null : obj.verify
           if (verify != null) { //FIXME isEmpty校验时居然在verify=null! StringUtil.isEmpty(verify, true) == false) {
             vVerify.value = verify
@@ -3078,6 +3437,10 @@
       /**计时回调
        */
       onHandle: function (before) {
+        if (IS_NODE) {
+          return;
+        }
+
         this.isDelayShow = false
         if (inputted != before) {
           clearTimeout(handler);
@@ -3104,6 +3467,8 @@
 
           var afterObj;
           var after;
+          var code = '';
+
           if (StringUtil.isEmpty(before)) {
             afterObj = {};
             after = '';
@@ -3130,12 +3495,14 @@
             }
 
             //关键词let在IE和Safari上不兼容
+            // if (this.isEditResponse != true) {
             // var code = '';
             // try {
             //   code = this.getCode(after); //必须在before还是用 " 时使用，后面用会因为解析 ' 导致失败
             // } catch(e) {
             //   code = '\n\n\n建议:\n使用其它浏览器，例如 谷歌Chrome、火狐FireFox 或者 微软Edge， 因为这样能自动生成请求代码.'
             //     + '\nError:\n' + e.message + '\n\n\n';
+            // }
             // }
 
 
@@ -3153,7 +3520,8 @@
 
           vSend.disabled = false;
           if (this.isEditResponse != true) {
-            // vOutput.value = output = 'OK，请点击 [运行方法] 按钮来测试。[点击这里查看视频教程](https://www.bilibili.com/video/BV1Tk4y1R7Yo)'; // + code;
+            vOutput.value = output = '登录后点 ↑ 上方左侧最后图标按钮可查看用例列表，点上方右侧中间图标按钮可上传用例并且添加到列表中 ↑ \nOK，请点左上方 [远程执行] 按钮来测试。[点击这里查看视频教程](https://i.youku.com/i/UNTg1NzI1MjQ4MA==/videos?spm=a2hzp.8244740.0.0)' + code;
+
             this.showDoc()
           }
 
@@ -3207,7 +3575,7 @@
               + '\n\n\n                                                                                                       '
               + '                                                                                                       \n';  //解决遮挡
 
-            vUrlComment.value = isSingle || StringUtil.isEmpty(App.urlComment, true) ? '' : vUrl.value + App.urlComment;
+            vUrlComment.value = isSingle || StringUtil.isEmpty(this.urlComment, true) ? '' : vUrl.value + this.urlComment;
 
 
             onScrollChanged()
@@ -3252,6 +3620,11 @@
        */
       onChange: function (delay) {
         this.setBaseUrl();
+
+        if (IS_NODE) {
+          return;
+        }
+
         inputted = new String(vInput.value);
         vComment.value = '';
         vWarning.value = '';
@@ -3317,11 +3690,11 @@
         if (index >= 0) {
           var paramObj = getRequestFromURL(url.substring(index), true)
           vUrl.value = url.substring(0, index)
-          if (paramObj != null && $.isEmptyObject(paramObj) == false) {
+          if (paramObj != null && JSONObject.isEmpty(paramObj) == false) {
             var originVal = this.getRequest(vInput.value, {});
             var isConflict = false;
 
-            if ($.isEmptyObject(originVal) == false) {
+            if (JSONObject.isEmpty(originVal) == false) {
               for (var k in paramObj) {
                 if (originVal.hasOwnProperty(k)) {
                   isConflict = true;
@@ -3460,6 +3833,17 @@
           else {
             document.cookie = header.Cookie
           }
+        } else if (IS_NODE) {
+          var curUser = isAdminOperation ? this.User : this.getCurrentAccount()
+          if (curUser != null && curUser.cookie != null) {
+            if (header == null) {
+              header = {}
+            }
+
+            // Node 环境内通过 headers 设置 Cookie 无效
+            header.Cookie = curUser.cookie
+            document.cookie = header.Cookie
+          }
         }
 
         if (isDelegate && this.delegateId != null && (header == null || header['Apijson-Delegate-Id'] == null)) {
@@ -3467,6 +3851,26 @@
             header = {};
           }
           header['Apijson-Delegate-Id'] = this.delegateId
+        }
+
+
+        if (IS_NODE) {
+          log('req = ' + JSON.stringify(req, null, '  '))
+          // 低版本 node 报错 cannot find module 'node:url' ，高版本报错 TypeError: axiosCookieJarSupport is not a function
+          //   const axiosCookieJarSupport = require('axios-cookiejar-support').default;
+          //   const tough = require('tough-cookie');
+          //   axiosCookieJarSupport(axios);
+          //   const cookieJar = new tough.CookieJar();
+          //   axios.defaults.jar = cookieJar;
+          //   axios.defaults.withCredentials = true;
+
+          // const {parse, stringify, toJSON, fromJSON} = require('flatted');
+          // JSON.stringify = stringify;
+          // JSON.parse = parse;
+
+          // const CircularJSON = require('circular-json');
+          // JSON.stringify = CircularJSON.stringify;
+          // JSON.parse = CircularJSON.parse;
         }
 
         // axios.defaults.withcredentials = true
@@ -3488,7 +3892,6 @@
         })
           .then(function (res) {
             App.isLoading = false
-
             res = res || {}
 
             if (isDelegate) {
@@ -3500,11 +3903,11 @@
               }
             }
 
-	    //any one of then callback throw error will cause it calls then(null)
+	          //any one of then callback throw error will cause it calls then(null)
             // if ((res.config || {}).method == 'options') {
             //   return
             // }
-            log('send >> success:\n' + JSON.stringify(res, null, '    '))
+            log('send >> success:\n' + JSON.stringify(res.data, null, '    '))
 
             //未登录，清空缓存
             if (res.data != null && res.data.code == 407) {
@@ -3531,17 +3934,22 @@
           })
           .catch(function (err) {
             App.isLoading = false
-            log('send >> error:\n' + err)
 
+            log('send >> error:\n' + err)
             if (isAdminOperation) {
               App.delegateId = null
             }
 
             if (callback != null) {
-              callback(url, {}, err)
+              callback(url, {request: {url: url, headers: header, data: req}}, err)
               return
             }
-            App.onResponse(url, {}, err)
+
+            if (typeof App.autoTestCallback == 'function') {
+              App.autoTestCallback('Error when testing: ' + err + '.\nurl: ' + url + ' \nrequest: \n' + JSON.stringify(req, null, '    '), err)
+            }
+
+            App.onResponse(url, {request: {url: url, headers: header, data: req}}, err)
           })
       },
 
@@ -3552,18 +3960,29 @@
         if (res == null) {
           res = {}
         }
-        log('onResponse url = ' + url + '\nerr = ' + err + '\nres = \n' + JSON.stringify(res))
+        if (DEBUG) {
+          log('onResponse url = ' + url + '\nerr = ' + err + '\nreq = \n'
+            + (res.request == null || res.request.data == null ? 'null' : JSON.stringify(res.request.data))
+            + '\n\nres = \n' + (res.data == null ? 'null' : JSON.stringify(res.data))
+          )
+        }
+
         if (err != null) {
-          vOutput.value = "Response:\nurl = " + url + "\nerror = " + err.message;
+          if (IS_BROWSER) {
+            vOutput.value = "Response:\nurl = " + url + "\nerror = " + err.message;
+          }
         }
         else {
-          var data = res.data || {}
-          if (isSingle && data.code == CODE_SUCCESS) { //不格式化错误的结果
-            data = JSONResponse.formatObject(data);
+          if (IS_BROWSER) {
+            var data = res.data || {}
+            if (isSingle && JSONResponse.isSuccess(data)) { //不格式化错误的结果
+              data = JSONResponse.formatObject(data);
+            }
+            this.jsoncon = JSON.stringify(data, null, '    ');
+            this.view = 'code';
+
+            vOutput.value = '';
           }
-          this.jsoncon = JSON.stringify(data, null, '    ');
-          this.view = 'code';
-          vOutput.value = '';
 
           // 会导致断言用了这个
           // if (this.currentRemoteItem == null) {
@@ -3870,7 +4289,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               tag: 'Random'
             }, {}, function (url, res, err) {
 
-              var isOk = (res.data || {}).code == CODE_SUCCESS
+              var isOk = JSONResponse.isSuccess(res.data)
 
               var msg = isOk ? '' : ('\nmsg: ' + StringUtil.get((res.data || {}).msg))
               if (err != null) {
@@ -3881,7 +4300,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 + msg
               )
 
-              App.isRandomEditable = !isOk
+              App.isRandomEditable = ! isOk
             })
 
             return
@@ -4102,7 +4521,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             + '\nAPIJSON 官方网站: https://github.com/APIJSON/apijson.cn '
             + '\nAPIJSON -Java版: https://github.com/Tencent/APIJSON '
             + '\nAPIJSON - C# 版: https://github.com/liaozb/APIJSON.NET '
-            + '\nAPIJSON - Go 版: https://github.com/j2go/apijson-go '
+            + '\nAPIJSON - Go 版: https://github.com/glennliao/apijson-go '
             + '\nAPIJSON - PHP版: https://github.com/kvnZero/hyperf-APIJSON '
             + '\nAPIJSON -Node版: https://github.com/kevinaskin/apijson-node '
             + '\nAPIJSON -Python: https://github.com/zhangchunlin/uliweb-apijson '
@@ -4127,7 +4546,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           + '<h3 align="center">关于</h3>'
           + '<p align="center">UnitAuto-零代码单元测试'
           + '<br>机器学习自动化测试、一键导入单元测试用例、自动生成复杂参数组合'
-          + '<br>由 <a href="https://github.com/TommyLemon/UnitAuto" target="_blank">UnitAuto(前端网页工具)</a>, <a href="https://github.com/Tencent/APIJSON" target="_blank">APIJSON(后端接口服务)</a> 等提供技术支持'
+          + '<br>由 <a href="https://github.com/TommyLemon/UnitAuto" target="_blank">UnitAuto-Admin(前端网页工具)</a>, <a href="https://github.com/Tencent/APIJSON" target="_blank">APIJSON(后端接口服务)</a> 等提供技术支持'
           + '<br>遵循 <a href="http://www.apache.org/licenses/LICENSE-2.0" target="_blank">Apache-2.0 开源协议</a>'
           + '<br>Copyright &copy; 2020-' + new Date().getFullYear() + ' Tommy Lemon'
           + '<br><a href="https://beian.miit.gov.cn/" target="_blank"><span >粤ICP备18005508号-1</span></a>'
@@ -4145,12 +4564,14 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
        */
       getDoc: function (callback) {
 
+      	var isTSQL = ['ORACLE', 'DAMENG'].indexOf(this.database) >= 0
+      	var isNotTSQL = ! isTSQL
         var count = 15 // this.count || 20  //超过就太卡了
         var page = this.page || 0
 
         var search = StringUtil.isEmpty(this.search, true) ? null : StringUtil.trim(this.search)
         var condition = {
-        	'len&{}': "length(package)>0;length(class)>0;length(method)>0",
+        	'len&{}': this.database == 'SQLSERVER' ? "len(package)>0;len(class)>0;len(method)>0": "length(package)>0;length(class)>0;length(method)>0",
         	'package%$': search,
             'class%$': search,
 //            'method%$': search,
@@ -4366,38 +4787,38 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
     	var packageList = data.packageList
     	var len = packageList == null ? 0 : packageList.length
 
-		if (StringUtil.isEmpty(packageName, true)) {
-			return Math.max(data.classTotal || 0, len);
-		}
+  		if (StringUtil.isEmpty(packageName, true)) {
+  			return Math.max(data.classTotal || 0, len);
+  		}
 
     	if (len <= 0) {
     		return 0;
     	}
 
-		for (var i in packageList) {
-			var pkgObj = packageList[i]
-			if (pkgObj != null && pkgObj['package'] == packageName) {
-				return Math.max(pkgObj.classTotal || 0, (pkgObj.classList || []).length || 0);
-			}
-		}
+  		for (var i in packageList) {
+  			var pkgObj = packageList[i]
+  			if (pkgObj != null && pkgObj['package'] == packageName) {
+  				return Math.max(pkgObj.classTotal || 0, (pkgObj.classList || []).length || 0);
+  			}
+  		}
 
-		return 0;
+  		return 0;
 	  },
 
 	  getRealMethodTotal: function(data, packageName, className) {
-		  if (data == null) {
+		    if (data == null) {
 	    	 return 0;
 	      }
 
 	    	var packageList = data.packageList
 	    	var len = packageList == null ? 0 : packageList.length
 
-			if (StringUtil.isEmpty(packageName, true)) {
-				if (StringUtil.isEmpty(className, true)) {
-					return Math.max(data.classTotal || 0, len);
-				}
-				return 0;
-			}
+  			if (StringUtil.isEmpty(packageName, true)) {
+  				if (StringUtil.isEmpty(className, true)) {
+  					return Math.max(data.classTotal || 0, len);
+  				}
+  				return 0;
+  			}
 
 	    	if (len <= 0) {
 	    		return 0;
@@ -4615,20 +5036,24 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
       /**参数注入，动态替换键值对
        * @param show
        */
-      onClickTestRandom: function () {
+      onClickTestRandom: function (isCross, callback) {
         this.isRandomTest = true
-        this.testRandom(! this.isRandomListShow && ! this.isRandomSubListShow, this.isRandomListShow, this.isRandomSubListShow)
+        this.testRandom(! this.isRandomListShow && ! this.isRandomSubListShow, this.isRandomListShow, this.isRandomSubListShow, null, isCross, callback)
       },
-      testRandom: function (show, testList, testSubList, limit) {
+      testRandom: function (show, testList, testSubList, limit, isCross, callback) {
         this.isRandomEditable = false
         if (testList != true && testSubList != true) {
           this.testRandomProcess = ''
-          this.testRandomWithText(show, null)
+          this.testRandomWithText(show, callback)
         }
         else {
           var baseUrl = StringUtil.trim(this.getBaseUrl())
           if (baseUrl == '') {
-            alert('请先输入有效的URL！')
+            if (callback) {
+              callback(true, 0, '请先输入有效的URI！')
+            } else {
+              alert('请先输入有效的URI！')
+            }
             return
           }
           //开放测试
@@ -4641,19 +5066,30 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           //   return
           // }
 
-          const list = (testSubList ? this.randomSubs : this.randoms) || []
-          var allCount = list.length
-          doneCount = 0
+          const list = (testSubList ? App.randomSubs : App.randoms) || []
+          var allCount = 0  // list.length
+          for (let i = 0; i < list.length; i++) {
+            const item = list[i]
+            const random = item == null ? null : item.Random
+            allCount += (random == null || random.count == null ? 0 : random.count)
+          }
+
+          App.randomAllCount = allCount
+          App.randomDoneCount = 0
 
           if (allCount <= 0) {
-            alert('请先获取随机配置\n点击[查看列表]按钮')
+            if (callback) {
+              callback(true, 0, '请先获取随机配置\n点击[查看列表]按钮')
+            } else {
+              alert('请先获取随机配置\n点击[查看列表]按钮')
+            }
             return
           }
-          this.testRandomProcess = '正在测试: ' + 0 + '/' + allCount
 
-          if (testSubList) {
-            this.resetCount(this.currentRandomItem)
-          }
+          this.testRandomProcess = '正在测试: ' + 0 + '/' + allCount
+          var summaryItem = this.getCurrentRandomSummary()
+          this.resetCount(summaryItem, true, App.currentAccountIndex)
+          summaryItem.totalCount = allCount
 
           var json = this.getRequest(vInput.value, {})
           var url = this.getUrl()
@@ -4665,7 +5101,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             const item = list[i]
             const random = item == null ? null : item.Random
             if (random == null || random.name == null) {
-              doneCount ++
+              App.randomDoneCount ++
               continue
             }
             this.log('test  random = ' + JSON.stringify(random, null, '  '))
@@ -4673,20 +5109,28 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             const index = i
 
             const itemAllCount = random.count || 0
-            allCount += (itemAllCount - 1)
+            // allCount += (itemAllCount - 1)  // 为什么减 1？因为初始化时 var allCount = list.length
 
-            this.testRandomSingle(show, false, itemAllCount > 1 && ! testSubList, item, this.type, url, json, header, function (url, res, err) {
+            // UI 往上顶出屏幕
+            // try {
+            //   document.getElementById((testSubList ?  'randomSubItem' : 'randomItem') + index).scrollIntoView()
+            // } catch (e) {
+            //   console.log(e)
+            // }
 
-              doneCount ++
-              App.testRandomProcess = doneCount >= allCount ? '' : ('正在测试: ' + doneCount + '/' + allCount)
-              try {
-                App.onResponse(url, res, err)
-                App.log('test  App.request >> res.data = ' + JSON.stringify(res.data, null, '  '))
-              } catch (e) {
-                App.log('test  App.request >> } catch (e) {\n' + e.message)
+            App[testSubList ? 'currentRandomSubIndex' : 'currentRandomIndex'] = index
+            this.testRandomSingle(show, false, itemAllCount > 1 && ! testSubList, item, this.type, url, json, header, isCross, function (url, res, err) {
+              if (res instanceof Object) {  // 可能通过 onTestResponse 返回的是 callback(true, 18, null)
+                try {
+                  App.onResponse(url, res, err)
+                  App.log('test  App.request >> res.data = ' + JSON.stringify(res.data, null, '  '))
+                } catch (e) {
+                  App.log('test  App.request >> } catch (e) {\n' + e.message)
+                }
               }
 
-              App.compareResponse(allCount, list, index, item, res.data, true, App.currentAccountIndex, false, err)
+              App.compareResponse(allCount, list, index, item, res.data, true, App.currentAccountIndex, false, err, null, isCross, callback)
+              return true
             })
           }
         }
@@ -4695,7 +5139,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
        * @param show
        * @param callback
        */
-      testRandomSingle: function (show, testList, testSubList, item, type, url, json, header, callback) {
+      testRandomSingle: function (show, testList, testSubList, item, type, url, json, header, isCross, callback) {
         item = item || {}
         var random = item.Random = item.Random || {}
         var subs = item['[]'] || []
@@ -4757,34 +5201,38 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                   }
                 };
 
-            if (show == true) {
-              vInput.value = JSON.stringify(constJson, null, '    ');
-              App.send(false, cb);
-            }
-            else {
-              var httpReq = {
-                "package": constJson.package || App.getPackage(url),
-                "class": constJson.class || App.getClass(url),
-                "this": constJson.this,
-                "constructor": constJson.constructor,
-                "classArgs": constJson.classArgs,
-                "method": constJson.method || App.getMethod(url),
-                "methodArgs": constJson.methodArgs,
-                "static": constJson.static,
-                "timeout": constJson.timeout,
-                "ui": constJson.ui
+                if (show == true) {
+                  vInput.value = JSON.stringify(constJson, null, '    ');
+                  App.send(false, cb);
+                }
+                else {
+                  var httpReq = {
+                    "package": constJson.package || App.getPackage(url),
+                    "class": constJson.class || App.getClass(url),
+                    "this": constJson.this,
+                    "constructor": constJson.constructor,
+                    "classArgs": constJson.classArgs,
+                    "method": constJson.method || App.getMethod(url),
+                    "methodArgs": constJson.methodArgs,
+                    "static": constJson.static,
+                    "timeout": constJson.timeout,
+                    "ui": constJson.ui
+                  }
+                  App.request(false, REQUEST_TYPE_JSON, App.project + '/method/invoke', httpReq, header, cb);
+                }
               }
-              App.request(false, REQUEST_TYPE_JSON, App.project + '/method/invoke', httpReq, header, cb);
-            }
-          }
 
               if (testSubList && respCount >= count) { // && which >= count - 1) {
-                App.randomSubs = subs
+                if (App.currentRandomItem == null) {
+                  App.currentRandomItem = {}
+                }
+                App.randomSubs = App.currentRandomItem.subs = subs
+                App.getCurrentRandomSummary().summaryType = 'total' // App.onClickSummary('total', true)
                 if (App.isRandomListShow == true) {
-                  App.resetCount(item)
+                  App.resetCount(item, true, App.currentAccountIndex)
                   item.subs = subs
                 }
-                App.testRandom(false, false, true, count)
+                App.testRandom(false, false, true, count, isCross, callback)
               }
 
             }
@@ -4794,17 +5242,72 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
     },
 
-      resetCount: function (randomItem) {
-        if (randomItem == null) {
-          this.log('resetCount  randomItem == null >> return')
-          return
+      resetParentCount: function (item, cri) {
+        cri.totalCount -= item.totalCount
+        cri.whiteCount -= item.whiteCount
+        cri.greenCount -= item.greenCount
+        cri.blueCount -= item.blueCount
+        cri.orangeCount -= item.orangeCount
+        cri.redCount -= item.redCount
+
+        // if (cri.totalCount < 0) {
+        //   cri.totalCount = 0
+        // }
+        if (cri.whiteCount < 0) {
+          cri.whiteCount = 0
         }
-        randomItem.totalCount = 0
-        randomItem.whiteCount = 0
-        randomItem.greenCount = 0
-        randomItem.blueCount = 0
-        randomItem.orangeCount = 0
-        randomItem.redCount = 0
+        if (cri.greenCount < 0) {
+          cri.greenCount = 0
+        }
+        if (cri.blueCount < 0) {
+          cri.blueCount = 0
+        }
+        if (cri.orangeCount < 0) {
+          cri.orangeCount = 0
+        }
+        if (cri.redCount < 0) {
+          cri.redCount = 0
+        }
+
+        cri.totalCount = cri.whiteCount + cri.greenCount + cri.blueCount + cri.orangeCount + cri.redCount
+      },
+      resetCount: function (item, isRandom, accountIndex) {
+        if (item == null) {
+          this.log('resetCount  randomItem == null >> return')
+          return item
+        }
+
+        if (isRandom) {
+          var cri = this.currentRemoteItem // isSub ? this.currentRemoteItem : null
+          // if (cri != null && item != null && item.toId != null && item.toId > 0) {
+          if (cri != null && (cri != item || cri.id != item.id)) {
+            this.resetParentCount(item, cri)
+          }
+        }
+
+        var accounts = this.accounts
+        var num = accounts == null ? 0 : accounts.length
+        if (isRandom && accountIndex != this.currentAccountIndex && accountIndex != num) {
+          var cs = this.getSummary(accountIndex)
+          if (cs != null && (cs != item || cs.id != item.id)) {
+            this.resetParentCount(item, cs)
+          }
+        }
+
+        if (isRandom || accountIndex != num) {
+          var als = this.getAllSummary()
+          if (als != null && (als != item || als.id != item.id)) {
+            this.resetParentCount(item, als)
+          }
+        }
+
+        item.totalCount = 0
+        item.whiteCount = 0
+        item.greenCount = 0
+        item.blueCount = 0
+        item.orangeCount = 0
+        item.redCount = 0
+        return item
       },
 
       /**参数注入，动态替换键值对
@@ -4815,16 +5318,19 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         try {
           var count = this.testRandomCount || 0;
           this.isRandomSubListShow = count > 1;
-          this.testRandomSingle(show, false, this.isRandomSubListShow, {
-              Random: {
-                toId: 0, // ((this.currentRandomItem || {}).Random || {}).id || 0,
-                userId: (this.User || {}).id,
-                count: count,
-                name: this.randomTestTitle,
-                config: vRandom.value
-              }
+          this.currentRandomItem = {
+            Random: {
+              toId: 0, // ((this.currentRandomItem || {}).Random || {}).id || 0,
+              userId: (this.User || {}).id,
+              count: count,
+              name: this.randomTestTitle,
+              config: vRandom.value
             },
-            this.type, this.getUrl(), this.getRequest(vInput.value, {}), this.getHeader(vHeader.value), callback
+            totalCount: count
+          }
+
+          this.testRandomSingle(show, false, this.isRandomSubListShow, this.currentRandomItem,
+            this.type, this.getUrl(), this.getRequest(vInput.value, {}), this.getHeader(vHeader.value), false, callback
           )
         }
         catch (e) {
@@ -5047,14 +5553,14 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             }
 
             // reqCount ++;
-            App.request(true, REQUEST_TYPE_JSON, baseUrl + '/get', req, {}, function (url, res, err) {
+            App.request(true, REQUEST_TYPE_JSON, App.project + '/get', req, {}, function (url, res, err) {
               // respCount ++;
               try {
                 App.onResponse(url, res, err)
               } catch (e) {}
 
               var data = (res || {}).data || {}
-              if (data.code != CODE_SUCCESS) {
+              if (JSONResponse.isSuccess(data) != true) {
                 respCount = -reqCount;
                 vOutput.value = '参数注入 为第 ' + (which + 1) + ' 行\n  ' + p_k + '  \n获取数据库数据 异常：\n' + data.msg;
                 alert(StringUtil.get(vOutput.value));
@@ -5174,9 +5680,59 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         this.isRandomTest = false
         this.send(false)
       },
-      onClickTest: function () {
+      onClickTest: function (callback) {
         this.isRandomTest = false
-        this.test(false, this.isCrossEnabled ? -1 : this.currentAccountIndex)
+
+        // 自动往右移动，避免断言结果遮挡太多接口名称、URL
+        var split_obj = IS_BROWSER ? $('.splitx') : null
+        var split_obj_left = split_obj == null ? 0 : parseInt(split_obj.css('left'))
+        var width = split_obj_left <= 0 ? 0 : (window.innerWidth || 1280)
+        if (width > 0 && Math.abs(split_obj_left - 0.5*width) <= 5) {
+          // 构造事件比较麻烦，即便用 JQuery 也是
+          // split_obj[0].dispatchEvent(new TouchEvent('', new class implements TouchEventInit{
+          //   clientX: 0.6*width
+          // }()))
+
+          var left_ele = $('.side-left')
+          var right_ele = $('.side-right')
+
+          // var left_width = left_ele.width()
+          // var right_width = right_ele.width()
+          //
+          // var right_left = parseInt(right_ele.css('left'))
+
+          split_obj.css('left', 0.55*width)
+          left_ele.width(0.55*width);
+          right_ele.width(0.45*width).css('left', 0.55*width);
+          // right_ele.width(right_width - left_ele.width() + left_width).css('left', right_left + left_ele.width() - left_width);
+        }
+
+        var isCross = this.isCrossEnabled
+        var accountIndex = isCross ? -1 : this.currentAccountIndex
+
+        var accounts = this.accounts
+        var num = accounts == null ? 0 : accounts.length
+
+        var remotes = this.remotes
+        var total = remotes == null ? 0 : remotes.length
+
+        var als = this.getAllSummary()
+        als = this.resetCount(als, false, num)
+        als.totalCount = isCross ? (num + 1)*total : total
+
+        if (isCross) {
+          for (var i = -1; i < num; i++) {
+            var cs = this.getSummary(i)
+            cs = this.resetCount(cs, false, i)
+            cs.totalCount = total
+          }
+        } else {
+          var cs = this.getSummary(accountIndex)
+          cs = this.resetCount(cs, false, accountIndex)
+          cs.totalCount = total
+        }
+
+        this.test(false, accountIndex, isCross, callback)
       },
       /**回归测试
        * 原理：
@@ -5192,25 +5748,46 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
        3-对象缺少字段/整数变小数，黄色；
        4-code/值类型 改变，红色；
        */
-      test: function (isRandom, accountIndex) {
+      test: function (isRandom, accountIndex, isCross, callback) {
         var accounts = this.accounts || []
         // alert('test  accountIndex = ' + accountIndex)
-        var isCrossEnabled = this.isCrossEnabled
         if (accountIndex == null) {
-          accountIndex = -1 //isCrossEnabled ? -1 : 0
+          accountIndex = -1 //isCross ? -1 : 0
         }
-        if (isCrossEnabled) {
+
+        if (isCross) {
           var isCrossDone = accountIndex >= accounts.length
-          this.crossProcess = isCrossDone ? (isCrossEnabled ? '交叉账号:已开启' : '交叉账号:已关闭') : ('交叉账号: ' + (accountIndex + 1) + '/' + accounts.length)
+          this.crossProcess = isCrossDone ? '交叉账号:已开启' : ('交叉账号: ' + (accountIndex + 1) + '/' + accounts.length)
           if (isCrossDone) {
-            alert('已完成账号交叉测试: 退出登录状态 和 每个账号登录状态')
+            this.testProcess = (this.isMLEnabled ? '机器学习:已开启' : '机器学习:已关闭')
+            this.testRandomProcess = ''
+            if (accountIndex == accounts.length) {
+              this.currentAccountIndex = accounts.length - 1  // -1 导致最后右侧显示空对象
+              if (callback) {
+                callback('已完成账号交叉测试: 退出登录状态 和 每个账号登录状态')
+              } else {
+                alert('已完成账号交叉测试: 退出登录状态 和 每个账号登录状态')
+              }
+
+              if (callback != this.autoTestCallback && typeof this.autoTestCallback == 'function') {
+                this.autoTestCallback('已完成账号交叉测试: 退出登录状态 和 每个账号登录状态')
+              }
+            }
             return
+          }
+
+          if (callback != this.autoTestCallback && typeof this.autoTestCallback == 'function') {
+            this.autoTestCallback('正在账号交叉测试 ')
           }
         }
 
         var baseUrl = StringUtil.trim(this.getBaseUrl())
         if (baseUrl == '') {
-          alert('请先输入有效的URL！')
+          if (callback) {
+            callback('请先输入有效的URI！')
+          } else {
+            alert('请先输入有效的URI！')
+          }
           return
         }
         //开放测试
@@ -5223,16 +5800,37 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         //   return
         // }
 
-        const list = this.remotes || []
+        const list = (isRandom ? this.randoms : this.remotes) || []
         const allCount = list.length
-        doneCount = 0
+        App.doneCount = 0
+        App.deepAllCount = 0
+        App.randomDoneCount = 0
+        if (isRandom != true) {
+          App.allCount = allCount
+        }
+
+        // var cs = this.getSummary(accountIndex)
+        // if (isCross && cs.totalCount <= 0) {
+        //   cs = this.resetCount(cs)
+        //   cs.totalCount = allCount
+        // }
+        //
+        // var als = this.getAllSummary()
+        // if (als.totalCount <= 0) {
+        //   als = this.resetCount(als)
+        //   als.totalCount = allCount
+        // }
 
         if (allCount <= 0) {
-          alert('请先获取测试用例文档\n点击[查看共享]图标按钮')
+          if (callback) {
+            callback('请先获取测试用例文档\n点击[查看共享]图标按钮')
+          } else {
+            alert('请先获取测试用例文档\n点击[查看共享]图标按钮')
+          }
           return
         }
 
-        if (isCrossEnabled) {
+        if (isCross) {
           if (accountIndex < 0 && accounts[this.currentAccountIndex] != null) {  //退出登录已登录的账号
             accounts[this.currentAccountIndex].isLoggedIn = true
           }
@@ -5244,28 +5842,43 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             //   return
             // }
             App.showTestCase(true, false)
-            App.startTest(list, allCount, isRandom, accountIndex)
+            App.startTest(list, allCount, isRandom, accountIndex, isCross, callback)
           })
         }
         else {
-          this.startTest(list, allCount, isRandom, accountIndex)
+          this.startTest(list, allCount, isRandom, accountIndex, isCross, callback)
         }
       },
 
-      startTest: function (list, allCount, isRandom, accountIndex) {
+      toTestDocIndexes: [],
+
+      startTest: function (list, allCount, isRandom, accountIndex, isCross, callback) {
         this.testProcess = '正在测试: ' + 0 + '/' + allCount
+        this.toTestDocIndexes = []
+
+        if (callback != this.autoTestCallback && typeof this.autoTestCallback == 'function') {
+          this.autoTestCallback(this.testProcess)
+        }
 
         for (var i = 0; i < allCount; i++) {
           const item = list[i]
           const document = item == null ? null : item.Method
           if (document == null || document.method == null) {
-            doneCount++
+            if (isRandom) {
+              App.randomDoneCount ++
+            } else {
+              App.doneCount ++
+            }
             continue
           }
           var method = (document.method || '').toLowerCase()
           if (method.indexOf('login') >= 0 || method.indexOf('logout') >= 0) { //login会导致登录用户改变为默认的但UI上还显示原来的，单独测试OWNER权限时能通过很困惑
             this.log("startTest  method.indexOf('login') >= 0 || method.indexOf('logout') >= 0 >> continue")
-            doneCount++
+            if (isRandom) {
+              App.randomDoneCount ++
+            } else {
+              App.doneCount ++
+            }
             continue
           }
           this.log('test  document = ' + JSON.stringify(document, null, '  '))
@@ -5328,27 +5941,32 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               App.log('test  App.request >> } catch (e) {\n' + e.message)
             }
 
-            App.compareResponse(allCount, list, index, item, res.data, isRandom, accountIndex, false, err)
+            App.compareResponse(allCount, list, index, item, res.data, isRandom, accountIndex, false, err, null, isCross, callback)
           })
         }
+
       },
 
-      compareResponse: function (allCount, list, index, item, response, isRandom, accountIndex, justRecoverTest, err) {
+      compareResponse: function (allCount, list, index, item, response, isRandom, accountIndex, justRecoverTest, err, ignoreTrend, isCross, callback) {
         var it = item || {} //请求异步
         var d = (isRandom ? this.currentRemoteItem.Method : it.Method) || {} //请求异步
         var r = isRandom ? it.Random : null //请求异步
         var tr = it.TestRecord || {} //请求异步
 
         var bdt = tr.duration || 0
-        it.durationBeforeShowStr = bdt < 0 ? '' : (bdt < 1000 ? bdt + 'ms' : (bdt < 1000*60 ? (bdt/1000).toFixed(1) + 's' : (bdt <= 1000*60*60 ? (bdt/1000/60/60).toFixed(1) + 'm' : '>1h')))
+        it.durationBeforeShowStr = bdt <= 0 ? '' : (bdt < 1000 ? bdt + 'ms' : (bdt < 1000*60 ? (bdt/1000).toFixed(1) + 's' : (bdt <= 1000*60*60 ? (bdt/1000/60).toFixed(1) + 'm' : '>1h')))
         try {
-          var durationInfo = response['time:start|duration|end']
+          var durationInfo = response == null ? null : response['time:start|duration|end']
           it.durationInfo = durationInfo
+          if (durationInfo == null) {
+            throw new Error("response['time:start|duration|end'] is null!");
+          }
+
           var di = durationInfo.substring(durationInfo.indexOf('\|') + 1)
           it.duration = di.substring(0, di.indexOf('\|') || di.length) || 0
           var dt = + it.duration
           it.duration = dt
-          it.durationShowStr = dt < 0 ? '' : (dt < 1000 ? dt + 'ms' : (dt < 1000*60 ? (dt/1000).toFixed(1) + 's' : (dt <= 1000*60*60 ? (dt/1000/60/60).toFixed(1) + 'm' : '>1h')))
+          it.durationShowStr = dt <= 0 ? '' : (dt < 1000 ? dt + 'ms' : (dt < 1000*60 ? (dt/1000).toFixed(1) + 's' : (dt <= 1000*60*60 ? (dt/1000/60).toFixed(1) + 'm' : '>1h')))
           var min = tr.minDuration == null || tr.minDuration < 0 ? 2 : tr.minDuration
           var max = tr.maxDuration == null || tr.maxDuration < 0 ? 20 : tr.maxDuration
           it.durationColor = dt < min ? 'green' : (dt > 2*max ? 'red' : (dt > max + min ? 'orange' : (dt > max ? 'blue' : 'black')))
@@ -5357,9 +5975,9 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               : (dt > max ? '有点慢：比以往 [' + min + 'ms, ' + max + 'ms] 最慢还更慢' : '正常：在以往 [' + min + 'ms, ' + max + 'ms] 最快和最慢之间')))
         }
         catch (e) {
-          log(e)
+          // log(e)
           it.durationShowStr = it.durationShowStr || it.duration
-          it.durationHint = it.durationHint || '最外层缺少字段 "time:start|duration|end": "1613039123780|10|1613039123790"，无法对比耗时'
+          it.durationHint = it.durationHint || '最外层缺少字段 "time:start|duration|end"，无法对比耗时'
         }
 
         if (err != null) {
@@ -5376,14 +5994,14 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           var rsp = JSON.parse(JSON.stringify(this.removeDebugInfo(response) || {}))
           rsp = JSONResponse.array2object(rsp, 'methodArgs', ['methodArgs'], true)
 
-          tr.compare = JSONResponse.compareResponse(standard, rsp, '', this.isMLEnabled, null, ['call()[]']) || {}
+          tr.compare = JSONResponse.compareResponse(standard, rsp, '', this.isMLEnabled, null, ['call()[]'], ignoreTrend) || {}
           tr.compare.duration = it.durationHint
         }
 
-        this.onTestResponse(allCount, list, index, it, d, r, tr, response, tr.compare || {}, isRandom, accountIndex, justRecoverTest);
+        this.onTestResponse(allCount, list, index, it, d, r, tr, response, tr.compare || {}, isRandom, accountIndex, justRecoverTest, isCross, callback);
       },
 
-      onTestResponse: function(allCount, list, index, it, d, r, tr, response, cmp, isRandom, accountIndex, justRecoverTest) {
+      onTestResponse: function(allCount, list, index, it, d, r, tr, response, cmp, isRandom, accountIndex, justRecoverTest, isCross, callback) {
         tr = tr || {}
         tr.compare = cmp;
 
@@ -5425,21 +6043,39 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           r = r || {}
           it.Random = r
 
-          this.updateToRandomSummary(it, 1)
+          this.updateToRandomSummary(it, 1, accountIndex)
         }
         else {
+          d = d || {}
           it.Method = d
+
+          this.updateToSummary(it, 1, accountIndex)
         }
         it.TestRecord = tr
 
         Vue.set(list, index, it)
 
         if (justRecoverTest) {
+          // callback(isRandom, allCount)
           return
         }
 
-        doneCount ++
-        this.testProcess = doneCount >= allCount ? (this.isMLEnabled ? '机器学习:已开启' : '机器学习:已关闭') : '正在测试: ' + doneCount + '/' + allCount
+        if (isRandom) {
+          App.randomDoneCount ++
+        } else {
+          App.doneCount ++
+        }
+
+        var doneCount = isRandom ? App.randomDoneCount : App.doneCount
+        if (isRandom) {
+          this.testRandomProcess = doneCount >= allCount ? '' : ('正在测试: ' + doneCount + '/' + allCount)
+        } else {
+          this.testProcess = doneCount >= allCount ? (this.isMLEnabled ? '机器学习:已开启' : '机器学习:已关闭') : '正在测试: ' + doneCount + '/' + allCount
+        }
+
+        if (doneCount < allCount && callback != this.autoTestCallback && typeof this.autoTestCallback == 'function') {
+          this.autoTestCallback('正在测试')
+        }
 
         this.log('doneCount = ' + doneCount + '; d.name = ' + (isRandom ? r.name : d.name) + '; it.compareType = ' + it.compareType)
 
@@ -5447,67 +6083,281 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         if (this.tests == null) {
           this.tests = {}
         }
-        if (this.tests[String(accountIndex)] == null) {
-          this.tests[String(accountIndex)] = {}
+
+        var accountIndexStr = String(accountIndex)
+        if (this.tests[accountIndexStr] == null) {
+          this.tests[accountIndexStr] = {}
         }
 
-        var tests = this.tests[String(accountIndex)] || {}
+        var tests = this.tests[accountIndexStr] || {}
         var t = tests[documentId]
         if (t == null) {
           t = tests[documentId] = {}
         }
         t[isRandom ? (r.id > 0 ? r.id : (r.toId + '' + r.id)) : 0] = response
 
-        this.tests[String(accountIndex)] = tests
-        this.log('tests = ' + JSON.stringify(tests, null, '    '))
+        if (isRandom != true && it.compareColor != 'red') {
+          if (this.toTestDocIndexes == null) {
+            this.toTestDocIndexes = []
+          }
+          this.toTestDocIndexes.push(index);
+        }
+
+        this.tests[accountIndexStr] = tests
+        if (DEBUG) {
+          this.log('tests = ' + JSON.stringify(tests, null, '    '))
+        }
         // this.showTestCase(true)
 
-        if (doneCount >= allCount && this.isCrossEnabled && isRandom != true) {
-          // alert('onTestResponse  accountIndex = ' + accountIndex)
-          //TODO 自动给非 红色 报错的接口跑参数注入
+        if (doneCount >= allCount) {  // 导致不继续测试  App.doneCount == allCount) {
+          if (callback != null && callback(isRandom, allCount)) {
+            return
+          }
 
-          this.test(false, accountIndex + 1)
+          // alert('onTestResponse  accountIndex = ' + accountIndex)
+
+          const deepAllCount = this.toTestDocIndexes == null ? 0 : this.toTestDocIndexes.length
+          App.deepAllCount = deepAllCount
+          if (isRandom != true && deepAllCount > 0) { // 自动给非 红色 报错的接口跑参数注入
+            App.deepDoneCount = 0;
+            this.startRandomTest4Doc(list, this.toTestDocIndexes, 0, deepAllCount, accountIndex, isCross)
+          } else if (isCross && doneCount == allCount && accountIndex <= this.accounts.length) {
+            this.test(false, accountIndex + 1, isCross)
+          }
         }
       },
 
-      //更新父级总览数据
-      updateToRandomSummary: function (item, change) {
-        var random = item == null || change == null ? null : item.Random
-        var toId = random == null ? null : random.toId
-        if (toId != null && toId > 0) {
+      startRandomTest4Doc: function (list, indexes, position, deepAllCount, accountIndex, isCross) {
+        const accInd = accountIndex
+        var callback = function (isRandom, allCount) {
+          if (App.randomDoneCount < App.randomAllCount) {
+            return true
+          }
 
-          for (var i in this.randoms) {
+          App.randomDoneCount = 0
+          // App.randomAllCount = 0
 
-            var toIt = this.randoms[i]
-            if (toIt != null && toIt.Random != null && toIt.Random.id == toId) {
+          App.deepDoneCount ++
+          const deepDoneCount = App.deepDoneCount
+          const autoTestCallback = App.autoTestCallback
 
-              var toRandom = toIt.Random
-              var id = toRandom == null ? 0 : toRandom.id
-              var count = id == null || id <= 0 ? 0 : toRandom.count
-              if (count != null && count > 1) {
-                var key = item.compareColor + 'Count'
-                if (toIt[key] == null) {
-                  toIt[key] = 0
-                }
-                toIt[key] += change
-                if (toIt[key] < 0) {
-                  toIt[key] = 0
-                }
+          App.testProcess = deepDoneCount < deepAllCount ? ('正在深度测试: ' + deepDoneCount + '/' + deepAllCount) : (App.isMLEnabled ? '机器学习:已开启' : '机器学习:已关闭')
+          App.testRandomProcess = App.randomDoneCount >= App.randomAllCount ? '' : ('正在测试: ' + App.randomDoneCount + '/' + App.randomAllCount)
 
-                if (toIt.totalCount == null) {
-                  toIt.totalCount = 0
-                }
-                toIt.totalCount += change
-                if (toIt.totalCount < 0) {
-                  toIt.totalCount = 0
-                }
-              }
+          setTimeout(function () {
+            App.isTestCaseShow = true
 
-              Vue.set(this.randoms, i, toIt)
-
-              break;
+            if (typeof autoTestCallback == 'function') {
+              autoTestCallback('正在深度测试')
             }
 
+            if (deepDoneCount < deepAllCount) {
+              setTimeout(function () {
+                App.startRandomTest4Doc(list, indexes, position + 1, deepAllCount, accInd, isCross)
+              }, IS_NODE ? 200 : 1000)
+            } else {
+              App.testRandomProcess = ''
+              if (isCross) {
+                if (deepDoneCount == deepAllCount) {
+                  App.test(false, accInd + 1, isCross)
+                }
+              } else {
+                if (deepDoneCount == deepAllCount) {
+                  alert('已完成回归测试')
+                  if (typeof autoTestCallback == 'function') {
+                    autoTestCallback('已完成回归测试')
+                  }
+                }
+              }
+            }
+          }, IS_NODE ? 200 : 1000)
+
+          return true
+        }
+
+        try {
+          var index = indexes[position]
+          var it = list[index] || {}
+
+          if (IS_BROWSER) {
+            try {
+              document.getElementById('docItem' + index).scrollIntoView()
+            } catch (e) {
+              console.log(e)
+            }
+          }
+
+          this.restoreRemote(index, it, false)
+
+          this.randoms = []
+          this.isRandomShow = true
+          this.isRandomEditable = true
+          this.isRandomListShow = false
+          this.isRandomSubListShow = false
+          this.showRandomList(true, it.Method, false, function (url, res, err) {
+            try {
+              App.onRandomListResponse(true, false, url, res, err)
+            } catch (e) {
+              log(e)
+            }
+
+            App.onClickTestRandom(isCross, callback)
+          })
+        } catch (e2) {
+          log(e2)
+          callback(true, deepAllCount)
+        }
+      },
+
+      getSummary: function (accountIndex) {
+        if (accountIndex == -1) {
+          return this.getLogoutSummary()
+        }
+        var accounts = this.accounts || []
+        if (accountIndex == accounts.length) {
+          return this.getAllSummary()
+        }
+
+        if (accountIndex < 0 || accountIndex >= accounts.length) {
+          return {}
+        }
+
+        var ci = this.accounts[accountIndex]
+        return ci || {}
+      },
+
+      getLogoutSummary: function () {
+        return this.logoutSummary || {}
+      },
+      getCurrentSummary: function () {
+        return this.getSummary(this.currentAccountIndex) || {}
+      },
+      getAllSummary: function () {
+        return this.allSummary || {}
+      },
+
+      getCurrentRandomSummary: function () {
+        return (this.isRandomSubListShow ? this.currentRandomItem : this.currentRemoteItem) || {}
+      },
+
+      isSummaryShow: function (accountIndex) {
+        if (accountIndex == -1) {
+          return this.isLogoutSummaryShow()
+        }
+        var accounts = this.accounts
+        if (accountIndex == accounts.length) {
+          return this.isAllSummaryShow()
+        }
+
+        if (accountIndex < 0 || accountIndex >= accounts.length) {
+          return false
+        }
+
+        // var ci = this.isTestCaseShow ? this.accounts[accountIndex] : null
+        var ci = this.accounts[accountIndex]
+        return ci != null && ci.totalCount != null && ci.totalCount > 0
+      },
+      isLogoutSummaryShow: function () {
+        // var ci = this.isCrossEnabled != true ? null : this.logoutSummary
+        var ci = this.logoutSummary
+        return ci != null && ci.totalCount != null && ci.totalCount > 0
+      },
+      isCurrentSummaryShow: function () {
+        return this.isSummaryShow(this.currentAccountIndex)
+      },
+      isAllSummaryShow: function () {
+        // var ci = this.isCrossEnabled != true ? null : this.allSummary
+        var ci = this.allSummary
+        return ci != null && ci.totalCount != null && ci.totalCount > 0
+      },
+      isRandomSummaryShow: function () {
+        var ci = this.isRandomListShow || this.isRandomSubListShow ? this.getCurrentRandomSummary() : null
+        return ci != null && ci.totalCount != null && ci.totalCount > 0
+      },
+
+      updateSummary: function (item, change, key) {
+        if (item == null) {
+          item = {}
+        }
+
+        var count = item[key]
+        if (count == null) {
+          count = 0
+        }
+        count += change
+
+        item[key] = count < 0 ? 0 : count
+
+        // 对于 Random 进入子项再退出后有时显示居然不准
+        // if (cri.totalCount == null) {
+        //   cri.totalCount = 0
+        // }
+        // cri.totalCount += change
+        // if (cri.totalCount < 0) {
+        //   cri.totalCount = 0
+        // }
+        item.totalCount = item.whiteCount + item.greenCount + item.blueCount + item.orangeCount + item.redCount
+
+        return item
+      },
+
+      //更新父级总览数据
+      updateToSummary: function (item, change, accountIndex) {
+        if (item == null || change == null) {
+          return
+        }
+
+        var key = item.compareColor + 'Count'
+        this.allSummary = this.updateSummary(this.allSummary, change, key)
+
+        if (accountIndex == -1) {
+          this.logoutSummary = this.updateSummary(this.logoutSummary, change, key)
+        }
+          // else if (accountIndex== this.accounts.length) {
+          //   this.allSummary = this.updateSummary(this.allSummary, change, key)
+        // }
+        else if (accountIndex >= 0 && accountIndex < this.accounts.length) {
+          var accountItem = this.updateSummary(this.getSummary(accountIndex), change, key)
+          this.accounts[accountIndex] = accountItem
+        }
+      },
+      updateToRandomSummary: function (item, change, accountIndex) {
+        var random = item == null || change == null ? null : item.Random
+        if (random == null) {
+          return
+        }
+
+        if (random.count == 1 || (random.id != null && random.id < 0)) {
+          var key = item.compareColor + 'Count'
+          // this.updateToSummary(item, change, accountIndex)
+
+          var curRandom = this.isRandomListShow || this.currentRandomItem == null ? null : this.currentRandomItem.Random
+          var isTemp = curRandom != null && (curRandom.id == null || curRandom.id < 0)
+          var cri = this.updateSummary(isTemp ? this.currentRandomItem : this.currentRemoteItem)  // this.getCurrentRandomSummary())
+
+          if (isTemp) {
+            this.currentRandomItem = cri
+          } else {
+            this.currentRemoteItem = cri
+          }
+
+          var toId = random.toId
+          if (toId != null && toId > 0) {
+            for (var i in this.randoms) {
+              var toIt = this.randoms[i]
+              if (toIt != null && toIt.Random != null && toIt.Random.id == toId) {
+
+                var toRandom = toIt.Random
+                var id = toRandom == null ? 0 : toRandom.id
+                var count = id == null || id <= 0 ? 0 : toRandom.count
+                if (count != null && count > 1) {
+                  toIt = this.updateSummary(toIt, change, key)
+                  Vue.set(this.randoms, i, toIt)
+                }
+
+                break
+              }
+            }
           }
         }
       },
@@ -5518,11 +6368,15 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
       removeDebugInfo: function (obj) {
         if (obj != null) {
           delete obj["trace"]
-          delete obj["sql:generate|cache|execute|maxExecute"]
-          delete obj["depth:count|max"]
+          // 保留 delete obj["sql:generate|cache|execute|maxExecute"]
+          // 保留 delete obj["depth:count|max"]
           delete obj["time:start|duration|end"]
+          delete obj["time:start|duration|end|parse|sql"]
+          // 保留 delete obj["throw"]
+          // 保留 delete obj["trace:throw"]
           delete obj["trace:stack"]
           delete obj["stack"]
+          delete obj["debug:info|help"]
         }
         return obj
       },
@@ -5586,7 +6440,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
        * @param index
        * @param item
        */
-      handleTest: function (right, index, item, isRandom, isDuration) {
+      handleTest: function (right, index, item, isRandom, isDuration, isCross) {
         item = item || {}
         var random = item.Random = item.Random || {}
         var document;
@@ -5597,6 +6451,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             this.restoreRandom(index, item)
             this.randomSubs = (item.subs || item['[]']) || []
             this.isRandomSubListShow = true
+            this.getCurrentRandomSummary().summaryType = 'total'
             return
           }
 
@@ -5650,13 +6505,15 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               App.onResponse(url, res, err)
 
               var data = res.data || {}
-              if (data.code != CODE_SUCCESS && testRecord!= null && testRecord.id != null) {
+              if (JSONResponse.isSuccess(data) != true && testRecord!= null && testRecord.id != null) {
                 alert('撤回最新的校验标准 异常：\n' + data.msg)
                 return
               }
 
               if (isRandom) {
-                App.updateToRandomSummary(item, -1)
+                App.updateToRandomSummary(item, -1, App.currentAccountIndex)
+              } else {
+                App.updateToSummary(item, -1, App.currentAccountIndex)
               }
 
               if (isDuration) {
@@ -5671,7 +6528,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 item.TestRecord = null
               }
 
-              App.updateTestRecord(0, list, index, item, currentResponse, isRandom, App.currentAccountIndex, true)
+              App.updateTestRecord(0, list, index, item, currentResponse, isRandom, true, App.currentAccountIndex, isCross)
             })
           }
           else { //上传新的校验标准
@@ -5690,7 +6547,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             var maxDuration = testRecord.maxDuration
             if (isDuration) {
               if (item.duration == null) {  // 没有获取到
-                alert('最外层缺少字段 "time:start|duration|end": "1613039123780|10|1613039123790"，无法对比耗时！')
+                alert('最外层缺少字段 "time:start|duration|end"，无法对比耗时！')
                 return
               }
               else if (maxDuration == null && minDuration == null) {
@@ -5823,14 +6680,16 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               App.onResponse(url, res, err)
 
               var data = res.data || {}
-              if (data.code != CODE_SUCCESS) {
+              if (JSONResponse.isSuccess(data) != true) {
                 if (isML) {
                   alert('机器学习更新标准 异常：\n' + data.msg)
                 }
               }
               else {
                 if (isRandom) {
-                  App.updateToRandomSummary(item, -1)
+                  App.updateToRandomSummary(item, -1, App.currentAccountIndex)
+                } else {
+                  App.updateToSummary(item, -1, App.currentAccountIndex)
                 }
 
                 var testRecord = item.TestRecord || {}
@@ -5877,7 +6736,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 //   }
                 // }
 
-                App.updateTestRecord(0, list, index, item, currentResponse, isRandom, true)
+                App.updateTestRecord(0, list, index, item, currentResponse, isRandom, true, App.currentAccountIndex, isCross)
               }
 
             })
@@ -5886,7 +6745,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         }
       },
 
-      updateTestRecord: function (allCount, list, index, item, response, isRandom, ignoreTrend) {
+      updateTestRecord: function (allCount, list, index, item, response, isRandom, ignoreTrend, accountIndex, isCross) {
         item = item || {}
         var doc = (isRandom ? item.Random : item.Method) || {}
 
@@ -5898,19 +6757,19 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             'host': this.getBaseUrl(),
             '@order': 'date-',
             '@column': 'id,userId,testAccountId,documentId,randomId,duration,minDuration,maxDuration,response' + (this.isMLEnabled ? ',standard' : ''),
-            '@having': this.isMLEnabled ? 'length(standard)>2' : null  // '@having': this.isMLEnabled ? 'json_length(standard)>0' : null
+            'standard{}': this.isMLEnabled ? (this.database == 'SQLSERVER' ? 'len(standard)>2' : 'length(standard)>2') : null  // '@having': this.isMLEnabled ? 'json_length(standard)>0' : null
           }
         }, {}, function (url, res, err) {
           App.onResponse(url, res, err)
 
           var data = (res || {}).data || {}
-          if (data.code != CODE_SUCCESS) {
+          if (JSONResponse.isSuccess(data) != true) {
             alert('获取最新的校验标准 异常：\n' + data.msg)
             return
           }
 
           item.TestRecord = data.TestRecord
-          App.compareResponse(allCount, list, index, item, response, isRandom, App.currentAccountIndex, true, err, ignoreTrend);
+          App.compareResponse(allCount, list, index, item, response, isRandom, accountIndex, true, err, ignoreTrend, isCross);
         })
       },
 
@@ -5951,8 +6810,136 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         var toId = isRandom ? ((item.Random || {}).toId || 0) : 0;
         var h = isDuration ? item.durationHint : item.hintMessage;
         this.$refs[(isRandom ? (toId <= 0 ? 'testRandomResult' : 'testRandomSubResult') : 'testResult') + (isDuration ? 'Duration' : '') + 'Buttons'][index].setAttribute('data-hint', h || '');
-      }
+      },
 
+      handleTestArg: function(hasTestArg, rawReq, delayTime, callback) {
+        if (hasTestArg && IS_BROWSER) {
+          vUrlComment.value = ""
+          vComment.value = ""
+          vWarning.value = ""
+        }
+
+        if (IS_BROWSER) {
+          App.onChange(false)
+        }
+
+        if (hasTestArg && rawReq.send != "false" && rawReq.send != "null") {
+          setTimeout(function () {
+            if (rawReq.send == 'random') {
+              App.onClickTestRandom(callback)
+            } else if (App.isTestCaseShow) {
+              App.onClickTest(callback)
+            } else {
+              App.send(false)
+            }
+
+            var url = vUrl.value || ''
+            if (IS_BROWSER && (rawReq.jump == "true" || rawReq.jump == "null"
+              || (rawReq.jump != "false" && App.isTestCaseShow != true && rawReq.send != 'random'
+                && (url.endsWith("/get") || url.endsWith("/head"))
+              )
+            )) {
+              setTimeout(function () {
+                window.open(vUrl.value + "/" + encodeURIComponent(JSON.stringify(encode(JSON.parse(vInput.value)))))
+              }, 2000)
+            }
+          }, Math.max(2000, delayTime))
+        }
+      },
+
+      autoTest: function(callback, delayTime, isTest, rawReq, setting) {
+        this.autoTestCallback = callback
+
+        if (delayTime == null) {
+          delayTime = 0
+        }
+
+        if (isTest == null) {
+          isTest = true
+        }
+
+        if (rawReq == null) {
+          rawReq = {
+            send: true,
+            type: REQUEST_TYPE_JSON,
+            url: 'unitauto.test.TestUtil.divide'
+          }
+        }
+
+        if (setting == null) {
+          setting = StringUtil.isEmpty(rawReq.setting, true) ? null : JSON.parse(StringUtil.trim(rawReq.setting, true))
+        }
+
+        if (setting == null) {
+          setting = {
+            isLocalShow: false,
+            isTestCaseShow: true,
+            isRandomShow: true,
+            isRandomListShow: false,
+            isRandomSubListShow: false,
+            isMLEnabled: true,
+            isCrossEnabled: true,
+            // testCaseCount: 100,
+            testCasePage: 0,
+            // randomCount: 100,
+            randomPage: 0,
+          }
+        }
+
+        rawReq.setting = setting
+
+        this.isLocalShow = setting.isLocalShow
+        this.isTestCaseShow = setting.isTestCaseShow
+        this.isRandomShow = setting.isRandomShow
+        this.isRandomListShow = setting.isRandomListShow
+        this.isRandomSubListShow = setting.isRandomSubListShow
+        this.isMLEnabled = setting.isMLEnabled
+        this.isCrossEnabled = setting.isCrossEnabled
+        // this.testCaseCount = setting.testCaseCount
+        this.testCasePage = setting.testCasePage
+        // this.randomCount = setting.randomCount
+        this.randomPage = setting.randomPage
+        this.server = 'http://localhost:8080' // this.getBaseUrl()
+
+        // if (this.isCrossEnabled) {
+        //   this.currentAccountIndex = -1
+        // }
+
+        this.login(true, function (url, res, err) {
+          if (setting.isRandomShow && setting.isRandomListShow) {
+            delayTime += Math.min(5000, (App.isMLEnabled ? 50 : 20) * (setting.randomCount || App.randomCount) + 1000)
+            App.isRandomShow = true
+            App.isRandomEditable = true
+            App.isRandomListShow = false
+            App.isRandomSubListShow = false
+            // App.showRandomList(false, setting.isRandomSubListShow ? App.currentRandomItem : null, setting.isRandomSubListShow)
+            App.showRandomList(true, setting.isRandomSubListShow ? (App.currentRandomItem || {}).Random : (App.currentRemoteItem || {}).Method, setting.isRandomSubListShow, function (url, res, err) {
+              App.onRandomListResponse(true, setting.isRandomSubListShow, url, res, err)
+              App.handleTestArg(isTest, rawReq, delayTime, callback)
+            })
+          }
+          else {  // if (setting.isTestCaseShow) {
+            delayTime += Math.min(5000, (App.isMLEnabled ? 30 : 10) * (setting.testCaseCount || App.testCaseCount) + 1000)
+
+            // App.login(true)
+            App.onLoginResponse(true, {
+              type: 0, // 登录方式，非必须 0-密码 1-验证码
+              phone: App.account,
+              password: App.password,
+              version: 1, // 全局默认版本号，非必须
+              remember: vRemember.checked,
+              format: false
+            }, url, res, err)
+
+            App.showTestCase(true, setting.isLocalShow, function (url, res, err) {
+              App.onTestCaseListResponse(IS_BROWSER, url, res, err)
+              App.isTestCaseShow = true
+              App.handleTestArg(isTest, rawReq, delayTime, callback)
+            })
+          }
+
+        })
+      }
     },
     watch: {
       jsoncon: function () {
@@ -6054,6 +7041,19 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           '\n} catch (e) {\n' + e.message)
       }
 
+      try {
+        var accounts = this.accounts
+        var num = accounts == null ? 0 : accounts.length
+        for (var i = -1; i <= num; i++) {
+          this.resetCount(this.getSummary(i), false, i)
+        }
+      } catch (e) {
+        console.log('created  try { ' +
+          '\nthis.User = this.getCache(this.server, User, {})' +
+          '\n} catch (e) {\n' + e.message)
+      }
+
+
       //无效，只能在index里设置 vUrl.value = this.getCache('', 'URL_BASE')
 
       this.listHistory()
@@ -6072,7 +7072,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         setTimeout(function () {
           isSingle = ! isSingle
 
-          var hasTestArg = false  // 避免 http://localhost:63342/APIAuto/index.html?_ijt=fh8di51h7qip2d1s3r3bqn73nt 这种无意义参数
+          var hasTestArg = false  // 避免 http://localhost:63342/UnitAuto/index.html?_ijt=fh8di51h7qip2d1s3r3bqn73nt 这种无意义参数
           if (StringUtil.isEmpty(rawReq.type, true) == false) {
             hasTestArg = true
             App.type = StringUtil.toUpperCase(rawReq.type, true)
@@ -6134,50 +7134,18 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 }
               }
 
-              if (setting.isRandomShow && setting.isRandomListShow) {
-                delayTime += Math.min(5000, (App.isMLEnabled ? 60 : 20)*(setting.randomCount || App.randomCount) + 1000)
-                App.showRandomList(true, setting.isRandomSubListShow ? App.currentRandomItem : null, setting.isRandomSubListShow)
-              }
+              if (setting.isTestCaseShow || (setting.isRandomShow && setting.isRandomListShow)) {
+                var isTest = hasTestArg
+                hasTestArg = false
 
-              if (setting.isTestCaseShow) {
-                delayTime += Math.min(5000, (App.isMLEnabled ? 30 : 10)*(setting.testCaseCount || App.testCaseCount) + 1000)
-                App.showTestCase(true, setting.isLocalShow)
+                App.autoTest(null, delayTime, isTest, rawReq, setting)
               }
             } catch (e) {
               log(e)
             }
           }
 
-          if (hasTestArg) {
-            vUrlComment.value = ""
-            vComment.value = ""
-            vWarning.value = ""
-          }
-
-          App.onChange(false)
-
-          if (hasTestArg && rawReq.send != "false" && rawReq.send != "null") {
-            setTimeout(function () {
-              if (rawReq.send == 'random') {
-                App.onClickTestRandom()
-              } else if (App.isTestCaseShow) {
-                App.onClickTest()
-              } else {
-                App.send(false)
-              }
-
-              var url = vUrl.value || ''
-              if (rawReq.jump == "true" || rawReq.jump == "null"
-                || (rawReq.jump != "false" && App.isTestCaseShow != true && rawReq.send != 'random'
-                  && (url.endsWith("/get") || url.endsWith("/head"))
-                )
-              ) {
-                setTimeout(function () {
-                  window.open(vUrl.value + "/" + encodeURIComponent(JSON.stringify(encode(JSON.parse(vInput.value)))))
-                }, 2000)
-              }
-            }, Math.max(1000, delayTime))
-          }
+          App.handleTestArg(hasTestArg, rawReq, delayTime)
         }, 2000)
 
       }
@@ -6288,7 +7256,25 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
       })
 
     }
-  })
+  }
+
+  if (IS_BROWSER) {
+    App = new Vue(App)
+  }
+  else {
+    var data = App.data
+    if (data instanceof Object && (data instanceof Array == false)) {
+      App = Object.assign(App, data)
+    }
+
+    var methods = App.methods
+    if (methods instanceof Object && (methods instanceof Array == false)) {
+      App = Object.assign(App, methods)
+    }
+
+    module.exports = {getRequestFromURL, App}
+  }
+
 })()
 
 // APIJSON >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>

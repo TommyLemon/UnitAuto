@@ -16,14 +16,11 @@ limitations under the License.*/
 package unitauto.demo;
 
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Configuration;
-
-import com.alibaba.fastjson.parser.ParserConfig;
 
 import unitauto.Log;
 import unitauto.boot.UnitAutoApplication;
@@ -35,7 +32,6 @@ import unitauto.boot.UnitAutoApplication;
  * https://www.springcloud.cc/spring-boot.html#using-boot-locating-the-main-class
  * @author Lemon
  */
-@EnableAutoConfiguration
 @Configuration
 @SpringBootApplication
 public class DemoApplication implements WebServerFactoryCustomizer<ConfigurableServletWebServerFactory> {
@@ -45,6 +41,7 @@ public class DemoApplication implements WebServerFactoryCustomizer<ConfigurableS
 		ConfigurableApplicationContext context = SpringApplication.run(DemoApplication.class, args);
 		
 		Log.DEBUG = true;  // FIXME 不要开放给项目组后端之外的任何人使用 UnitAuto（强制登录鉴权）！！！
+
 		UnitAutoApplication.init(context);
 
 		System.out.println("\n\n<<<<<<<<< 本 Demo 在 resources/static 内置了 UnitAuto-Admin，Chrome/Firefox 打开 http://localhost:8081 即可调试(端口号根据项目配置而定) ^_^ >>>>>>>>>\n");

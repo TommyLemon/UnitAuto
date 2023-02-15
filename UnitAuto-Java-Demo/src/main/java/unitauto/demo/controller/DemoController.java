@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.alibaba.fastjson.JSONObject;
 
 import unitauto.MethodUtil;
-import unitauto.boot.controller.UnitAutoController;
+import unitauto.boot.UnitAutoController;
 import unitauto.demo.domain.User;
 import unitauto.demo.service.DemoService;
 
