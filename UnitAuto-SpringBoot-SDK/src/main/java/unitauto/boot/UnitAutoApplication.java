@@ -21,21 +21,19 @@ import java.util.List;
 import javax.naming.Context;
 
 import org.springframework.beans.BeansException;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.parser.ParserConfig;
 import com.alibaba.fastjson.serializer.PropertyFilter;
 
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import unitauto.Log;
 import unitauto.MethodUtil;
 import unitauto.MethodUtil.Argument;
@@ -52,7 +50,6 @@ import unitauto.jar.UnitAutoApp;
  * @author Lemon
  */
 @SpringBootApplication
-@EnableAutoConfiguration
 @Configuration
 public class UnitAutoApplication implements ApplicationContextAware {
 	private static final String TAG = "UnitAutoApplication";
@@ -172,21 +169,17 @@ public class UnitAutoApplication implements ApplicationContextAware {
 	 * @return
 	 */
 	@Bean
-	public CorsFilter corsFilter() {
-		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-		source.registerCorsConfiguration("/**", buildConfig());
-		return new CorsFilter(source);
-	}
-	/**CORS跨域配置
-	 * @return
-	 */
-	protected CorsConfiguration buildConfig() {
-		CorsConfiguration corsConfiguration = new CorsConfiguration();
-		corsConfiguration.addAllowedOrigin("*"); //允许的域名或IP地址
-		corsConfiguration.addAllowedHeader("*"); //允许的请求头
-		corsConfiguration.addAllowedMethod("*"); //允许的HTTP请求方法
-		corsConfiguration.setAllowCredentials(true); //允许发送跨域凭据，前端Axios存取JSESSIONID必须要
-		return corsConfiguration;
+	public WebMvcConfigurer corsConfigurer() {
+		return new WebMvcConfigurer() {
+			@Override
+			public void addCorsMappings(CorsRegistry registry) {
+				registry.addMapping("/**")
+						.allowedOriginPatterns("*")
+						.allowedMethods("*")
+						.allowCredentials(true)
+						.maxAge(3600);
+			}
+		};
 	}
 	//支持JavaScript跨域请求 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
