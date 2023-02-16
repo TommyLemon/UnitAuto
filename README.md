@@ -209,7 +209,7 @@ dependencies {
 
 ### 部署后台管理工具
 可以直接[下载源码](https://github.com/TommyLemon/UnitAuto/archive/master.zip)解压后用浏览器打开 [UnitAuto-Admin](https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Admin)/index.html，建议用 Chrome 或 火狐 (Safari、Edge、IE 等可能有兼容问题)。<br />
-也可以直接访问官网的环境 http://apijson.cn/unit <br />
+也可以直接访问官网的环境 http://apijson.cn/unit 或 http://apijson.cn:8081 <br />
 <br />
 点右上角设置项 "项目服务器地址 URL"，把输入框内基地址改为你主机的地址(例如 http://192.168.0.102:8080 )<br />
 <br />
@@ -371,7 +371,7 @@ https://github.com/Tencent/APIJSON/issues/85
 https://github.com/TommyLemon/APIAuto/issues/12
 
 #### 4.apijson.cn 访问不了
-托管服务地址改为 http://47.74.39.68:8080  <br />
+托管服务地址改为 http://47.98.196.224:8080  <br />
 https://github.com/TommyLemon/APIAuto/issues/13
 
 更多常见问题 <br />
