@@ -23,3 +23,7 @@ UnitAuto-Java-Demo/.settings
 .idea
 
 UnitAuto-SpringBoot-SDK/bin
+UnitAuto-Android/gradlew.bat
+UnitAuto-Android/gradlew
+UnitAuto-Android/gradle/wrapper/gradle-wrapper.properties
+UnitAuto-Android/gradle/wrapper/gradle-wrapper.jar

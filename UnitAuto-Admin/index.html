@@ -109,14 +109,17 @@
                 <ul class="themes pop" style="z-index: 200;padding: 0px;margin-top: 8px;width: 300px">
 
                   <a style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(! isDelegateEnabled, 9)">托管服务器代理: {{ isDelegateEnabled ? '已开启，点击关闭' : '已关闭，点击开启' }}</a>
+                  <a style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(! isEnvCompareEnabled, 14)">对比其它环境结果:  {{ isEnvCompareEnabled ? '已开启，点击关闭' : '已关闭，点击开启' }}</a>
                   <a style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(! isPreviewEnabled, 10)">预览左侧输入框:  {{ isPreviewEnabled ? '已开启，点击关闭' : '已关闭，点击开启' }}</a>
                   <a v-show="User.id != null && User.id > 0" style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(! isEditResponse, 11)">当前编辑模式:  {{ isEditResponse ? 'Response 后端响应结果' : 'Request 前端请求参数' }}</a>
                   <a style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(StringUtil.isEmpty(host, true), 3)">{{ StringUtil.isEmpty(host, true) ? '隐藏(固定)方法路径: 可用空格隔开' : '显示(编辑)方法路径: \n' + host }}</a>
                   <a style="border-bottom: #DDD 1px solid;width: 100%;display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden;" href="javascript:void(0)" @click="showConfig(! isRandomShow, 5)">{{ isRandomShow ? '隐藏(固定)参数注入 Random Test' : '显示(编辑)参数注入 Random Test' }}</a>
-                  <a style="border-bottom: #DDD 1px solid;width: 100%;display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden;" href="javascript:void(0)" @click="showConfig(! isHeaderShow, 4)">{{ isHeaderShow ? '隐藏(固定)请求头 Request Header' : '显示(编辑)请求头 Request Header' }}</a>
-                  <a v-show="User.id != null && User.id > 0" style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(true, 13)">查看、同步方法文档: 可先编辑再上传</a>
-                  <a style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(true, 8)">项目服务器地址URL: {{ project || '点击设置' }}</a>
-                  <a v-show="User.id == null || User.id <= 0" style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(true, 6)">托管服务器地址URL: {{ server || '点击设置' }}</a>
+                  <a style="border-bottom: #DDD 1px solid;width: 100%;display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden;" href="javascript:void(0)" @click="showConfig(! isHeaderShow, 4)">{{ (isHeaderShow ? '隐藏(固定)' : '显示(编辑)') + (isEditResponse ? '响应头 Response Header' : '请求头 Request Header' ) }}</a>
+                  <a style="border-bottom: #DDD 1px solid;width: 100%;display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden;" href="javascript:void(0)" @click="showConfig(! isScriptShow, 13)">{{ (isScriptShow ? '隐藏(固定)' : '显示(编辑)') + '执行脚本 JavaScript' }}</a>
+                  <a v-show="User.id != null && User.id > 0" style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(true, 16)">查看、同步方法文档: 可先编辑再上传</a>
+                  <a style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(true, 8)">项目服务器地址 URL Host: {{ project || '点击设置' }}</a>
+                  <a style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(true, 15)">其它环境地址 URL Host: {{ otherEnv || '点击设置' }}</a>
+                  <a v-show="User.id == null || User.id <= 0" style="border-bottom: #DDD 1px solid;width: 100%" href="javascript:void(0)" @click="showConfig(true, 6)">托管服务器地址 URL Host: {{ server || '点击设置' }}</a>
                 </ul>
       </span>
 
@@ -213,7 +216,7 @@
     0,
     null
   ],
-  'this': {  // 当前类示例，和 constructor & classArgs 二选一
+  'this': {  // 当前类实例，和 constructor & classArgs 二选一
     'type': 'apijson.demo.server.model.User',  // 不可缺省，且必须全称
     'value': {  // User 的示例值，会根据 type 来转为 Java 类型，这里执行等价于 JSON.parseObject(JSON.toJSONString(value), User.class)
       'id': 1,
@@ -292,6 +295,8 @@ for (var i = 0; i < list.length; i ++) {
 ## 快捷键
 Ctrl + I 或 Command + I 格式化 JSON，清除所有注释和无效空格、换行等；
 Ctrl + / 或 Command + / 对选中行 新增行注释 或 取消行注释；
+Ctrl + D 或 Command + D 删除 选中行；
+Ctrl + S 或 Command + S 保存当前用例；
 
 #### 右上角设置项 > 预览请求输入框，显示对应的预览效果
 */
@@ -306,7 +311,7 @@ Ctrl + / 或 Command + / 对选中行 新增行注释 或 取消行注释；
             "type": "long",
             "value": 1
         },
-        {   // 这个对象还可以简化为 "long:2" 这种字符串形式，方便手动调试
+        {   // 这个对象还可以简化为 "long:2" 这种字符串形式，方便手动调试。在键值对后按 Enter 回车键自动智能生成补全提示
             "type": "long",
             "value": 2
         }
@@ -315,11 +320,13 @@ Ctrl + / 或 Command + / 对选中行 新增行注释 或 取消行注释；
 
 /*
 以上 JSON 文本支持 JSON5 格式。清空文本内容可查看规则。
-注释可省略。行注释前必须有两个空格；段注释必须在 JSON 下方。
+注释可省略。行注释前必须有 1 个空格；段注释必须在 JSON 下方。
 
 ## 快捷键
 Ctrl + I 或 Command + I 格式化输入框，清除所有注释和无效空格、换行等；
 Ctrl + / 或 Command + / 对选中行 新增行注释 或 取消行注释；
+Ctrl + D 或 Command + D 删除 选中行；
+Ctrl + S 或 Command + S 保存当前用例；
 
 #### 右上角设置项 > 预览请求输入框，显示对应的预览效果
 */
@@ -458,32 +465,73 @@ methodArgs/0/value: RANDOM_IN(1, 0.1, -10, 9.99, null)  // 随机取值
 methodArgs/1/type: ORDER_IN('long', 'double', 'Number', 'int', 'Float')  // 顺序取值
 methodArgs/1/value: ORDER_INT(-10, 100)  // 顺序整数
 
-  // 从数据库随机取值  methodArgs/1/value: RANDOM_DB(0, 1000, 'Random', 'count')
+// 从数据库随机取值  methodArgs/1/value: RANDOM_DB(0, 1000, 'Random', 'count')
 
-  // 注释可省略，但如果未省略则前面两个空格必须；清空文本内容可查看规则。
+// 回车智能生成。注释可省略，未省略则前面必须空格；清空文本内容可查看规则。
 
-  // ## 快捷键
-  // Ctrl + I 或 Command + I 格式化文本，清除所有注释和无效空格、换行等；
-  // Ctrl + / 或 Command + / 对选中行 新增行注释 或 取消行注释；
+// ## 快捷键
+// Ctrl + I 或 Command + I 格式化文本，清除所有注释和无效空格、换行等；
+// Ctrl + / 或 Command + / 对选中行 新增行注释 或 取消行注释；
+// Ctrl + D 或 Command + D 删除 选中行；
+// Ctrl + S 或 Command + S 保存当前请求；
                         </textarea>
                     </div>
 
-
-                    <div v-show="isHeaderShow" style="width: 100%; height: 150px; position: relative;" >
-                        <div class="left-bar" style="border-top: #DDD 1px solid; position: relative">
-                            <a style="padding-left: 10px;padding-right: 2px;font-size: medium;color: black" >{{ (isEditResponse ? '响应头 Response Header' : '请求头 Request Header' ) }}<a style="display: flex;flex-grow: 1;padding-right: 10px;padding-top: 2px"> (每行都按 key: value 格式)</a></a>
-                            <a class="hint--top @cli-tool" data-hint="隐藏" style="float: right;padding: 8px;height: 100%"  href="javascript:void(0)" @click="showConfig(false, 4)">
-                                <svg class="icon close-icon"  >
-                                    <use xlink:href="svg/icon.svg#close"></use>
-                                </svg>
-                            </a>
-                        </div>
-                        <textarea id="vHeader" @copy="doOnCopy" @paste="doOnPaste" @keyup="onChange(true)" style="width: 100%;height: 100%;" wrap="off" placeholder="Authorization: Basic YWRtaW46YWRtaW4=  // 示例，支持单行注释
-My-Header: 'Secret' + Math.random()  // 示例，代码执行结果作为实际值，值为 fun(arg0, arg1..) 等包含函数名与括号的格式
-  // ## 快捷键
-  // Ctrl + I 或 Command + I 格式化文本，清除所有注释和无效空格、换行等；
-  // Ctrl + / 或 Command + / 对选中行 新增行注释 或 取消行注释；"></textarea>
+                  <div v-show="isHeaderShow" style="width: 100%; height: 150px; position: relative;" >
+                    <div class="left-bar" style="border-top: #DDD 1px solid; position: relative">
+                      <a style="padding-left: 10px;padding-right: 2px;font-size: medium;color: black" >{{ (isEditResponse ? '响应头 Response Header' : '请求头 Request Header' ) }}<a style="display: flex;flex-grow: 1;padding-right: 10px;padding-top: 2px"> (每行都按 key: value 格式)</a></a>
+                      <a class="hint--top @cli-tool" data-hint="隐藏" style="float: right;padding: 8px;height: 100%"  href="javascript:void(0)" @click="showConfig(false, 4)">
+                        <svg class="icon close-icon"  >
+                          <use xlink:href="svg/icon.svg#close"></use>
+                        </svg>
+                      </a>
                     </div>
+                    <textarea id="vHeader" @copy="doOnCopy" @paste="doOnPaste" @keyup="onChange(true)" style="width: 100%;height: 100%;" wrap="off" placeholder="Authorization: Basic YWRtaW46YWRtaW4= // 示例，支持单行注释，回车智能生成
+My-Header: 'Secret' + Math.random() // 示例，代码执行结果作为实际值，值为 fun(arg0, arg1..) 等包含函数名与括号的格式
+// ## 快捷键
+// Ctrl + I 或 Command + I 格式化文本，清除所有注释和无效空格、换行等；
+// Ctrl + / 或 Command + / 对选中行 新增行注释 或 取消行注释；
+// Ctrl + D 或 Command + D 删除 选中行；
+// Ctrl + S 或 Command + S 保存当前请求；"></textarea>
+                  </div>
+
+                  <div v-show="isScriptShow" style="width: 100%; height: 240px; position: relative;" >
+                    <div class="left-bar" style="border-top: #DDD 1px solid; position: relative">
+                      <a href="javascript:void(0)" @click="changeScriptType('case')" :style="{'color': scriptType == 'case' ? 'red' : 'gray'}" style="padding-left: 10px; font-size: medium">用例</a><a v-show="getCurrentAccountId() != null">|<a v-show="getCurrentAccountId() != null" href="javascript:void(0)" @click="changeScriptType('account')" :style="{'color': scriptType == 'account' ? 'red' : 'gray'}" style="font-size: medium">账号</a></a><a>|</a><a href="javascript:void(0)" @click="changeScriptType('global')" :style="{'color': scriptType == 'global' ? 'red' : 'gray'}" style="font-size: medium">全局</a><a href="javascript:void(0)" @click="changeScriptPriority(true)" :style="{'color': isPreScript ? 'red' : 'gray'}" style="font-size: medium; padding-left: 10px">前置</a><a>|</a><a href="javascript:void(0)" @click="changeScriptPriority(false)" :style="{'color': isPreScript ? 'gray' : 'red'}" style="font-size: medium">后置</a><a style="display: flex;flex-grow: 1;padding-left: 10px;font-size: medium;color: black">执行脚本 JavaScript</a>
+                      <a class="hint--top @cli-tool" style="font-size: small;" data-hint="测试" href="javascript:void(0)" @click="onClickTestScript()">
+                        <img class="icon" src="img/refresh.png"/>
+                      </a>
+                      <a class="hint--top @cli-tool" data-hint="添加脚本" style="font-size:xx-large; margin-bottom: 2px; color: black;"
+                         href="javascript:void(0)" @click="showExport(true, true, false, true)"> + </a>
+                      <a v-show="false" href="javascript:void(0)" style="font-size: small;" class="hint--top"  data-hint="上传/分享"  @click="showExport(true, true)">
+                        <svg class="icon">
+                          <use xlink:href="svg/icon.svg#share"></use>
+                        </svg>
+                      </a>
+                      <a class="hint--top @cli-tool" data-hint="隐藏" style="float: right; padding: 8px; margin-top: 2px; height: 100%"  href="javascript:void(0)" @click="showConfig(false, 13)">
+                        <svg class="icon close-icon"  >
+                          <use xlink:href="svg/icon.svg#close"></use>
+                        </svg>
+                      </a>
+                    </div>
+
+                    <!--        v-model  不允许调用方法            -->
+                    <template v-if="scripts[scriptType][scriptBelongId]">
+                    <textarea id="vScript" style="width: 100%;height: 100%;" wrap="off"
+                              v-model="scripts[scriptType][scriptBelongId][isPreScript ? 'pre' : 'post'].script"
+                              placeholder="// JavaScript 脚本
+// 逻辑代码 ..
+
+function fun(arg0, arg1, arg2..) {
+  // TODO 获取 token 或 自定义断言 等逻辑
+}
+fun(true, 1, 'a'..);
+
+// .. 逻辑代码
+">
+                        </textarea>
+                    </template>
+                  </div>
 
                 </div>
             </div>
@@ -518,7 +566,7 @@ My-Header: 'Secret' + Math.random()  // 示例，代码执行结果作为实际�
               </a>
               <ul class="historys pop" style="width: 304px"> <!-- 没必要太长，遮挡范围过大 // 490 刚好与 URL 输入框左对齐 -->
                   <li v-for="(his, index) in historys">
-                    <a href="javascript:void(0)" @click="restore(his, his.response)"  > {{his.name}}</a>
+                    <a style="padding: 0px" href="javascript:void(0)" @click="restore(his, his.response)"  > {{his.name}}</a>
 
                     <svg class="icon" @click="remove(his, index, false)">
                       <use xlink:href="svg/icon.svg#trash"></use>
@@ -636,6 +684,10 @@ My-Header: 'Secret' + Math.random()  // 示例，代码执行结果作为实际�
                     <input id="vCount" v-model="count" style="width: 30px;text-align: center"  type="number" @keyup="doOnKeyUp(event, 'document', true)" />
                     <a >条</a>
                 </div>
+
+                <ul class="dropdown-menu" id="vOption" style="display: block; left: 0px; top: 0px; max-height: 100%; max-width: 100%; overflow: scroll; overflow-x: scroll; overflow-y:scroll;" v-show="options != null && options.length > 0">
+                  <li class="dropdown-item" style="width: 100%" :style="{'color': (index == selectIndex ? 'orangered' : 'black')}" v-for="(item, index) in options" :id="'option' + index" @click="onClickSelectInput(item, index)" >{{StringUtil.get(item.name) + ': ' + StringUtil.get(item.type) + ', ' + StringUtil.trim(item.comment)}}</li>
+                </ul>
             </div>
 
 
@@ -666,7 +718,7 @@ My-Header: 'Secret' + Math.random()  // 示例，代码执行结果作为实际�
             <use xlink:href="svg/icon.svg#close"></use>
         </svg>
 
-        <input type="text" placeholder="请输入名称" v-model="history.name" />
+        <input type="text" placeholder="请输入" v-model="history.name" />
         <button   @click="save()" >保存</button>
     </div>
 
@@ -689,7 +741,7 @@ My-Header: 'Secret' + Math.random()  // 示例，代码执行结果作为实际�
             <use xlink:href="svg/icon.svg#close"></use>
         </svg>
 
-        <input type="text" placeholder="请输入名称" v-model="exTxt.name" />
+        <input type="text" placeholder="请输入" v-model="exTxt.name" />
         <button @click="saveConfig()">{{ exTxt.button || '切换' }}</button>
     </div>
 
@@ -901,10 +953,12 @@ My-Header: 'Secret' + Math.random()  // 示例，代码执行结果作为实际�
   var vTransfer = document.getElementById("vTransfer");
   var vSend = document.getElementById("vSend");
 
+  var vOption = document.getElementById("vOption");
   var vInput = document.getElementById("vInput");
   var vWarning = document.getElementById("vWarning");
   var vComment = document.getElementById("vComment");
   var vHeader = document.getElementById("vHeader");
+  var vScript = document.getElementById("vScript");
   var vRandom = document.getElementById("vRandom");
   var vOutput = document.getElementById("vOutput");
 
