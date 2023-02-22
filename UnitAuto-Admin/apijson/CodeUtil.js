@@ -28,6 +28,8 @@ if (typeof window == 'undefined') {
  */
 var CodeUtil = {
   TAG: 'CodeUtil',
+  APP_NAME: 'UnitAuto',
+  DIVIDER: '.',
 
   LANGUAGE_KOTLIN: 'Kotlin',
   LANGUAGE_JAVA: 'Java',
@@ -93,18 +95,21 @@ var CodeUtil = {
       }
     };
 
+    var cc = isRestful == true ? '//' : ' //'; // 对 APIJSON API 要求严格些，因为本来就有字段注释
+    var ccLen = cc.length;
+
     for (var i = 0; i < lines.length; i ++) {
       var line = lines[i].trim() || '';
 
       //每一种都要提取:左边的key
       var index = line.indexOf(': '); //可能是 ' 或 "，所以不好用 ': , ": 判断
       var key = index < 0 ? (depth <= 1 && startName != null ? startName : '') : line.substring(1, index - 1);
-      var cIndex = line.indexOf('  //');
+      var cIndex = line.lastIndexOf(cc);
 
       var comment = '';
       if (cIndex >= 0) {
         if (isExtract && standardObj != null && (depth != 1 || (key != 'code' && key != 'throw'))) {
-          comment = line.substring(cIndex + '  //'.length).trim();
+          comment = line.substring(cIndex + ccLen).trim();
           // standardObj = CodeUtil.updateStandardPart(standardObj, names, key, value, comment)
         }
 
@@ -693,12 +698,12 @@ var CodeUtil = {
 
       url = url || '';
 
-      var lastIndex = url.lastIndexOf('.');
+      var lastIndex = url.lastIndexOf(CodeUtil.DIVIDER);
       var methodUri = url; // lastIndex < 0 ? url : url.substring(lastIndex);
       var methodName = JSONResponse.getVariableName(lastIndex < 0 ? url : url.substring(lastIndex + 1));
 
       url = url.substring(0, lastIndex);
-      lastIndex = url.lastIndexOf('.');
+      lastIndex = url.lastIndexOf(CodeUtil.DIVIDER);
       var varName = JSONResponse.getVariableName(lastIndex < 0 ? url : url.substring(lastIndex + 1));
       var modelName = StringUtil.firstCase(varName, true);
 
@@ -1040,12 +1045,12 @@ var CodeUtil = {
 
       url = url || '';
 
-      var lastIndex = url.lastIndexOf('.');
+      var lastIndex = url.lastIndexOf(CodeUtil.DIVIDER);
       var methodUri = url; // lastIndex < 0 ? url : url.substring(lastIndex);
       var methodName = JSONResponse.getVariableName(lastIndex < 0 ? url : url.substring(lastIndex + 1));
 
       url = url.substring(0, lastIndex);
-      lastIndex = url.lastIndexOf('.');
+      lastIndex = url.lastIndexOf(CodeUtil.DIVIDER);
       var varName = JSONResponse.getVariableName(lastIndex < 0 ? url : url.substring(lastIndex + 1));
       var modelName = StringUtil.firstCase(varName, true);
 
@@ -3289,12 +3294,12 @@ var CodeUtil = {
 
     url = url || '';
 
-    var lastIndex = url.lastIndexOf('.');
+    var lastIndex = url.lastIndexOf(CodeUtil.DIVIDER);
     var methodUri = lastIndex < 0 ? url : url.substring(lastIndex);
     var methodName = JSONResponse.getVariableName(lastIndex < 0 ? url : url.substring(lastIndex + 1));
 
     url = url.substring(0, lastIndex);
-    lastIndex = url.lastIndexOf('.');
+    lastIndex = url.lastIndexOf(CodeUtil.DIVIDER);
     var varName = JSONResponse.getVariableName(lastIndex < 0 ? url : url.substring(lastIndex + 1));
     var modelName = StringUtil.firstCase(varName, true);
 
@@ -3827,7 +3832,7 @@ var CodeUtil = {
 
 
         doc += '/**'
-          + '\n *UnitAuto 自动生成 JavaBean\n *主页: https://github.com/TommyLemon/UnitAuto'
+          + '\n *' + APP_NAME + ' 自动生成 JavaBean\n *主页: https://github.com/TommyLemon/' + APP_NAME
           + '\n *使用方法：\n *1.修改包名 package \n *2.import 需要引入的类，可使用快捷键 Ctrl+Shift+O '
           + '\n */'
           + '\npackage apijson.demo.server.model;\n\n\n'
@@ -3946,7 +3951,7 @@ var CodeUtil = {
 
 
         doc += '/**'
-          + '\n *UnitAuto 自动生成 C++ Struct\n *主页: https://github.com/TommyLemon/UnitAuto'
+          + '\n *' + APP_NAME + ' 自动生成 C++ Struct\n *主页: https://github.com/TommyLemon/' + APP_NAME
           + '\n *使用方法：\n *1.修改包名 namespace \n *2.#include 需要引入的类，可使用快捷键 Ctrl+Shift+O '
           + '\n */\n'
           + '\n#include <string>'
@@ -4064,7 +4069,7 @@ var CodeUtil = {
 
 
         doc += '/**'
-          + '\n *UnitAuto 自动生成 JavaBean\n *主页: https://github.com/TommyLemon/UnitAuto'
+          + '\n *' + APP_NAME + ' 自动生成 JavaBean\n *主页: https://github.com/TommyLemon/' + APP_NAME
           + '\n *使用方法：\n *1.修改包名 package \n *2.import 需要引入的类，可使用快捷键 Ctrl+Shift+O '
           + '\n */'
           + '\npackage apijson.demo.server.model;\n\n\n'
@@ -4185,7 +4190,7 @@ var CodeUtil = {
 
         doc += '<?php'
           + '\n/**'
-          + '\n *UnitAuto 自动生成 PHP 实体类代码\n *主页: https://github.com/TommyLemon/UnitAuto'
+          + '\n *' + APP_NAME + ' 自动生成 PHP 实体类代码\n *主页: https://github.com/TommyLemon/' + APP_NAME
           + '\n *使用方法：\n *1.修改包名 namespace \n *2.use 需要引入的类，可使用快捷键 Ctrl+Shift+O '
           + '\n */'
           + '\n\nnamespace apijson\\demo\\server\\model;\n\n\n'
@@ -4304,7 +4309,7 @@ var CodeUtil = {
 
 
         doc += '/**'
-          + '\n *UnitAuto 自动生成 JavaBean\n *主页: https://github.com/TommyLemon/UnitAuto'
+          + '\n *' + APP_NAME + ' 自动生成 Go struct\n *主页: https://github.com/TommyLemon/' + APP_NAME
           + '\n *使用方法：\n *1.修改包名 package \n *2.import 需要引入的类，可使用快捷键 Ctrl+Shift+O '
           + '\n */'
           + '\npackage model\n\n\n'
@@ -4387,7 +4392,7 @@ var CodeUtil = {
 
 
         doc += '/**'
-          + '\n *UnitAuto 自动生成 C# Bean\n *主页: https://github.com/TommyLemon/UnitAuto'
+          + '\n *' + APP_NAME + ' 自动生成 C# Bean\n *主页: https://github.com/TommyLemon/' + APP_NAME
           + '\n *使用方法：\n *1.修改包名 namespace \n *2. using 需要引入的类，可使用快捷键 Ctrl+Shift+O '
           + '\n */\n'
           + '\nnamespace apijson.demo.server.model'
@@ -4480,7 +4485,7 @@ var CodeUtil = {
 
 
         doc += '/**'
-          + '\n *UnitAuto 自动生成 TypeScript Entity\n *主页: https://github.com/TommyLemon/UnitAuto'
+          + '\n *' + APP_NAME + ' 自动生成 TypeScript Entity\n *主页: https://github.com/TommyLemon/' + APP_NAME
           + '\n */\n\n\n'
           + CodeUtil.getComment(database != 'POSTGRESQL' ? table.table_comment : (item.PgClass || {}).table_comment, true)
           + '\n@MethodAccess'
@@ -4563,7 +4568,7 @@ var CodeUtil = {
 
 
         doc += '/**'
-          + '\n *UnitAuto 自动生成 Python Entity\n *主页: https://github.com/TommyLemon/UnitAuto'
+          + '\n *' + APP_NAME + ' 自动生成 Python Entity\n *主页: https://github.com/TommyLemon/' + APP_NAME
           + '\n *使用方法：\n *1.修改包名 package \n *2.import 需要引入的类，可使用快捷键 Ctrl+Shift+O '
           + '\n */'
           + '\npackage apijson.demo.server.model;\n\n\n'
@@ -4677,7 +4682,7 @@ var CodeUtil = {
 
 
         doc += '/**'
-          + '\n *UnitAuto 自动生成 Swift Struct\n *主页: https://github.com/TommyLemon/UnitAuto'
+          + '\n *' + APP_NAME + ' 自动生成 Swift Struct\n *主页: https://github.com/TommyLemon/' + APP_NAME
           + '\n *使用方法：\n *1.修改包名 package \n *2.import 需要引入的类，可使用快捷键 Ctrl+Shift+O '
           + '\n */'
           + '\npackage apijson.demo.server.model\n\n\n'
@@ -4754,7 +4759,7 @@ var CodeUtil = {
 
 
         doc += '/**'
-          + '\n *UnitAuto 自动生成 JavaScript Entity\n *主页: https://github.com/TommyLemon/UnitAuto'
+          + '\n *' + APP_NAME + ' 自动生成 JavaScript Entity\n *主页: https://github.com/TommyLemon/' + APP_NAME
           + '\n */\n\n\n'
           + CodeUtil.getComment(database != 'POSTGRESQL' ? table.table_comment : (item.PgClass || {}).table_comment, true)
           + '\n@MethodAccess'
@@ -4848,7 +4853,7 @@ var CodeUtil = {
 
 
         doc += '/**'
-          + '\n *UnitAuto 自动生成 Kotlin Data Class\n *主页: https://github.com/TommyLemon/UnitAuto'
+          + '\n *' + APP_NAME + ' 自动生成 Kotlin Data Class\n *主页: https://github.com/TommyLemon/' + APP_NAME
           + '\n *使用方法：\n *1.修改包名 package \n *2.import 需要引入的类，可使用快捷键 Ctrl+Shift+O '
           + '\n */'
           + '\npackage apijson.demo.server.model\n\n\n'
@@ -5878,6 +5883,86 @@ var CodeUtil = {
   },
   DATABASE_KEYS: ['MYSQL', 'POSTGRESQL', 'SQLSERVER', 'ORACLE', 'DB2', 'DAMENG', 'CLICKHOUSE', 'SQLITE', 'TDENGINE'],
 
+  getComment4Function: function (funCallStr, method, language) {
+    if (typeof funCallStr != 'string') {
+      return '远程函数 value 必须是 String 类型！';
+    }
+
+    var start = funCallStr == null ? -1 : funCallStr.indexOf('(')
+    if (start <= 0 || funCallStr.endsWith(')') != true) {
+      throw new Error('远程函数调用格式非法！必须为 fun(arg0,arg1..) 这种形式！不允许多余的空格！')
+    }
+
+    var fun = funCallStr.substring(0, start)
+    if (StringUtil.isName(fun) != true) {
+      throw new Error('远程函数名称 ' + fun + ' 非法！必须为大小写英文字母开头且其它字符只能是字母/下划线/数字！')
+    }
+
+    var funObj = CodeUtil.getFunctionFromList(fun, method)
+    if (funObj == null) {
+      throw new Error('远程函数 ' + fun + ' 非法！只能传后端 Function 表中配置的！')
+    }
+
+    // 不做校验，似乎怎么写都是对的
+    var argStr = funCallStr.substring(start + 1, funCallStr.length - 1)
+    var args = StringUtil.isEmpty(argStr) ? null : StringUtil.split(argStr)
+    var argLen = args == null ? 0 : args.length
+
+    // if (args != null) {
+    //   for (var i = 0; i < args.length; i++) {
+    //     var a = args[i]
+    //     if (a.startsWith("'") && a.endsWith("'")) {
+    //       continue
+    //     }
+    //
+    //     if (a.startsWith('`') && a.endsWith('`')) {
+    //       a = a.substring(1, a.length - 1)
+    //       if (StringUtil.isName(a) != true) {
+    //         throw new Error('远程函数名称 ' + fun + ' 非法！必须为大小写英文字母开头且其它字符只能是字母/下划线/数字！')
+    //       }
+    //     }
+    //   }
+    // }
+
+    var allowArgStr = funObj.arguments
+    var allowArgs = StringUtil.isEmpty(allowArgStr) ? null : StringUtil.split(allowArgStr)
+    var allowArgLen = allowArgs == null ? 0 : allowArgs.length
+    if (argLen != allowArgLen) {
+      throw new Error('远程函数参数数量 ' + argLen + ' 非法！必须是 ' + allowArgLen + ' 个！格式为 ' + fun + '(' + StringUtil.trim(allowArgStr) + ')')
+    }
+
+    return CodeUtil.getType4Language(language, funObj.returnType) + ', ' + (funObj.rawDetail || funObj.detail)
+  },
+
+  getFunctionFromList: function (name, method) {
+    if (StringUtil.isEmpty(name)) {
+      return null
+    }
+
+    var functionMap = CodeUtil.functionMap;
+    var funObj = functionMap == null ? null : functionMap[name]
+    if (funObj != null) {
+      return funObj;
+    }
+
+    var functionList = CodeUtil.functionList;
+    if (functionList != null) {
+      for (var i = 0; i < functionList.length; i++) {
+        var f = functionList[i];
+        if (f != null && f.name == name) {
+          if (functionMap == null) {
+            functionMap = {};
+          }
+          functionMap[name] = f;
+          CodeUtil.functionMap = functionMap;
+          return f;
+        }
+      }
+    }
+
+    return null;
+  },
+
   /**获取请求JSON的注释
    * @param tableList
    * @param name
@@ -5953,7 +6038,7 @@ var CodeUtil = {
       case 'methodArgs':
       case 'classArgs':
         if (value == null || value instanceof Array) {
-          return (isWarning ? '' : CodeUtil.getComment((key == 'classArgs' ? '调用类构造' : '普通') + '方法的参数类型type和值value包装对象', false, ' '));
+          return (isWarning ? '' : CodeUtil.getComment((key == 'classArgs' ? '调用类构造' : '普通') + '方法的参数类型 type 和值 value 包装对象', false, ' '));
         }
         break;
       default:
@@ -6020,6 +6105,55 @@ var CodeUtil = {
         }
       }
     }
+
+    if (isRestful != true && key != null && key.startsWith('@') != true && key.endsWith('()')) { // 方法，查询完后处理，先用一个Map<key,function>保存？
+      if (['GET', 'HEAD'].indexOf(method) < 0) {
+        return ' ! 远程函数只能用于 GET,HEAD 请求！！';
+      }
+
+      if (value != null && valuesIsNotString) {
+        return ' ! 远程函数 value 必须是 String 类型！';
+      }
+
+      // if (value != null) {
+      //   var startIndex = value.indexOf("(");
+      //   if (startIndex <= 0 || value.endsWith(")") == false) {
+      //     return ' ! 远程函数 value 必须符合 fun(arg0,arg1..) 这种格式！且不要有任何多余的空格！';
+      //   }
+      //   var fun = value.substring(0, startIndex);
+      //   if (StringUtil.isName(fun) != true) {
+      //     return '! 函数名' + fun + '不合法！value 必须符合 fun(arg0,arg1..) 这种格式！且不要有任何多余的空格！';
+      //   }
+      // }
+
+      var c = ''
+      if (StringUtil.isNotEmpty(value)) { // isValueNotEmpty 居然不对
+        try {
+          c = CodeUtil.getComment4Function(value, method, language)
+        } catch (e) {
+          return ' ! ' + e.message
+        }
+      }
+
+      if (isWarning) {
+        return ' ';
+      }
+
+      var priority = '';
+      if (key.endsWith("-()")) {
+        priority = ' < 在解析所在对象前优先执行';
+      }
+      else if (key.endsWith("+()")) {
+        priority = ' < 在解析所在对象后滞后执行';
+      }
+      else {
+        priority = ' < 执行时机在解析所在对象后，解析子对象前，可以在 () 前用 + - 设置优先级，例如 key-() 优先执行';
+      }
+
+      return CodeUtil.getComment('远程函数' + (isValueNotEmpty ? (StringUtil.isEmpty(c, true) ? '' : '：' + c) + priority
+        : '，例如 "isContain(praiseUserIdList,userId)"'), false, ' ');
+    }
+
 
     // if (value == null) {
     //  return ' ! key:value 中 key 或 value 任何一个为 null 时，该 key:value 都无效！'
@@ -6119,8 +6253,9 @@ var CodeUtil = {
       }
 
       if (isWarning != true && isRestful != true && isTableKey != true && StringUtil.isEmpty(objName) != true) {
-        // return CodeUtil.getComment('普通对象。如果要对应数据库表请把 ' + objName + ' 改成 ' + StringUtil.firstCase(objName, true)
-        //  + ' 这种以大写字母开头的 APIJSON 表名！数据库表不一样要这样，MySQL 默认大小写不敏感。', false, ' ') + extraComment;
+        if (key.endsWith(')') && key.indexOf('(') > 0 && value instanceof Array == false && value instanceof Object) {
+          return CodeUtil.getComment('回调方法，可在内部传 return, type, callback 等', false, ' ') + extraComment;
+        }
         return extraComment;
       }
 
@@ -6402,7 +6537,7 @@ var CodeUtil = {
         case 'methodArgs':
         case 'classArgs':
           if (value == null || value instanceof Array) {
-            return isWarning ? '' : (key == 'classArgs' ? '调用类构造' : '普通') + '方法的参数类型type和值value包装对象';
+            return isWarning ? '' : (key == 'classArgs' ? '调用类构造' : '普通') + '方法的参数类型 type 和值 value 包装对象';
           }
         case 'call(){}':
           if (value == null || (value instanceof Array == false && value instanceof Object)) {
@@ -6555,6 +6690,43 @@ var CodeUtil = {
 
     }
 
+    // if (isRestful != true && onlyTableAndColumn != true && columnName != null && columnName.endsWith('()')) { // 方法，查询完后处理，先用一个Map<key,function>保存？
+    //   if (['GET', 'HEAD'].indexOf(method) < 0) {
+    //     return ' ! 远程函数只能用于 GET,HEAD 请求！！';
+    //   }
+    //
+    //   if (value != null && valuesIsNotString) {
+    //     return ' ! value必须是String类型！';
+    //   }
+    //   if (value != null) {
+    //     var startIndex = value.indexOf("(");
+    //     if (startIndex <= 0 || value.endsWith(")") == false) {
+    //       return ' ! value必须符合 fun(arg0,arg1..) 这种格式！且不要有任何多余的空格！';
+    //     }
+    //     var fun = value.substring(0, startIndex);
+    //     if (StringUtil.isName(fun) != true) {
+    //       return '! 函数名' + fun + '不合法！value必须符合 fun(arg0,arg1..) 这种格式！且不要有任何多余的空格！';
+    //     }
+    //   }
+    //
+    //   if (isWarning) {
+    //     return ' ';
+    //   }
+    //
+    //   var priority = '';
+    //   if (columnName.endsWith("-()")) {
+    //     priority = ' < 在解析所在对象前优先执行';
+    //   }
+    //   else if (columnName.endsWith("+()")) {
+    //     priority = ' < 在解析所在对象后滞后执行';
+    //   }
+    //   else {
+    //     priority = '，执行时机在解析所在对象后，解析子对象前，可以在 () 前用 + - 设置优先级，例如 key-() 优先执行';
+    //   }
+    //
+    //   return '远程函数' + (isValueNotEmpty ? '，触发调用后端对应的方法/函数' + priority : '，例如 "isContain(praiseUserIdList,userId)"');
+    // }
+
     if (tableList == null || tableList.length <= 0) {
       return isWarning ? ' ' : '...';
     }
@@ -6598,7 +6770,6 @@ var CodeUtil = {
         key = new String(columnName);
       }
       else {
-
         //功能符 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
         if (columnName.endsWith("()")) {//方法，查询完后处理，先用一个Map<key,function>保存？

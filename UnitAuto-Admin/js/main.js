@@ -7169,7 +7169,12 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
           }
 
-          invoke(eval(toEval), which, p_k, pathKeys, key, lastKeyInPath);
+          var isPre = false; // 避免执行副作用代码 true;
+          var isTest = false;
+          var res = {};
+          var data = res.data;
+          var err = null;
+          invoke(eval(StringUtil.trim(preScript) + '\n' + toEval), which, p_k, pathKeys, key, lastKeyInPath);
 
           // alert('> current = ' + JSON.stringify(current, null, '    '))
         }
