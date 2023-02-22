@@ -2728,7 +2728,7 @@ https://github.com/Tencent/APIJSON/issues
             format: false,
             'Method': {
               'userId': this.User.id,
-              'testAccountId': currentAccountId,
+              // 'testAccountId': currentAccountId,
               'package': classItem.package == null ? null : classItem.package,  // .replace(/[.]/g, '/'),
               'class': classItem.class,
               'method': methodItem.name,
@@ -2750,7 +2750,7 @@ https://github.com/Tencent/APIJSON/issues
             'TestRecord': {
               'randomId': 0,
               'host': this.getBaseUrl(),
-              'testAccountId': currentAccountId,
+              // 'testAccountId': currentAccountId,
               'response': ''
             },
             'tag': 'Method'
