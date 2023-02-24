@@ -22,6 +22,9 @@
 已被 互联网教育智能技术及应用国家工程实验室 收录。
 https://github.com/TommyLemon/APIAuto/issues/19
 
+<img width="1494" alt="image" src="https://user-images.githubusercontent.com/5738175/221088793-f60d1a43-fdb4-4cda-84ef-04fdee1aa472.png">
+
+
 ### 特点优势
 相比 JUnit, JTest, Mockito, Mockk 等一堆 Compiling testing 工具：<br />
 1.其它工具需要每个方法都写一大堆测试代码，需要开发成本、需要解决测试代码的 bug、业务代码更改后需要同步修改测试代码等；<br />
