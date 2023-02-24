@@ -23,7 +23,7 @@
 https://github.com/TommyLemon/APIAuto/issues/19
 
 <img width="1494" alt="image" src="https://user-images.githubusercontent.com/5738175/221088793-f60d1a43-fdb4-4cda-84ef-04fdee1aa472.png">
-
+<img width="1494" alt="image" src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-RandomTest-Parent-small.jpg">
 
 ### 特点优势
 相比 JUnit, JTest, Mockito, Mockk 等一堆 Compiling testing 工具：<br />
