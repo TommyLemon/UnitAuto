@@ -518,10 +518,9 @@ func InvokeMethod(req map[string]any, instance any, listener Listener[any]) erro
 		instance = args[0]
 	}
 
-	var t = reflect.TypeOf(typ)
-	if t.Kind() == reflect.Struct && instance == nil && static_ == false {
+	if typ.Kind() == reflect.Struct && instance == nil && static_ == false {
 		if IsEmpty(cttName, true) {
-			instance, err = GetInstance(t, clsArgs, GetBool(req, KEY_REUSE))
+			instance, err = GetInstance(reflect.TypeOf(typ), clsArgs, GetBool(req, KEY_REUSE))
 		} else {
 			instance, err = getInvokeResult(typ, nil, cttName, clsArgs, nil)
 		}
@@ -737,10 +736,10 @@ var GetInvokeClass = func(pkgName string, clsName string) (reflect.Value, error)
 	}
 
 	if cls != nil {
-		var t = reflect.TypeOf(cls)
-		var k = t.Kind()
+		var v = reflect.ValueOf(cls)
+		var k = v.Kind()
 		if k == reflect.Struct || k == reflect.Func {
-			return reflect.ValueOf(cls), nil
+			return v, nil
 		}
 	}
 
@@ -899,17 +898,17 @@ func getInvokeResult(typ reflect.Value, instance any, methodName string, methodA
 		}
 	}
 
-	var t = reflect.TypeOf(typ)
-	var k = t.Kind()
+	var k = typ.Kind()
 	var method reflect.Value
 
 	if k == reflect.Struct {
-		var m, exists = t.MethodByName(methodName)
-		if exists {
-			method = m.Func
-		} else {
-			method = typ.MethodByName(methodName)
-		}
+		//var t = reflect.TypeOf(typ)
+		//var m, exists = t.MethodByName(methodName)
+		//if exists {
+		//	method = m.Func
+		//} else {
+		method = typ.MethodByName(methodName)
+		//}
 	} else if k == reflect.Func {
 		method = typ
 	} else {
@@ -1885,10 +1884,16 @@ func trimType(name string) string {
 		return ""
 	}
 
+	//var ts = CLASS_MAP[name]
+	//if len(ts) > 0 {
+	//	return ts
+	//}
+
 	for k, v := range CLASS_MAP {
 		if v == nil {
 			continue
 		}
+
 		var t = reflect.TypeOf(v)
 		if t == nil {
 			continue

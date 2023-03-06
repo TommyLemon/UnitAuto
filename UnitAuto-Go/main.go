@@ -13,7 +13,8 @@ import (
 )
 
 func main() {
-	unitauto.CLASS_MAP["unitauto-go.unitauto.test.Hello"] = reflect.ValueOf(test.Hello)
+	unitauto.CLASS_MAP["unitauto-go.unitauto.test.Hello"] = test.Hello
+	unitauto.CLASS_MAP["unitauto-go.unitauto.test.ComputeAsync"] = test.ComputeAsync
 	unitauto.CLASS_MAP["unitauto-go.unitauto.test.Test"] = test.Test{
 		Id:   1,
 		Name: "UnitAuto",
