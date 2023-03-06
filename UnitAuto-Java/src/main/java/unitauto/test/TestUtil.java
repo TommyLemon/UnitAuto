@@ -105,8 +105,7 @@ public class TestUtil {
 				Boolean sort = callback.sort();
 				if (sort != null && sort && a > b) {
 					callback.minusAsId(b, a);
-				}
-				else {
+				} else {
 					callback.minusAsId(a, b);
 				}
 
