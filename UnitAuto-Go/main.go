@@ -14,6 +14,10 @@ import (
 
 func main() {
 	unitauto.CLASS_MAP["unitauto-go.unitauto.test.Hello"] = test.Hello
+	unitauto.CLASS_MAP["unitauto-go.unitauto.test.Add"] = test.Add
+	unitauto.CLASS_MAP["unitauto-go.unitauto.test.Minus"] = test.Minus
+	unitauto.CLASS_MAP["unitauto-go.unitauto.test.Multiply"] = test.Multiply
+	unitauto.CLASS_MAP["unitauto-go.unitauto.test.Divide"] = test.Divide
 	unitauto.CLASS_MAP["unitauto-go.unitauto.test.ComputeAsync"] = test.ComputeAsync
 	unitauto.CLASS_MAP["unitauto-go.unitauto.test.Test"] = test.Test{
 		Id:   1,
@@ -58,11 +62,17 @@ func handle(w http.ResponseWriter, r *http.Request) {
 
 		cors(w, r)
 
+		var called = []bool{false}
 		var respMap map[string]any
 		if r.URL.Path == "/method/list" {
 			respMap = unitauto.ListMethodByStr(reqStr)
 		} else if r.URL.Path == "/method/invoke" {
 			if err := unitauto.InvokeMethodByStr(reqStr, nil, func(data any, method *reflect.Method, proxy *unitauto.InterfaceProxy, extras ...any) error {
+				if called[0] || r.Close {
+					return nil
+				}
+				called[0] = true
+
 				if respBody, err := json.Marshal(data); err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
 				} else {
@@ -73,6 +83,8 @@ func handle(w http.ResponseWriter, r *http.Request) {
 						w.WriteHeader(http.StatusOK)
 					}
 				}
+				r.Context().Done()
+
 				return nil
 			}); err == nil {
 				return
@@ -82,6 +94,11 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		} else {
 			respMap = unitauto.NewErrorResult(errors.New("URL 错误，只支持 /method/list 和 /method/invoke"))
 		}
+
+		if called[0] || r.Close {
+			return
+		}
+		called[0] = true
 
 		if respBody, err := json.Marshal(respMap); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -94,6 +111,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		r.Context().Done()
 	}
 }
 
