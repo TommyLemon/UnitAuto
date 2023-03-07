@@ -463,7 +463,7 @@ var InvokeMethodByStr = func(request string, instance any, listener Listener[any
 func InvokeMethod(req map[string]any, instance any, listener Listener[any]) error {
 	defer func() {
 		if err := recover(); err != nil {
-			completeWithError("", "", "", 0, errors.New("unknown error !"+fmt.Sprint(err)), listener)
+			completeWithError("", "", "", 0, errors.New("unknown error ! "+fmt.Sprint(err)), listener)
 		}
 	}()
 
@@ -548,7 +548,6 @@ func InvokeMethod(req map[string]any, instance any, listener Listener[any]) erro
 	}
 
 	return InvokeReflectMethod(typ, instance, pkgName, clsName, methodName, methodArgs, listener)
-
 }
 
 var InvokeReflectMethod = func(typ reflect.Value, instance any, pkgName string, clsName string, methodName string,
@@ -966,54 +965,60 @@ func getInvokeResult(typ reflect.Value, instance any, methodName string, methodA
 				var v = args[i]
 				//无效	if (v != nil && v.getClass() == reflect.TypeOf(InterfaceProxy{})) { // v instanceof InterfaceProxy) { // v.getClass().isInterface()) {
 
-				//解决只有 interface getter 方法才有对应字段返回
+				////解决只有 interface getter 方法才有对应字段返回
 				if t.Kind() == reflect.Array || t.Kind() == reflect.Slice {
 					//a := v.([]any)
 					//if (t.getComponentType() != nil && t.getComponentType().isInterface()) {
 					//	v = ParseArr(v.toString())
 					//}
 				} else if t.Kind() == reflect.Func {
-					m := map[string]any{}
+					//m := map[string]any{}
+					//
+					//s := t.Name() + "("
+					//for i := 0; i < t.NumIn(); i++ {
+					//	if i <= 0 {
+					//		s += t.In(i).String()
+					//	} else {
+					//		s += "," + t.In(i).String()
+					//	}
+					//}
+					//s += ")"
+					//
+					//m[s] = map[string]any{
+					//	"type": reflect.TypeOf(t).Name(),
+					//}
+					//
+					//v = m
 
-					s := t.Name() + "("
-					for i := 0; i < t.NumIn(); i++ {
-						if i <= 0 {
-							s += t.In(i).String()
-						} else {
-							s += "," + t.In(i).String()
-						}
-					}
-					s += ")"
-
-					m[s] = map[string]any{
-						"type": reflect.TypeOf(t).Name(),
-					}
-
-					v = m
+					finalMethodArgs = append(finalMethodArgs, v)
+					continue
 				} else if t.Kind() == reflect.Interface {
-					m := map[string]any{}
-					for i := 0; i < t.NumMethod(); i++ {
-						mth := t.Method(i)
-
-						s := mth.Name + "("
-						var mt = reflect.TypeOf(m)
-						for j := 0; j < mt.NumIn(); j++ {
-							if j <= 0 {
-								s += mt.In(j).String()
-							} else {
-								s += "," + mt.In(j).String()
-							}
-						}
-						s += ")"
-
-						m[s] = map[string]any{
-							"type": mt.Name(),
-						}
-					}
-
-					v = m
+					//m := map[string]any{}
+					//for i := 0; i < t.NumMethod(); i++ {
+					//	mth := t.Method(i)
+					//
+					//	s := mth.Name + "("
+					//	var mt = reflect.TypeOf(m)
+					//	for j := 0; j < mt.NumIn(); j++ {
+					//		if j <= 0 {
+					//			s += mt.In(j).String()
+					//		} else {
+					//			s += "," + mt.In(j).String()
+					//		}
+					//	}
+					//	s += ")"
+					//
+					//	m[s] = map[string]any{
+					//		"type": mt.Name(),
+					//	}
+					//}
+					//
+					//v = m
+					finalMethodArgs = append(finalMethodArgs, v)
+					continue
 				}
 
+				//args[i] = v
 				finalMethodArgs = append(finalMethodArgs, parseJSON(t.String(), v))
 			}
 		}
@@ -1034,132 +1039,240 @@ func getInvokeResult(typ reflect.Value, instance any, methodName string, methodA
 	var isSync = true
 	var err error = nil
 
+	pl := make([]reflect.Value, len(args))
+	//for i := 0; i < len(args); i++ {
+	//	//var t = types[i] // reflect.TypeOf(args[i])
+	//	//var ts = t.String()
+	//	//if ts == "*reflect.rtype" {
+	//	//	pl[i] = reflect.ValueOf(args[i]).Convert(types[i])
+	//	//} else
+	//	//if t.Kind() == reflect.Func || t.Kind() == reflect.Interface {
+	//	//	pl[i] = reflect.ValueOf(CLASS_MAP[t.String()])
+	//	//} else {
+	//	pl[i] = reflect.ValueOf(args[i])
+	//	//}
+	//}
+
+	var res any = nil
+
 	if len(types) > 0 {
 		for i := 0; i < len(types); i++ { //当其中有 interface 且用 KEY_CALLBACK 标记了内部至少一个方法，则认为是触发异步回调的方法
-			var typ = types[i]
-			var value = args[i]
-			var isIP = reflect.TypeOf(value).String() == "InterfaceProxy"
+			//var type_ = types[i]
+			//var value = args[i]
+			//var isIP = reflect.TypeOf(value) == TYPE_INTERFACE_PROXY
 
-			if isIP || (typ != nil && typ.Kind().String() == "interface") { // @interface 也必须代理  && typ.isAnnotation() == false)) {  //如果这里不行，就 initTypesAndValues 给个回调
-				//不能交给 initTypesAndValues 中 castValue2Type，否则会导致这里 cast 抛异常
-				var proxy InterfaceProxy
-				if !isIP {
-					proxy = value.(InterfaceProxy)
+			//if isIP || (type_ != nil && (typ.Kind() == reflect.Interface || type_.Kind() == reflect.Func)) { // @interface 也必须代理  && typ.isAnnotation() == false)) {  //如果这里不行，就 initTypesAndValues 给个回调
+			//不能交给 initTypesAndValues 中 castValue2Type，否则会导致这里 cast 抛异常
+			//var proxy InterfaceProxy
+			//if isIP {
+			//	proxy = value.(InterfaceProxy)
+			//} else {
+			//	//if val, err2 := cast(value, TYPE_INTERFACE_PROXY); err2 != nil {
+			//	//	return nil, err2
+			//	//} else {
+			//	//	proxy = val.(InterfaceProxy)
+			//	//}
+			//	proxy = InterfaceProxy{}
+			//}
+
+			var key = methodArgs[i].Type
+			var value = methodArgs[i].Value
+
+			if reflect.TypeOf(value).Kind() == reflect.Map {
+				//var proxy = value.(map[string]any)
+
+				//for _, key := range proxy.Keys() {
+				//var key = GetStr(proxy, KEY_TYPE)
+				//var val = GetMap(proxy, KEY_VALUE)
+				//判断是否符合 "fun(arg0,arg1...)": { "callback": true } 格式
+				var start = -1
+				var end = strings.LastIndex(key, ")")
+				if end > 2 {
+					start = strings.Index(key, "(")
+				}
+				if start < 1 || !IsName(key[0:start]) {
+					continue
+				}
+
+				//var val, exists = proxy.Get(key)
+				//if !exists {
+				//	continue
+				//}
+
+				t := reflect.TypeOf(value)
+				//if !exists || t.Kind() != reflect.Map {
+				if t.Kind() != reflect.Map {
+					continue
+				}
+				//if t == TYPE_MAP_STRING_ANY {
+				//	var m = val.(map[string]any)
+				//	if GetBool(m, KEY_CALLBACK) {
+				//		proxy.PutCallback(key, onItemComplete)
+				//	}
+				//} else if t == TYPE_MAP_STRING_INTERFACE {
+				//	var m = val.(map[string]interface{})
+				//	if GetBool(m, KEY_CALLBACK) {
+				//		proxy.PutCallback(key, onItemComplete)
+				//	}
+				//}
+
+				//for j, k := range reflect.ValueOf(val).MapKeys() {
+				//	if (k.String() == KEY_CALLBACK) {
+				//		proxy.PutCallback(key, reflect.ValueOf(val).MapIndex(k))
+				//	}
+				//}
+
+				//reflect.FuncOf()
+
+				var inTypeStrs = strings.Split(key[start+1:end], ",")
+				//var inTypes, err2 = getTypes(inTypeStrs, ","))
+				//if err2 != nil {
+				//	return nil, err2
+				//}
+
+				var inTypes = make([]reflect.Type, len(inTypeStrs))
+				for j, its := range inTypeStrs {
+					inTypes[j], err = getType(its, nil, true)
+					if err != nil {
+						return nil, err
+					}
+				}
+
+				var outTypeStrs = strings.Split(key[end+1:], ",")
+
+				var fcm = value.(map[string]any)
+				var fct = GetStr(fcm, KEY_TYPE)
+				var fcr = fcm[KEY_RETURN]
+				var fcc = GetBool(fcm, KEY_CALLBACK)
+				if fcc {
+					isSync = false
+				}
+
+				if len(outTypeStrs) <= 0 {
+					outTypeStrs = strings.Split(fct, ",")
+				}
+
+				//var outTypes, err3 = getTypes(outTypeStrs)
+				//if err3 != nil {
+				//	return nil, err3
+				//}
+
+				var outTypes = make([]reflect.Type, len(outTypeStrs))
+				for j, its := range outTypeStrs {
+					outTypes[j], err = getType(its, nil, true)
+					if err != nil {
+						return nil, err
+					}
+				}
+
+				//inTypes = []reflect.Type{reflect.TypeOf(0), reflect.TypeOf(0)}
+				//outTypes = []reflect.Type{reflect.TypeOf(0)}
+
+				var callbackIndex = i
+				pl[i] = reflect.MakeFunc(reflect.FuncOf(inTypes, outTypes, false), func(as []reflect.Value) (rs []reflect.Value) {
+					var callTime = time.Now().UnixMilli()
+
+					var calledArgs = make([]map[string]any, len(as))
+					for j, a := range as {
+						fmt.Println("as[", j, "] = ", a)
+						var vt = a.Type()
+						var vv any
+						if a.CanInt() {
+							vv = a.Int()
+						} else if a.CanFloat() {
+							vv = a.Float()
+						} else if vt == TYPE_BOOL {
+							vv = a.Bool()
+						} else if vt == TYPE_STRING {
+							vv = a.String()
+						} else if a.CanConvert(vt) {
+							vv = a.Convert(vt)
+						}
+
+						calledArgs[j] = map[string]any{
+							"type":  vt.String(),
+							"value": vv,
+						}
+					}
+
+					var cm = GetArr(fcm, KEY_CALL_MAP)
+					if cm == nil {
+						cm = []any{}
+					}
+
+					var callInfo = map[string]any{
+						"time":       callTime,
+						"methodArgs": calledArgs,
+					}
+					fcm[KEY_CALL_MAP] = append(cm, callInfo)
+
+					args[callbackIndex] = map[string]any{
+						"type":  key,
+						"value": fcm,
+					}
+
+					var rl = len(rs)
+					if rl != len(outTypes) {
+						rs = make([]reflect.Value, len(outTypes))
+						rl = len(rs)
+					}
+
+					if rl <= 0 {
+						// do nothing
+					} else if reflect.TypeOf(fcr).Kind() == reflect.Array {
+						var arr = fcr.([]any)
+						var al = len(arr)
+						var min = al
+						if al > rl {
+							min = rl
+						}
+						for j := 0; j < min; j++ {
+							if v, err3 := cast(arr[j], outTypes[j]); err3 != nil {
+								rs[j] = reflect.Zero(outTypes[j])
+							} else {
+								rs[j] = reflect.ValueOf(v)
+							}
+						}
+					} else {
+						if v, err3 := cast(fcr, outTypes[0]); err3 != nil {
+							rs[0] = reflect.Zero(outTypes[0])
+						} else {
+							rs[0] = reflect.ValueOf(v)
+						}
+					}
+
+					if fcc {
+						err = onItemComplete(res, nil, nil)
+						if err != nil {
+							fmt.Println(err.Error())
+							callInfo[KEY_WARN] = err.Error()
+						}
+					}
+
+					return rs
+				})
+
+				//args[i], err = cast(value, type_)
+				//if err != nil {
+				//	return nil, err
+				//}
+
+				//if isSync {
+				//	isSync = len(proxy.callbackMap) <= 0
+				//}
+			} else {
+				if v, err2 := cast(args[i], types[i]); err2 == nil {
+					pl[i] = reflect.ValueOf(v)
 				} else {
-					proxy = InterfaceProxy{}
-
-					var t = reflect.TypeOf(value).String()
-					if t == "map[string]any" {
-						var m = value.(map[string]any)
-						//var cbm = map[string]Listener[any] {}
-
-						//var ft = GetStr(m, KEY_TYPE)
-						var fv = GetMap(m, KEY_VALUE)
-						for k, v := range fv {
-							proxy.Set(k, v)
-
-							// FIXME 下面有 PutCallback
-							//var index = -1
-							//if strings.HasSuffix(k, ")") {
-							//	index = strings.Index(k, "(")
-							//}
-							//if index < 0 || ! IsName(k[0 : index]) {
-							//	proxy.Set(k, v)
-							//	continue
-							//}
-
-							//var inTypes, err2 = getTypes(strings.Split(k[index + 1 : len(k) - 1], ","))
-							//if err2 != nil {
-							//	return nil, err2
-							//}
-							//
-							//var vt = reflect.TypeOf(v).String()
-							//if vt == "map[string]any" {
-							//	var fcm = v.(map[string]any)
-							//	var fct = GetStr(fcm, KEY_TYPE)
-							//	var fcr = fcm[KEY_RETURN]
-							//	var fcc = GetBool(fcm, KEY_CALLBACK)
-							//
-							//
-							//	var outTypes, err3 = getTypes(strings.Split(fct, ","))
-							//	if err3 != nil {
-							//		return nil, err3
-							//	}
-							//
-							//	//cbm[k] = reflect.FuncOf(inTypes, outTypes, true)
-							//
-							//	proxy.PutCallback(k, func(data any, method *reflect.Method, proxy *InterfaceProxy, extras ...any) error {
-							//		if fcc {
-							//			err4 := listener(data, method, proxy, extras)
-							//			if err4 != nil {
-							//				return err4
-							//			}
-							//		}
-							//		return nil
-							//	})
-							//}
-							//cbm[k] = func(data any, method *reflect.Method, proxy *InterfaceProxy, extras ...any) error {
-							//
-							//}
-
-						}
-					}
-
-				}
-
-				for _, key := range proxy.Keys() {
-					//判断是否符合 "fun(arg0,arg1...)": { "callback": true } 格式
-					var index = -1
-					if strings.HasSuffix(key, ")") {
-						index = strings.Index(key, "(")
-					}
-					if index <= 0 || !IsName(key[0:index]) {
-						continue
-					}
-
-					var val, exists = proxy.Get(key)
-					if !exists {
-						continue
-					}
-
-					t := reflect.TypeOf(val)
-					if !exists || t.Kind() != reflect.Map {
-						continue
-					}
-					if t.String() == "map[string]any" {
-						var m = val.(map[string]any)
-						if GetBool(m, KEY_CALLBACK) {
-							proxy.PutCallback(key, onItemComplete)
-						}
-					} else if t.String() == "map[string]interface {}" {
-						var m = val.(map[string]interface{})
-						if GetBool(m, KEY_CALLBACK) {
-							proxy.PutCallback(key, onItemComplete)
-						}
-					}
-
-					//for j, k := range reflect.ValueOf(val).MapKeys() {
-					//	if (k.String() == KEY_CALLBACK) {
-					//		proxy.PutCallback(key, reflect.ValueOf(val).MapIndex(k))
-					//	}
-					//}
-				}
-
-				args[i], err = cast(proxy, typ)
-				if err != nil {
-					return nil, err
-				}
-
-				if isSync {
-					isSync = len(proxy.callbackMap) <= 0
+					fmt.Println(err2.Error())
 				}
 			}
 			//始终需要 cast	 else {  //前面 initTypesAndValues castValue2Type = false
-			if v, err2 := cast(value, typ); err2 == nil {
-				args[i] = v
-			} else {
-				fmt.Println(err2.Error())
-			}
+			//if v, err2 := cast(value, type_); err2 == nil {
+			//	args[i] = v
+			//} else {
+			//	fmt.Println(err2.Error())
+			//}
 			//				}
 		}
 	}
@@ -1168,11 +1281,6 @@ func getInvokeResult(typ reflect.Value, instance any, methodName string, methodA
 	//	types = append(reflect.TypeOf(instance), types...)
 	//	args = append(instance, args...)
 	//}
-
-	pl := make([]reflect.Value, len(args))
-	for i := 0; i < len(args); i++ {
-		pl[i] = reflect.ValueOf(args[i])
-	}
 
 	startTime[0] = time.Now().UnixMilli() // 排除前面初始化参数的最准确时间
 	fmt.Println("getInvokeResult  " + method.String() + " startTime = " + fmt.Sprint(startTime[0]) +
@@ -1197,7 +1305,6 @@ func getInvokeResult(typ reflect.Value, instance any, methodName string, methodA
 		}
 	}
 
-	var res any = nil
 	if vl == 1 {
 		res = vs[0]
 	} else if vl > 1 {
@@ -1942,6 +2049,13 @@ func getTypes(types []string) ([]reflect.Type, error) {
 //	}
 
 func getType(name string, value any, defaultType bool) (reflect.Type, error) {
+	if strings.HasPrefix(name, "func(") {
+		return TYPE_FUNC, nil
+	}
+	if strings.HasPrefix(name, "method") {
+		return TYPE_METHOD, nil
+	}
+
 	var typ reflect.Type = nil
 	if IsEmpty(name, true) { //根据值来自动判断
 		if value == nil || defaultType == false {
@@ -2028,6 +2142,9 @@ func getType(name string, value any, defaultType bool) (reflect.Type, error) {
 	return typ, nil
 }
 
+var TYPE_INTERFACE_PROXY = reflect.TypeOf(InterfaceProxy{})
+var TYPE_FUNC = reflect.TypeOf(func() {})
+var TYPE_METHOD = reflect.TypeOf(InterfaceProxy.GetType)
 var TYPE_ANY = reflect.TypeOf(nil)
 var TYPE_INTERFACE = TYPE_ANY
 var TYPE_BOOL = reflect.TypeOf(false)
@@ -2233,6 +2350,84 @@ func cast(obj any, typ reflect.Type) (any, error) {
 			}
 		}
 		return a, nil
+	case TYPE_FUNC, TYPE_METHOD, TYPE_INTERFACE_PROXY:
+		var proxy = InterfaceProxy{}
+		if t == TYPE_MAP_STRING_INTERFACE {
+			var m = obj.(map[string]interface{})
+			var m2 = map[string]any{}
+			for k, v := range m {
+				m2[k] = v
+			}
+			obj = m2
+			t = TYPE_MAP_STRING_ANY
+		}
+
+		if t == TYPE_MAP_STRING_ANY {
+			var m = obj.(map[string]any)
+			//var cbm = map[string]Listener[any] {}
+
+			//var ft = GetStr(m, KEY_TYPE)
+			var fv = GetMap(m, KEY_VALUE)
+			if fv == nil {
+				fv = m
+			}
+			for k, v := range fv {
+				//proxy.Set(k, v)
+
+				// FIXME 下面有 PutCallback
+				var end = strings.LastIndex(k, ")")
+				var start = -1
+				if end > 2 {
+					start = strings.Index(k, "(")
+				}
+				var name = ""
+				if start > 0 && start < end {
+					name = k[0:start]
+				}
+				if start < 1 || !IsName(name) {
+					proxy.Set(k, v)
+					continue
+				}
+
+				//var inTypes, err2 = getTypes(strings.Split(k[index+1:len(k)-1], ","))
+				//if err2 != nil {
+				//	return nil, err2
+				//}
+
+				var vt = reflect.TypeOf(v)
+				if vt == TYPE_MAP_STRING_ANY {
+					//var fcm = v.(map[string]any)
+					//var fct = GetStr(fcm, KEY_TYPE)
+					//var fcr = fcm[KEY_RETURN]
+					//var fcc = GetBool(fcm, KEY_CALLBACK)
+
+					//var outTypes, err3 = getTypes(strings.Split(fct, ","))
+					//if err3 != nil {
+					//	return nil, err3
+					//}
+
+					var f = CLASS_MAP[k] // reflect.FuncOf(inTypes, outTypes, false)
+					//var f = reflect.New(typ).Elem()
+					//var f = reflect.MakeFunc(reflect.FuncOf(inTypes, outTypes, false), func(args []reflect.Value) (results []reflect.Value) {
+					//	fmt.Println(args)
+					//	return []reflect.Value{reflect.ValueOf(fcr)}
+					//})
+					if typ == TYPE_FUNC {
+						return f, nil
+					}
+					if typ == TYPE_METHOD {
+						return reflect.Method{
+							Name: name,
+							Type: TYPE_INTERFACE_PROXY,
+							Func: reflect.ValueOf(f),
+						}, nil
+					}
+					return f, nil
+				}
+
+			}
+		}
+		return proxy, nil
 	default:
 		return reflect.ValueOf(obj).Convert(typ), nil
 	}
@@ -2499,8 +2694,13 @@ func NewArgument(typ string, value any) Argument {
  */
 type InterfaceProxy struct {
 	orderedmap.OrderedMap
+	//reflect.Value
 	Type        reflect.Type
 	callbackMap map[string]Listener[any]
+}
+
+func (ip InterfaceProxy) GetType() reflect.Type {
+	return ip.Type
 }
 
 func (ip InterfaceProxy) SetType(typ reflect.Type) {

@@ -9,8 +9,13 @@ import (
 	"net/http"
 	"reflect"
 	"unitauto-go/unitauto"
+	//InterfaceProxy "unitauto-go/unitauto"
 	"unitauto-go/unitauto/test"
 )
+
+//func (proxy unitauto.InterfaceProxy) callback(a int, b int) int {
+//	return a + b
+//}
 
 func main() {
 	unitauto.CLASS_MAP["unitauto-go.unitauto.test.Hello"] = test.Hello
@@ -23,6 +28,12 @@ func main() {
 		Id:   1,
 		Name: "UnitAuto",
 	}
+
+	unitauto.CLASS_MAP["func(int,int)int"] = reflect.FuncOf([]reflect.Type{reflect.TypeOf(0), reflect.TypeOf(0)}, append([]reflect.Type{}, reflect.TypeOf(0)), false)
+	unitauto.CLASS_MAP["func(int, int) int"] = func(a int, b int) int {
+		return a + b
+	}
+	unitauto.CLASS_MAP["callback(int,int)"] = reflect.FuncOf([]reflect.Type{reflect.TypeOf(0), reflect.TypeOf(0)}, []reflect.Type{reflect.TypeOf(0)}, false)
 
 	http.HandleFunc("/method/list", handle)
 	http.HandleFunc("/method/invoke", handle)
@@ -76,6 +87,9 @@ func handle(w http.ResponseWriter, r *http.Request) {
 				if respBody, err := json.Marshal(data); err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
 				} else {
+					//r.Header["Content-Length"] = []string{strconv.Itoa(len(string(respBody)))}
+					//r.Header.Set("Content-Length", strconv.Itoa(len(string(respBody))))
+					//w.Header().Set("Content-Length", strconv.Itoa(len(string(respBody))))
 					_, err = w.Write(respBody)
 					if err != nil {
 						w.WriteHeader(http.StatusInternalServerError)

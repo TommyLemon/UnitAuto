@@ -23,10 +23,14 @@ func Divide(a float64, b float64) float64 {
 }
 
 func ComputeAsync(a int, b int, callback func(a int, b int) int) int {
-	if a < b {
-		return callback(a, b)
-	}
-	return callback(b, a)
+	go func() {
+		if a < b {
+			callback(a, b)
+		} else {
+			callback(b, a)
+		}
+	}()
+	return a + b
 }
 
 type Test struct {
