@@ -24,6 +24,8 @@ https://github.com/TommyLemon/APIAuto/issues/19
 
 <img width="1494" alt="image" src="https://user-images.githubusercontent.com/5738175/221088793-f60d1a43-fdb4-4cda-84ef-04fdee1aa472.png">
 <img width="1494" alt="image" src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-RandomTest-Parent-small.jpg">
+<img width="1495" alt="image" src="https://user-images.githubusercontent.com/5738175/224038704-fef31759-c349-40cb-a252-e0c8cff55110.png">
+
 
 ### 特点优势
 相比 JUnit, JTest, Mockito, Mockk 等一堆 Compiling testing 工具：<br />
@@ -239,7 +241,7 @@ UnitAuto-Admin 登录后点击 设置项 \[查看、同步方法文档]，等返
 ![image](https://user-images.githubusercontent.com/5738175/172366167-87b5de56-16c0-4a44-bed7-6a6fe76a4209.png)
 
 对应发送 HTTP 请求 <br />
-[POST /method/list](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java-Demo/src/main/java/unitauto/demo/controller/DemoController.java#L111-L118)
+[POST /method/list](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-SpringBoot-SDK/src/main/java/unitauto/boot/UnitAutoController.java#L43-L50)
 ```js
 {
     "query": 2,  // 0-数据，1-总数，2-全部
@@ -260,6 +262,7 @@ https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java/src/main/java/u
 UnitAuto-Admin 点击 \[运行方法]
 ![image](https://user-images.githubusercontent.com/5738175/172368105-d4d0b53c-59a7-42d8-aaf1-4ecfc0711b8a.png)
 
+同步方法 <br />
 unitauto.test.TestUtil.divide
 ```js
 {
@@ -289,7 +292,7 @@ unitauto.test.TestUtil.divide
 ```
 
 对应发送 HTTP 请求  <br />
-[POST /method/invoke](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java-Demo/src/main/java/unitauto/demo/controller/DemoController.java#L120-L170)
+[POST /method/invoke](https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-SpringBoot-SDK/src/main/java/unitauto/boot/UnitAutoController.java#L52-L102)
 ```js
 {
     "package": "unitauto.test",
@@ -319,6 +322,63 @@ unitauto.test.TestUtil.divide(double, double)
 ```
 https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java/src/main/java/unitauto/test/TestUtil.java#L56-L58
 
+<img width="1495" alt="image" src="https://user-images.githubusercontent.com/5738175/224038704-fef31759-c349-40cb-a252-e0c8cff55110.png">
+
+异步回调方法  <br />
+unitauto.test.TestUtil.computeAsync
+```js
+{
+    "static": true,
+    "methodArgs": [
+        "long:8",
+        "long:2",
+        {
+            "type": "unitauto.test.TestUtil$Callback",
+            "value": {
+                "sort()": { // 可以简写为 "sort()": false 
+                    "type": "Boolean",
+                    "return": false
+                },
+                "setData(D)": {
+                    "callback": true
+                }
+            }
+        }
+    ]
+}
+```
+
+
+对应调用 Java 方法  <br />
+unitauto.test.TestUtil.divide(double, double)
+```java
+	public static Number computeAsync(long a, long b, Callback callback) {
+
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				try {
+					Thread.sleep(3000);
+				} catch (Exception e) {}
+				
+				Boolean sort = callback.sort();
+				if (sort != null && sort && a > b) {
+					callback.minusAsId(b, a);
+				} else {
+					callback.minusAsId(a, b);
+				}
+
+				callback.setData("Mock inner interface success!");
+			}
+		}).start();
+
+		return callback.getId();
+	}
+```
+https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java/src/main/java/unitauto/test/TestUtil.java#L95-L117
+
+ <br /> <br />
 
 详细说明见 MethodUtil.invokeMethod 的注释 <br />
 https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java/src/main/java/unitauto/MethodUtil.java#L353-L424
