@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	orderedmap "github.com/TommyLemon/unitauto-go/iancoleman"
 	"go/importer"
 	"go/token"
 	"go/types"
@@ -28,7 +29,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	orderedmap "unitauto-go/iancoleman"
 )
 
 /**方法/函数的工具类
@@ -94,7 +94,7 @@ var LoadStruct = func(packageOrFileName string, className string, ignoreError bo
 	if s, err := FindClass(packageOrFileName, className, ignoreError); err != nil {
 		return nil, err
 	} else {
-		return s.Type(), nil
+		return reflect.TypeOf(reflect.ValueOf(s)), nil
 	}
 }
 
@@ -106,17 +106,17 @@ var LoadStructList = func(packageOrFileName string, className string, ignoreErro
 
 	var nl = make([]reflect.Type, len(lst))
 	for i, s := range lst {
-		nl[i] = reflect.TypeOf(s)
+		nl[i] = reflect.TypeOf(reflect.ValueOf(s)) // reflect.TypeOf(s)
 	}
 	return nl, nil
 }
 
 // 不能在 static 代码块赋值，否则 MethodUtil 子类中 static 代码块对它赋值的代码不会执行！
-var LoadClass = func(packageOrFileName string, className string, ignoreError bool) (reflect.Value, error) {
+var LoadClass = func(packageOrFileName string, className string, ignoreError bool) (types.Object, error) {
 	return FindClass(packageOrFileName, className, ignoreError)
 }
 
-var LoadClassList = func(packageOrFileName string, className string, ignoreError bool, limit int, offset int) ([]reflect.Value, error) {
+var LoadClassList = func(packageOrFileName string, className string, ignoreError bool, limit int, offset int) ([]types.Object, error) {
 	return FindClassList(packageOrFileName, className, ignoreError, limit, offset, false)
 }
 
@@ -124,6 +124,7 @@ var PRIMITIVE_CLASS_MAP = map[string]any{
 	"any":         nil,
 	"interface{}": nil,
 	"bool":        false,
+	"byte":        byte(0),
 	"int":         int(0),
 	"int32":       int32(0),
 	"int64":       int64(0),
@@ -136,6 +137,7 @@ var BASE_CLASS_MAP = map[string]any{
 	"any":         nil,
 	"interface{}": nil,
 	"bool":        false,
+	"byte":        byte(0),
 	"int":         int(0),
 	"int32":       int32(0),
 	"int64":       int64(0),
@@ -147,6 +149,7 @@ var CLASS_MAP = map[string]any{
 	"any":               nil,
 	"interface{}":       nil,
 	"bool":              false,
+	"byte":              byte(0),
 	"int":               int(0),
 	"int32":             int32(0),
 	"int64":             int64(0),
@@ -154,6 +157,7 @@ var CLASS_MAP = map[string]any{
 	"float64":           float64(0),
 	"string":            "",
 	"[]bool":            []bool{},
+	"[]byte":            []byte{},
 	"[]int":             []int{},
 	"[]int32":           []int32{},
 	"[]int64":           []int64{},
@@ -192,6 +196,17 @@ func GetInt(m map[string]any, k string) int {
 	if v == nil {
 		return 0
 	}
+
+	switch v.(type) {
+	case int32:
+		return int(v.(int32))
+	case int64:
+		return int(v.(int64))
+	case float32:
+		return int(v.(float32))
+	case float64:
+		return int(v.(float64))
+	}
 	return v.(int)
 }
 
@@ -203,6 +218,17 @@ func GetInt32(m map[string]any, k string) int32 {
 	if v == nil {
 		return 0
 	}
+
+	switch v.(type) {
+	case int:
+		return int32(v.(int))
+	case int64:
+		return int32(v.(int64))
+	case float32:
+		return int32(v.(float32))
+	case float64:
+		return int32(v.(float64))
+	}
 	return v.(int32)
 }
 
@@ -213,6 +239,16 @@ func GetInt64(m map[string]any, k string) int64 {
 	v := m[k]
 	if v == nil {
 		return 0
+	}
+	switch v.(type) {
+	case int:
+		return int64(v.(int))
+	case int32:
+		return int64(v.(int32))
+	case float32:
+		return int64(v.(float32))
+	case float64:
+		return int64(v.(float64))
 	}
 	return v.(int64)
 }
@@ -248,6 +284,17 @@ func GetArr(m map[string]any, k string) []any {
 		return nil
 	}
 	return v.([]any)
+}
+
+func GetMapArr(m map[string]any, k string) []map[string]any {
+	if m == nil {
+		return nil
+	}
+	v := m[k]
+	if v == nil {
+		return nil
+	}
+	return v.([]map[string]any)
 }
 
 func GetJSONObject(m map[string]any, k string) orderedmap.OrderedMap {
@@ -742,7 +789,11 @@ var GetInvokeClass = func(pkgName string, clsName string) (reflect.Value, error)
 		}
 	}
 
-	return LoadClass(pkgName, clsName, false)
+	o, err := LoadClass(pkgName, clsName, false)
+	if err != nil {
+		return reflect.Value{}, err
+	}
+	return reflect.ValueOf(o), err
 }
 
 var GetInstanceValue = func(typ reflect.Type) any {
@@ -784,7 +835,7 @@ func GetInvokeInstance(typ reflect.Type, classArgs []Argument, reuse bool) (any,
 	if instance == nil {
 		//var size = len(classArgs)
 		//if (size <= 0) {
-		instance = reflect.New(typ) // GetInstanceValue(typ) // new(typ)
+		instance = GetInstanceValue(typ) // new(typ)
 		//} else { //通过构造方法
 		//	var exactContructor = false  //指定某个构造方法，只要某一项 typ 不为空就是
 		//	for i := 0; i < size; i++ {
@@ -1340,21 +1391,21 @@ func getMethodListGroupByClass(pkgName string, clsName string, methodName string
 		return nil, errors.New("query 取值只能是 [0, 1, 2] 中的一个！ 0-数据，1-总数，2-全部")
 	}
 
-	//var allClassList, err = LoadClassList(pkgName, clsName, true)
-	//if err != nil {
-	//	return nil, err
-	//}
+	var allClassList, err = LoadClassList(pkgName, clsName, true, 0, 0)
+	if err != nil {
+		return nil, err
+	}
 
-	//var queryData = query != 1
+	var queryData = query != 1
 	var queryTotal = query != 0
-	//var allMethod = IsEmpty(methodName, true)
+	var allMethod = IsEmpty(methodName, true)
 
 	var packageTotal = 0
 	var classTotal = 0
 	var methodTotal = 0
 
-	var packageMap = map[string]any{}
-	//var packageList = []string{}
+	var packageMap map[string]any
+	var packageList []map[string]any
 
 	var countObj = map[string]any{}
 	if queryTotal {
@@ -1363,108 +1414,138 @@ func getMethodListGroupByClass(pkgName string, clsName string, methodName string
 		countObj[KEY_METHOD_TOTAL] = methodTotal
 	}
 
-	//if (len(allClassList) <= 0) {
-	//	packageList = []string{}
-	//
-	//	for i := 0; i < len(allClassList); i++ {
-	//		var cls = allClassList[i]
-	//		if (cls == nil) {
-	//			continue
-	//		}
-	//
-	//		classTotal ++
-	//
-	//		var methodCount = 0
-	//			var pkg = cls.PkgPath()
-	//			var pkgObj = packageMap[pkg)
-	//			var pkgNotExist = pkgObj == nil
-	//			if (pkgNotExist) {
-	//				pkgObj = map[string]any{}
-	//				packageMap[pkg] = pkgObj
-	//			}
-	//
-	//			if (queryTotal) {
-	//				var clsCount = pkgObj[KEY_CLASS_TOTAL]
-	//				pkgObj[KEY_CLASS_TOTAL] = clsCount + 1
-	//			}
-	//				pkgObj[KEY_PACKAGE] = pkg
-	//
-	//				var classList = pkgObj[KEY_CLASS_LIST]
-	//				if (classList == nil) {
-	//					classList = []map[string]any{}
-	//				}
-	//
-	//				var clsObj = map[string]any{}
-	//
-	//				clsObj[KEY_CLASS] = cls.String()
-	//				//clsObj[KEY_TYPE] = trimType(cls.getGenericSuperclass())
-	//
-	//				var methodList = nil
-	//				if (allMethod == false && argTypes != nil) {
-	//					methodList = queryData ? new JSONArray(1) : nil
-	//
-	//					var mObj = parseMethodObject(cls.getMethod(methodName, argTypes), mock)
-	//					if (mObj != nil && mObj.IsEmpty() == false) {
-	//						methodCount = 1
-	//
-	//						if (methodList != nil) {
-	//							methodList.add(mObj)
-	//						}
-	//					}
-	//				}
-	//				else {
-	//					Method[] methods = cls.getDeclaredMethods() //父类的就用父类去获取 cls.getMethods()
-	//					if (methods != nil && methods.length > 0) {
-	//						methodList = queryData ? new JSONArray(methods.length) : nil
-	//
-	//						for (Method m : methods) {
-	//							var name = m == nil ? nil : m.getName()
-	//							if (IsEmpty(name, true) || name.contains("$") || name.length() < 2) {
-	//								continue
-	//							}
-	//
-	//							if (allMethod || methodName == (name)) {
-	//								var mObj = parseMethodObject(m, mock)
-	//								if (mObj != nil && mObj.IsEmpty() == false) {
-	//									methodCount ++
-	//
-	//									if (methodList != nil) {
-	//										methodList.add(mObj)
-	//									}
-	//								}
-	//							}
-	//						}
-	//					}
-	//				}
-	//
-	//				if (queryTotal) {
-	//					clsObj.put(KEY_METHOD_TOTAL, methodCount)  //太多不需要的信息，导致后端返回慢、前端卡 UI	clsObj.put("Method[]", ParseArr(methods))
-	//				}
-	//
-	//				if (methodList != nil && methodList.IsEmpty() == false) {
-	//					clsObj.put(KEY_METHOD_LIST, methodList)  //太多不需要的信息，导致后端返回慢、前端卡 UI	clsObj.put("Method[]", ParseArr(methods))
-	//				}
-	//
-	//				if (clsObj != nil && clsObj.IsEmpty() == false) {
-	//					classList.add(clsObj)
-	//				}
-	//
-	//				if (classList != nil && classList.IsEmpty() == false) {
-	//					pkgObj.put(KEY_CLASS_LIST, classList)
-	//				}
-	//
-	//				if (pkgNotExist && pkgObj != nil && pkgObj.IsEmpty() == false) {
-	//					packageList.add(pkgObj)
-	//				}
-	//
-	//
-	//		methodTotal += methodCount
-	//	}
-	//
-	//	if (len(packageList) > 0) {
-	//		countObj[KEY_PACKAGE_LIST] = packageList
-	//	}
-	//}
+	if len(allClassList) > 0 {
+		packageMap = map[string]any{}
+		packageList = []map[string]any{}
+
+		for i := 0; i < len(allClassList); i++ {
+			var cls = allClassList[i]
+			if cls == nil { // reflect.Value{}) {
+				continue
+			}
+
+			classTotal++
+
+			var methodCount = 0
+			var pkg = cls.Pkg().String() // .Type().PkgPath()
+			var start = strings.Index(pkg, "(")
+			//var end = strings.LastIndex(pkg, ")")
+			if start > 1 {
+				pkg = pkg[:start]
+			}
+			if strings.HasPrefix(pkg, "package ") {
+				pkg = pkg[len("package "):]
+			}
+			pkg = strings.TrimSpace(pkg)
+
+			var pkgObj = GetMap(packageMap, pkg)
+			var pkgNotExist = pkgObj == nil
+			if pkgNotExist {
+				pkgObj = map[string]any{}
+				packageMap[pkg] = pkgObj
+			}
+
+			if queryTotal {
+				var clsCount = GetInt(pkgObj, KEY_CLASS_TOTAL)
+				pkgObj[KEY_CLASS_TOTAL] = clsCount + 1
+			}
+			pkgObj[KEY_PACKAGE] = pkg
+
+			var classList = GetMapArr(pkgObj, KEY_CLASS_LIST)
+			if classList == nil {
+				classList = []map[string]any{}
+			}
+
+			var clsObj = map[string]any{}
+
+			var cn = cls.Name() // fmt.Sprint(cls) // cls.String()
+			clsObj[KEY_CLASS] = cn
+			//clsObj[KEY_TYPE] = trimType(cls.getGenericSuperclass())
+
+			var methodList []map[string]any
+			if queryData {
+				methodList = []map[string]any{}
+			}
+
+			fmt.Println("cls = ", cls)
+			var v = reflect.ValueOf(cls)
+			fmt.Println("v = ", v)
+			var t = cls.Type() // v.Type() // reflect.TypeOf(cls)
+			fmt.Println("t = ", t)
+			var k = v.Kind()
+			fmt.Println("k = ", k)
+
+			if (allMethod == false && argTypes != nil) || k == reflect.Func || strings.HasPrefix(t.String(), "func(") {
+				//var m = v
+				//if k == reflect.Struct {
+				//	m = v.MethodByName(methodName)
+				//}
+				var mObj = parseMethodObject(fmt.Sprint(cls), mock)
+				//if len(mObj) <= 0 {
+				//	mObj = parseMethodObject(m, mock)
+				//}
+
+				if len(mObj) > 0 {
+					//mObj["name"] = fmt.Sprint(m) // m.String()
+					methodCount = 1
+
+					if methodList != nil {
+						methodList = append(methodList, mObj)
+					}
+				}
+			} else {
+				for j := 0; j < v.NumMethod(); j++ {
+					var m = v.Method(j)
+					var name = m.String()
+					if len(name) < 2 {
+						continue
+					}
+
+					if allMethod || name == methodName {
+						var mObj = parseMethodObject(fmt.Sprint(m), mock)
+						//if len(mObj) <= 0 {
+						//	mObj = parseMethodObject(m, mock)
+						//}
+
+						if len(mObj) > 0 {
+							//mObj["name"] = fmt.Sprint(m) // m.String()
+							methodCount++
+
+							if methodList != nil {
+								methodList = append(methodList, mObj)
+							}
+						}
+					}
+				}
+			}
+
+			if queryTotal {
+				clsObj[KEY_METHOD_TOTAL] = methodCount //太多不需要的信息，导致后端返回慢、前端卡 UI	clsObj["Method[]", ParseArr(methods))
+			}
+
+			if len(methodList) > 0 {
+				clsObj[KEY_METHOD_LIST] = methodList //太多不需要的信息，导致后端返回慢、前端卡 UI	clsObj["Method[]", ParseArr(methods))
+			}
+
+			if len(clsObj) > 0 {
+				classList = append(classList, clsObj)
+			}
+
+			if len(classList) > 0 {
+				pkgObj[KEY_CLASS_LIST] = classList
+			}
+
+			if pkgNotExist && len(pkgObj) > 0 {
+				packageList = append(packageList, pkgObj)
+			}
+
+			methodTotal += methodCount
+		}
+
+		if len(packageList) > 0 {
+			countObj[KEY_PACKAGE_LIST] = packageList
+		}
+	}
 
 	packageTotal = len(packageMap)
 
@@ -1559,65 +1640,135 @@ func initTypesAndValues(methodArgs []Argument, types []reflect.Type, args []any,
 	return nil
 }
 
-//func parseMethodObject(m reflect.Method, mock int) map[string]any {
-//	if (m == reflect.Method{}) {
-//		return nil
-//	}
-//	//排除 var 和 protected 等访问不到的方法，以后可以通过 IDE 插件为这些方法新增代理方法
-//	/*
-//	  public Type $_delegate_$method(Type0 arg0, Type1 arg1...) {
-//		Type returnVal = method(arg0, arg1...)
-//		if (returnVal instanceof Void) {
-//		  return new any[]{ watchVar0, watchVar1... }  //FIXME void 方法需要指定要观察的变量
-//		}
-//		return returnVal
-//	  }
-//	*/
-//	var mod = m.getModifiers()
-//	if (Modifier.isPrivate(mod) || Modifier.isProtected(mod)) {
-//		return nil
-//	}
-//
-//	var t = reflect.TypeOf(m)
-//	var types = make([]reflect.Type, t.NumIn())
-//	for i := 0; i < t.NumIn(); i++ {
-//		types[i] = t.In(i)
-//	}
-//
-//	var returnTypes = make([]reflect.Type, t.NumOut())
-//	for i := 0; i < t.NumOut(); i++ {
-//		returnTypes[i] = t.Out(i)
-//	}
-//
-//	var genericTypes = m.getGenericParameterTypes()
-//
-//
-//	var obj = map[string]any{}
-//	obj["name"] = m.Name
-//	obj["parameterTypeList"] = trimTypes(types)  //不能用泛型，会导致解析崩溃 m.getGenericParameterTypes()))
-//	obj["genericParameterTypeList"] = trimTypes(genericTypes)  //不能用泛型，会导致解析崩溃 m.getGenericParameterTypes()))
-//	obj["returnType"] = trimTypes(returnTypes)  //不能用泛型，会导致解析崩溃m.getGenericReturnType()))
-//	obj["genericReturnType"] = trimType(m.Type.String())  //不能用泛型，会导致解析崩溃m.getGenericReturnType()))
-//	obj["static"] = Modifier.isStatic(m.getModifiers())
-//	obj["exceptionTypeList"] = trimTypes(m.getExceptionTypes())  //不能用泛型，会导致解析崩溃m.getGenericExceptionTypes()))
-//	obj["genericExceptionTypeList"] = trimTypes(m.getGenericExceptionTypes())  //不能用泛型，会导致解析崩溃m.getGenericExceptionTypes()))
-//
-//	if (mock && genericTypes != nil && genericTypes.length > 0) {
-//		var vs = new any[genericTypes.length]
-//		for i := 0; i < genericTypes.length; i++ {
-//			try {
-//				vs[i] = mockValue(types[i], genericTypes[i])  //FIXME 这里应该用 ParameterTypes 还是 GenericParameterTypes ?
-//			}
-//			catch (Exception e) {
-//				fmt.Println(err.Error())
-//			}
-//		}
-//
-//		obj["parameterDefaultValueList"] = vs
-//	}
-//
-//	return obj
-//}
+func parseMethodObject(m any, mock bool) map[string]any {
+	if (m == nil || m == "" || m == reflect.Value{}) {
+		return nil
+	}
+	//排除 var 和 protected 等访问不到的方法，以后可以通过 IDE 插件为这些方法新增代理方法
+	/*
+		  public Type $_delegate_$method(Type0 arg0, Type1 arg1...) {
+			Type returnVal = method(arg0, arg1...)
+			if (returnVal instanceof Void) {
+			  return new any[]{ watchVar0, watchVar1... }  //FIXME void 方法需要指定要观察的变量
+			}
+			return returnVal
+		  }
+	*/
+	//var mod = m.getModifiers()
+	//if (Modifier.isPrivate(mod) || Modifier.isProtected(mod)) {
+	//	return nil
+	//}
+
+	var types []reflect.Type
+	var returnTypes []reflect.Type
+	var obj = map[string]any{}
+
+	var t = reflect.TypeOf(m)
+	if t.Kind() == reflect.String {
+		var s = m.(string)
+		var start = strings.Index(s, "(")
+		var end = strings.LastIndex(s, ")")
+		if start < 0 || start >= end {
+			return nil
+		}
+
+		var n = strings.TrimSpace(s[0:start])
+		var dotInd = strings.LastIndex(n, ".")
+		if dotInd >= 0 {
+			n = n[dotInd+1:]
+		}
+		if strings.HasPrefix(n, "func ") {
+			n = n[len("func "):]
+		}
+
+		obj["name"] = n
+
+		var inStrs = strings.Split(s[start+1:end], ",")
+		types = make([]reflect.Type, len(inStrs))
+		var inTypes = make([]string, len(inStrs))
+		var err error
+		for i := 0; i < len(inStrs); i++ {
+			var as = strings.Trim(inStrs[i], " ")
+			var blankInd = strings.Index(as, " ")
+			if blankInd >= 0 {
+				as = as[blankInd+1:]
+			}
+			as = strings.TrimSpace(as)
+			//if strings.HasPrefix(as, "...") {
+			//
+			//}
+			inTypes[i] = as
+			types[i], err = getType(as, nil, true)
+			if err != nil {
+				fmt.Println(err.Error())
+				return nil
+			}
+		}
+
+		var outStrs = strings.Split(s[end+1:], ",")
+		returnTypes = make([]reflect.Type, len(outStrs))
+		var outTypes = make([]string, len(outStrs))
+		for i := 0; i < len(outStrs); i++ {
+			var as = strings.Trim(outStrs[i], " ")
+			var blankInd = strings.Index(as, " ")
+			if blankInd >= 0 {
+				as = as[blankInd+1:]
+			}
+			as = strings.TrimSpace(as)
+			//if strings.HasPrefix(as, "...") {
+			//
+			//}
+			outTypes[i] = as
+			returnTypes[i], err = getType(as, nil, true)
+			if err != nil {
+				fmt.Println(err.Error())
+				return nil
+			}
+		}
+
+		obj["parameterTypeList"] = inTypes
+		obj["genericParameterTypeList"] = inTypes //不能用泛型，会导致解析崩溃 m.getGenericParameterTypes()))
+		obj["returnType"] = outTypes              //不能用泛型，会导致解析崩溃m.getGenericReturnType()))
+		obj["genericReturnType"] = outTypes       //不能用泛型，会导致解析崩溃m.getGenericReturnType()))
+	} else {
+		obj["name"] = t.Name() // m.Name
+
+		//var t = m.Type() // reflect.TypeOf(m)
+		types = make([]reflect.Type, t.NumIn())
+		for i := 0; i < t.NumIn(); i++ {
+			types[i] = t.In(i)
+		}
+
+		returnTypes = make([]reflect.Type, t.NumOut())
+		for i := 0; i < t.NumOut(); i++ {
+			returnTypes[i] = t.Out(i)
+		}
+
+		var inTypes = trimTypes(types)
+		var outTypes = trimTypes(returnTypes)
+		obj["parameterTypeList"] = inTypes        //不能用泛型，会导致解析崩溃 m.getGenericParameterTypes()))
+		obj["genericParameterTypeList"] = inTypes // trimTypes(genericTypes)  //不能用泛型，会导致解析崩溃 m.getGenericParameterTypes()))
+		obj["returnType"] = outTypes              //不能用泛型，会导致解析崩溃m.getGenericReturnType()))
+		obj["genericReturnType"] = outTypes       //不能用泛型，会导致解析崩溃m.getGenericReturnType()))
+	}
+
+	//var genericTypes = m.getGenericParameterTypes()
+
+	//obj["static"] = Modifier.isStatic(m.getModifiers())
+	//obj["exceptionTypeList"] = trimTypes(m.getExceptionTypes()) //不能用泛型，会导致解析崩溃m.getGenericExceptionTypes()))
+	//obj["genericExceptionTypeList"] = trimTypes(m.getGenericExceptionTypes())  //不能用泛型，会导致解析崩溃m.getGenericExceptionTypes()))
+
+	if mock && len(types) > 0 { // genericTypes != nil && genericTypes.length > 0) {
+		var vs = make([]any, len(types))
+		for i := 0; i < len(types); i++ {
+			vs[i] = mockValue(types[i], types[i]) //FIXME 这里应该用 ParameterTypes 还是 GenericParameterTypes ?
+		}
+
+		obj["parameterDefaultValueList"] = vs
+	}
+
+	return obj
+}
 
 func mockValue(typ reflect.Type, genericType reflect.Type) any {
 	//避免缓存穿透
@@ -2056,8 +2207,13 @@ func getType(name string, value any, defaultType bool) (reflect.Type, error) {
 		return TYPE_METHOD, nil
 	}
 
-	var typ reflect.Type = nil
-	if IsEmpty(name, true) { //根据值来自动判断
+	var typ reflect.Type = nil // FIXME 太奇怪了，居然 name = "any" 然后 name == "any" 返回 false
+	if strings.HasPrefix(name, "any") && strings.HasSuffix(name, "any") {
+		name = ""
+	} else if strings.HasPrefix(name, "interface{}") && strings.HasSuffix(name, "interface{}") {
+		name = ""
+	}
+	if IsEmpty(name, true) || name == "any" || name == "interface{}" { //根据值来自动判断
 		if value == nil || defaultType == false {
 			//nothing
 		} else {
@@ -2066,9 +2222,24 @@ func getType(name string, value any, defaultType bool) (reflect.Type, error) {
 	} else {
 		var index = strings.Index(name, "[")
 		// TODO var child = ""
-		if index >= 0 {
+		if strings.HasPrefix(name, "...") {
+			name = name[len("..."):]
+		}
+		if index > 0 && IsName(name[0:index]) {
 			//child = name[index + 1 : strings.LastIndex(name, "]")]
 			name = name[0:index]
+		}
+		if strings.HasPrefix(name, "any") && strings.HasSuffix(name, "any") {
+			name = ""
+		} else if strings.HasPrefix(name, "interface{}") && strings.HasSuffix(name, "interface{}") {
+			name = ""
+		}
+		if IsEmpty(name, true) {
+			if typ == nil && defaultType {
+				typ = reflect.TypeOf(nil)
+			}
+
+			return typ, nil
 		}
 
 		typ = reflect.TypeOf(CLASS_MAP[name])
@@ -2474,7 +2645,7 @@ func cast(obj any, typ reflect.Type) (any, error) {
  * @throws ClassNotFoundException
  * @throws IOException
  */
-func FindClass(packageOrFileName string, className string, ignoreError bool) (reflect.Value, error) {
+func FindClass(packageOrFileName string, className string, ignoreError bool) (types.Object, error) {
 	//if len(className) <= 0 {
 	//	return nil, nil
 	//}
@@ -2491,7 +2662,7 @@ func FindClass(packageOrFileName string, className string, ignoreError bool) (re
 
 	var lst, err = LoadClassList(packageOrFileName, className, ignoreError, 1, 0)
 	if err != nil || len(lst) <= 0 {
-		return reflect.Value{}, err
+		return nil, err
 	}
 	return lst[0], nil
 }
@@ -2503,8 +2674,8 @@ func FindClass(packageOrFileName string, className string, ignoreError bool) (re
  * @return
  * @throws ClassNotFoundException
  */
-func FindClassList(packageOrFileName string, className string, ignoreError bool, limit int, offset int, onlyStruct bool) ([]reflect.Value, error) {
-	var lst = []reflect.Value{}
+func FindClassList(packageOrFileName string, className string, ignoreError bool, limit int, offset int, onlyStruct bool) ([]types.Object, error) {
+	var lst = []types.Object{} // []reflect.Value{}
 
 	var index = -1
 	if len(className) > 0 {
@@ -2519,7 +2690,10 @@ func FindClassList(packageOrFileName string, className string, ignoreError bool,
 	var allPackage = IsEmpty(packageOrFileName, true)
 	var allName = IsEmpty(className, true)
 
-	pkg, err := importer.ForCompiler(token.NewFileSet(), "source", nil).Import(packageOrFileName)
+	var pkg, err = importer.Default().Import(packageOrFileName)
+	if err != nil {
+		pkg, err = importer.ForCompiler(token.NewFileSet(), "source", nil).Import(packageOrFileName)
+	}
 	if err != nil {
 		fmt.Println("error:", err)
 		return nil, err
@@ -2549,9 +2723,9 @@ func FindClassList(packageOrFileName string, className string, ignoreError bool,
 			fmt.Println(v)
 			//fmt.Println("v.Elem() = ", v.Elem())
 
-			for i := 0; i < v.NumMethod(); i++ {
-				fmt.Println("v.Method(", i, ") = ", v.Method(i).String())
-			}
+			//for i := 0; i < v.NumMethod(); i++ {
+			//	fmt.Println("v.Method(", i, ") = ", v.Method(i).String())
+			//}
 
 			t := reflect.TypeOf(v) // v.Type().String()
 			k := t.Kind()
@@ -2565,7 +2739,7 @@ func FindClassList(packageOrFileName string, className string, ignoreError bool,
 
 				//if t == "Struct" || (t == "Func" && !onlyStruct) { //
 				if k == reflect.Struct || (k == reflect.Func && !onlyStruct) {
-					lst = append(lst, v) // v.Elem())
+					lst = append(lst, o) // .Convert(t)) // v.Elem())
 					if limit > 0 {
 						count++
 						if count >= limit {
@@ -2580,7 +2754,7 @@ func FindClassList(packageOrFileName string, className string, ignoreError bool,
 					childScope := scope.Child(i)
 
 					//进一步寻找
-					childList, err := FindClassList(childScope.String(), className, ignoreError, limit-count, offset, onlyStruct)
+					childList, err := FindClassList(childScope.String(), className, ignoreError, limit-count, 0, onlyStruct)
 					if err != nil || len(childList) <= 0 {
 						continue
 					}

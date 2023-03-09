@@ -1,4 +1,4 @@
-module unitauto-go
+module github.com/TommyLemon/unitauto-go
 
 go 1.20
 

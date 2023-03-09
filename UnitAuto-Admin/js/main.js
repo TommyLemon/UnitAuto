@@ -2328,7 +2328,7 @@ https://github.com/Tencent/APIJSON/issues
                 'package': App.getPackage(),
                 'methodArgs': JSON.stringify(currentResponse.methodArgs),
                 'genericMethodArgs': JSON.stringify(App.getRequest(vInput.value, {}).methodArgs),
-                'request': this.toDoubleJSON(inputted)
+                'request': App.toDoubleJSON(inputted)
               },
               'TestRecord': isEditResponse != true && did != null ? null : {
                 'documentId': isEditResponse ? did : undefined,
@@ -2724,6 +2724,17 @@ https://github.com/Tencent/APIJSON/issues
           }
 
           var currentAccountId = this.getCurrentAccountId()
+          var returnType = methodItem.returnType == null ? null : methodItem.returnType
+          if (returnType instanceof Array) {
+            if (returnType.length <= 0) {
+              returnType = null
+            } else if (returnType.length == 1) {
+              returnType = returnType[0]
+            } else {
+              returnType = "(" + returnType.join() + ")"
+            }
+          }
+
           this.request(true, REQUEST_TYPE_JSON, this.server + '/post', {
             format: false,
             'Method': {
@@ -2738,7 +2749,7 @@ https://github.com/Tencent/APIJSON/issues
               'genericClassArgs': this.getArgs4Sync(classItem.genericParameterTypeList),
               'methodArgs': this.getArgs4Sync(methodItem.parameterTypeList, methodItem.parameterDefaultValueList),
               'genericMethodArgs': this.getArgs4Sync(methodItem.genericParameterTypeList, methodItem.parameterDefaultValueList),
-              'type': methodItem.returnType == null ? null : methodItem.returnType,  // .replace(/[.]/g, '/'),
+              'type': returnType,  // .replace(/[.]/g, '/'),
               'genericType': methodItem.genericReturnType == null ? null : methodItem.genericReturnType,  // .replace(/[.]/g, '/'),
               'static': methodItem.static ? 1 : 0,
               'timeout': methodItem.timeout,

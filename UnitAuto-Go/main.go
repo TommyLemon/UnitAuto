@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/TommyLemon/unitauto-go/unitauto"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"reflect"
-	"unitauto-go/unitauto"
 	//InterfaceProxy "unitauto-go/unitauto"
-	"unitauto-go/unitauto/test"
+	"github.com/TommyLemon/unitauto-go/unitauto/test"
 )
 
 //func (proxy unitauto.InterfaceProxy) callback(a int, b int) int {
@@ -18,6 +18,8 @@ import (
 //}
 
 func main() {
+	unitauto.CLASS_MAP["fmt.Append"] = test.Hello
+	unitauto.CLASS_MAP["fmt.Sprint.Sprint"] = test.Hello
 	unitauto.CLASS_MAP["unitauto-go.unitauto.test.Hello"] = test.Hello
 	unitauto.CLASS_MAP["unitauto-go.unitauto.test.Add"] = test.Add
 	unitauto.CLASS_MAP["unitauto-go.unitauto.test.Minus"] = test.Minus
@@ -29,11 +31,11 @@ func main() {
 		Name: "UnitAuto",
 	}
 
-	unitauto.CLASS_MAP["func(int,int)int"] = reflect.FuncOf([]reflect.Type{reflect.TypeOf(0), reflect.TypeOf(0)}, append([]reflect.Type{}, reflect.TypeOf(0)), false)
-	unitauto.CLASS_MAP["func(int, int) int"] = func(a int, b int) int {
-		return a + b
-	}
-	unitauto.CLASS_MAP["callback(int,int)"] = reflect.FuncOf([]reflect.Type{reflect.TypeOf(0), reflect.TypeOf(0)}, []reflect.Type{reflect.TypeOf(0)}, false)
+	//unitauto.CLASS_MAP["func(int,int)int"] = reflect.FuncOf([]reflect.Type{reflect.TypeOf(0), reflect.TypeOf(0)}, append([]reflect.Type{}, reflect.TypeOf(0)), false)
+	//unitauto.CLASS_MAP["func(int, int) int"] = func(a int, b int) int {
+	//	return a + b
+	//}
+	//unitauto.CLASS_MAP["callback(int,int)"] = reflect.FuncOf([]reflect.Type{reflect.TypeOf(0), reflect.TypeOf(0)}, []reflect.Type{reflect.TypeOf(0)}, false)
 
 	http.HandleFunc("/method/list", handle)
 	http.HandleFunc("/method/invoke", handle)
@@ -87,11 +89,10 @@ func handle(w http.ResponseWriter, r *http.Request) {
 				if respBody, err := json.Marshal(data); err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
 				} else {
-					//r.Header["Content-Length"] = []string{strconv.Itoa(len(string(respBody)))}
-					//r.Header.Set("Content-Length", strconv.Itoa(len(string(respBody))))
-					//w.Header().Set("Content-Length", strconv.Itoa(len(string(respBody))))
-					_, err = w.Write(respBody)
-					if err != nil {
+					w.Header().Set("Content-Length", "-1")
+					w.Header().Set("Transfer-Encoding", "true")
+					_, err2 := w.Write(respBody)
+					if err2 != nil {
 						w.WriteHeader(http.StatusInternalServerError)
 					} else {
 						w.WriteHeader(http.StatusOK)
