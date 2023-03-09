@@ -1,6 +1,9 @@
 package test
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 func Hello(s string) string {
 	return "Hello, " + s + " !"
@@ -24,11 +27,14 @@ func Divide(a float64, b float64) float64 {
 
 func ComputeAsync(a int, b int, callback func(a int, b int) int) int {
 	go func() {
+		time.Sleep(time.Second * 3) // 模拟耗时 3s
+		var result any
 		if a < b {
-			callback(a, b)
+			result = callback(a, b)
 		} else {
-			callback(b, a)
+			result = callback(b, a)
 		}
+		fmt.Println("ComputeAsync result = ", result)
 	}()
 	return a + b
 }

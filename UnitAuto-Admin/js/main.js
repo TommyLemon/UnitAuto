@@ -932,7 +932,7 @@ https://github.com/Tencent/APIJSON/issues
       server: 'http://apijson.cn:8080',  //apijson.cn
       // server: 'http://47.74.39.68:9090',  // apijson.org
       project: 'http://apijson.cn:8080', // 'http://localhost:8081',
-      language: CodeUtil.LANGUAGE_KOTLIN,
+      language: 'Java,Kotlin,Go', // CodeUtil.LANGUAGE_JAVA,
       header: {},
       page: 0,
       count: 20,
@@ -1519,7 +1519,7 @@ https://github.com/Tencent/APIJSON/issues
                 alert('可填数据库:\n' + CodeUtil.DATABASE_KEYS.join())
               }
               else if (index == 2) {
-                alert('自动生成代码，可填语言:\nKotlin,Java,Swift,Objective-C,C#,Go,\nTypeScript,JavaScript,PHP,Python,C++')
+                alert('根据语言筛选用例，可填语言:\nKotlin,Java,Swift,Objective-C,C#,Go,\nTypeScript,JavaScript,PHP,Python,C++')
               }
               else if (index == 7) {
                 alert('多个类型用 , 隔开，可填类型:\nPARAM(GET ?a=1&b=c&key=value),\nJSON(POST application/json),\nFORM(POST x-www-form-urlencoded),\nDATA(POST form-data),\nGRPC(POST application/json 需要 GRPC 服务开启反射)')

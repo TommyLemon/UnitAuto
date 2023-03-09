@@ -18,15 +18,18 @@ import (
 //}
 
 func main() {
-	unitauto.CLASS_MAP["fmt.Append"] = test.Hello
-	unitauto.CLASS_MAP["fmt.Sprint.Sprint"] = test.Hello
-	unitauto.CLASS_MAP["unitauto-go.unitauto.test.Hello"] = test.Hello
-	unitauto.CLASS_MAP["unitauto-go.unitauto.test.Add"] = test.Add
-	unitauto.CLASS_MAP["unitauto-go.unitauto.test.Minus"] = test.Minus
-	unitauto.CLASS_MAP["unitauto-go.unitauto.test.Multiply"] = test.Multiply
-	unitauto.CLASS_MAP["unitauto-go.unitauto.test.Divide"] = test.Divide
-	unitauto.CLASS_MAP["unitauto-go.unitauto.test.ComputeAsync"] = test.ComputeAsync
-	unitauto.CLASS_MAP["unitauto-go.unitauto.test.Test"] = test.Test{
+	unitauto.CLASS_MAP["fmt.Sprint"] = fmt.Sprint
+	unitauto.CLASS_MAP["fmt.Append"] = fmt.Append
+	unitauto.CLASS_MAP["fmt.Print"] = fmt.Print
+	unitauto.CLASS_MAP["fmt.Errorf"] = fmt.Errorf
+
+	unitauto.CLASS_MAP["unitauto.test.Hello"] = test.Hello
+	unitauto.CLASS_MAP["unitauto.test.Add"] = test.Add
+	unitauto.CLASS_MAP["unitauto.test.Minus"] = test.Minus
+	unitauto.CLASS_MAP["unitauto.test.Multiply"] = test.Multiply
+	unitauto.CLASS_MAP["unitauto.test.Divide"] = test.Divide
+	unitauto.CLASS_MAP["unitauto.test.ComputeAsync"] = test.ComputeAsync
+	unitauto.CLASS_MAP["unitauto.test.Test"] = test.Test{
 		Id:   1,
 		Name: "UnitAuto",
 	}
