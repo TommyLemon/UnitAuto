@@ -24,6 +24,8 @@ https://github.com/TommyLemon/APIAuto/issues/19
 
 <img width="1494" alt="image" src="https://user-images.githubusercontent.com/5738175/221088793-f60d1a43-fdb4-4cda-84ef-04fdee1aa472.png">
 <img width="1494" alt="image" src="https://raw.githubusercontent.com/TommyLemon/StaticResources/master/UnitAuto/UnitAuto-RandomTest-Parent-small.jpg">
+<img width="1495" alt="image" src="https://user-images.githubusercontent.com/5738175/224038704-fef31759-c349-40cb-a252-e0c8cff55110.png">
+
 
 ### 特点优势
 相比 JUnit, JTest, Mockito, Mockk 等一堆 Compiling testing 工具：<br />
@@ -320,7 +322,7 @@ unitauto.test.TestUtil.divide(double, double)
 ```
 https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Java/src/main/java/unitauto/test/TestUtil.java#L56-L58
 
-<img width="1495" alt="image" src="https://user-images.githubusercontent.com/5738175/224036073-83f44fea-120b-46a2-bf98-985f8c8828ac.png">
+<img width="1495" alt="image" src="https://user-images.githubusercontent.com/5738175/224038704-fef31759-c349-40cb-a252-e0c8cff55110.png">
 
 异步回调方法  <br />
 unitauto.test.TestUtil.computeAsync
