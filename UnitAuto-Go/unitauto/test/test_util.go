@@ -1,6 +1,7 @@
 package test
 
 import (
+	"errors"
 	"fmt"
 	"time"
 )
@@ -37,6 +38,39 @@ func ComputeAsync(a int, b int, callback func(a int, b int) int) int {
 		fmt.Println("ComputeAsync result = ", result)
 	}()
 	return a + b
+}
+
+type Callback interface {
+	OnSuccess(data any)
+	OnFailure(err error)
+}
+
+type CallbackImpl struct {
+}
+
+func (test CallbackImpl) OnSuccess(data any) {
+	fmt.Println("OnSuccess data = ", data)
+}
+func (test CallbackImpl) OnFailure(err error) {
+	fmt.Println("OnFailure err = ", err)
+}
+
+func (test Test) OnSuccess(data any) {
+	fmt.Println("OnSuccess data = ", data)
+}
+func (test Test) OnFailure(err error) {
+	fmt.Println("OnFailure err = ", err)
+}
+
+func TestInterfaceCallback(a int, callback Callback) {
+	go func() {
+		time.Sleep(time.Second * 2) // 模拟耗时 2s
+		if a%2 == 0 {
+			callback.OnSuccess(a + 1)
+		} else {
+			callback.OnFailure(errors.New("a%2 != 0"))
+		}
+	}()
 }
 
 type Test struct {
