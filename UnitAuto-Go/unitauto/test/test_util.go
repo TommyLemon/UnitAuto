@@ -46,13 +46,16 @@ type Callback interface {
 }
 
 type CallbackImpl struct {
+	//unitauto.InterfaceProxy
 }
 
 func (test CallbackImpl) OnSuccess(data any) {
 	fmt.Println("OnSuccess data = ", data)
+	//test.Invoke("OnSuccess(any)", []any{data})
 }
 func (test CallbackImpl) OnFailure(err error) {
 	fmt.Println("OnFailure err = ", err)
+	//test.Invoke("OnFailure(err)", []any{err})
 }
 
 func (test Test) OnSuccess(data any) {

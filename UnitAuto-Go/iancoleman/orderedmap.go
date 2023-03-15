@@ -47,11 +47,17 @@ func (o *OrderedMap) SetEscapeHTML(on bool) {
 }
 
 func (o *OrderedMap) Get(key string) (interface{}, bool) {
+	if o.values == nil {
+		return nil, false
+	}
 	val, exists := o.values[key]
 	return val, exists
 }
 
 func (o *OrderedMap) Set(key string, value interface{}) {
+	if o.values == nil {
+		o.values = map[string]interface{}{}
+	}
 	_, exists := o.values[key]
 	if !exists {
 		o.keys = append(o.keys, key)
