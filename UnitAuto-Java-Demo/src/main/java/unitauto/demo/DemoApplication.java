@@ -20,8 +20,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import unitauto.Log;
 import unitauto.boot.UnitAutoApplication;
 
@@ -51,6 +54,21 @@ public class DemoApplication implements WebServerFactoryCustomizer<ConfigurableS
 	@Override
 	public void customize(ConfigurableServletWebServerFactory server) {
 		server.setPort(8081);
+	}
+
+	// 支持 APIAuto 中 JavaScript 代码跨域请求
+	@Bean
+	public WebMvcConfigurer corsConfigurer() {
+		return new WebMvcConfigurer() {
+			@Override
+			public void addCorsMappings(CorsRegistry registry) {
+				registry.addMapping("/**")
+						.allowedOriginPatterns("*")
+						.allowedMethods("*")
+						.allowCredentials(true)
+						.maxAge(3600);
+			}
+		};
 	}
 
 }

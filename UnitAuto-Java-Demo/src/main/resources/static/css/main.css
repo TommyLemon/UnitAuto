@@ -263,7 +263,8 @@ textarea {
 }
 
 .right-bar {
-  height: 40px;
+  height: auto;
+  min-height: 40px;
   border-bottom: #DDD 1px solid;
   width: 100%;
   position: absolute;
@@ -327,6 +328,10 @@ textarea {
   border-top: 0;
 }
 
+.pop a {
+  padding: 10px;
+}
+
 .pop-btn {
   display: inline-block;
   position: relative
@@ -374,26 +379,31 @@ textarea {
   position: absolute;
   text-align: center;
   width: 370px;
-  background-color: #b5b5b5;
+  background-color: #cccccc;
   left: 50%;
   margin-left: -372px;
   margin-top: 192px;
-  padding: 30px;
+  padding-top: 30px;
+  padding-bottom: 12px;
+  padding-left: 10px;
+  padding-right: 10px;
   z-index: 100;
-  border: #dadada  10px solid;
-
+  border: #bbbbbb  1px solid;
+  border-radius: 6px;
 }
 
 .save-box input {
   padding: 10px;
   border: none;
   outline: none;
-  width: 200px;
+  width: 100%;
+  text-align: center;
 }
 
 .save-box button {
   border:  none;
   padding: 8px 20px;
+  margin-top: 10px;
   cursor: pointer;
   outline: none;
 }
@@ -466,7 +476,7 @@ textarea {
 }
 /* .json-link:link, .json-link:visited {
   color: #717171;
-  text-decoration: none 
+  text-decoration: none
 } */
 .json-link:hover, .json-link:active {
   color: #3ab54a!important;

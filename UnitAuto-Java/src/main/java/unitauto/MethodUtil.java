@@ -16,15 +16,7 @@ package unitauto;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Array;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.GenericArrayType;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.lang.reflect.TypeVariable;
+import java.lang.reflect.*;
 import java.sql.Timestamp;
 import java.util.AbstractCollection;
 import java.util.AbstractList;
@@ -723,20 +715,20 @@ public class MethodUtil {
 					throw new IllegalArgumentException("@interface " + clazz.getName() + " 没有构造参数，对应的 classArgs 数量只能是 0！");
 				}
 
-				boolean exactContructor = false;  //指定某个构造方法，只要某一项 type 不为空就是
+				boolean exactConstructor = false;  //指定某个构造方法，只要某一项 type 不为空就是
 				for (int i = 0; i < classArgs.size(); i++) {
 					Argument obj = classArgs.get(i);
 					if (obj != null && isEmpty(obj.getType(), true) == false) {
-						exactContructor = true;
+						exactConstructor = true;
 						break;
 					}
 				}
 
 				Class<?>[] classArgTypes = new Class<?>[classArgs.size()];
 				Object[] classArgValues = new Object[classArgs.size()];
-				initTypesAndValues(classArgs, classArgTypes, classArgValues, exactContructor);
+				initTypesAndValues(classArgs, classArgTypes, classArgValues, exactConstructor);
 
-				if (exactContructor) {  //指定某个构造方法
+				if (exactConstructor) {  //指定某个构造方法
 					Constructor<?> constructor = clazz.getConstructor(classArgTypes);
 					instance = constructor.newInstance(classArgValues);
 				}
@@ -1309,7 +1301,10 @@ public class MethodUtil {
 
 	@SuppressWarnings("rawtypes")
 	public static Object mockValue(Class type, Type genericType) {
-		//避免缓存穿透
+		return mockValue(type, genericType, 3);
+	}
+	public static Object mockValue(Class type, Type genericType, int depth) {
+			//避免缓存穿透
 		//		Object v = DEFAULT_TYPE_VALUE_MAP.get(t);
 		//		if (v != null) {
 		//			return v;
@@ -1340,26 +1335,30 @@ public class MethodUtil {
 
 		//常规业务不会用 int, long 之外的整型，一般是驱动、算法之类的才会用
 		if (type == char.class || type == Character.class) {
-			return Math.round(Character.MAX_VALUE * Math.random());
+			return (char) (Math.round(Character.MAX_VALUE * Math.random()));
 		}
-		if (type == byte.class || type == Byte.class || type == char.class || type == Character.class) {
-			return Math.round(Byte.MAX_VALUE * Math.random());
+		if (type == byte.class || type == Byte.class) {
+			return (byte) (Math.round(Byte.MAX_VALUE * Math.random()));
 		}
 		if (type == short.class || type == Short.class) {
-			return Math.round(Short.MAX_VALUE * Math.random());
+			return (short) (Math.round(Short.MAX_VALUE * Math.random()));
 		}
 
 		if (type == int.class || type == Integer.class) {
-			return sign * Math.round((sign < 0 ? 2 : 10) * Math.random());
+			return (int) (sign * Math.round((sign < 0 ? 2 : 10) * Math.random()));
 		}
 		if (type == long.class || type == Long.class) {
-			return sign * Math.round((sign < 0 ? 10 : 100) * Math.random());
+			return (long) (sign * Math.round((sign < 0 ? 10 : 100) * Math.random()));
 		}
 		if (type == float.class || type == Float.class || type == Number.class) {
-			return sign * (sign < 0 ? 10 : 100) * Math.random();
+			return (float) (sign * (sign < 0 ? 10 : 100) * Math.random());
 		}
 		if (type == double.class || type == Double.class) {
-			return sign * (sign < 0 ? 10 : 100) * Math.random();
+			return (double) (sign * (sign < 0 ? 10 : 100) * Math.random());
+		}
+
+		if (depth < 0) {
+			return null;
 		}
 
 		//		if (type instanceof Class) {
@@ -1385,17 +1384,14 @@ public class MethodUtil {
 				JSONObject obj = new JSONObject(true);
 
 				Type[] ts = getTypeArguments(type, genericType);
-				Class mt;
-				if (ts == null || ts.length < 2 || ts[1] instanceof Class == false) {
-					mt = int.class;  // return obj;
-				} else {
-					mt = (Class) ts[1];
-				}
+				Class<?> tt = ts == null || ts.length < 1 || ts[0] instanceof Class == false ? String.class : (Class<?>) ts[0];
+				Class<?> vt = ts == null || ts.length < 2 || ts[1] instanceof Class == false ? int.class : (Class<?>) ts[1];
 
 				for (int i = 0; i < r*3; i++) {
-					Object v = mockValue(mt, ts[1]);
+					Object k = mockValue(tt, ts[0], 1);
+					Object v = k == null ? null : mockValue(vt, ts[1], depth - 1);
 					if (v != null) {
-						obj.put((String) mockValue(String.class, String.class), v);
+						obj.put(k.toString(), v);
 					}
 				}
 
@@ -1475,8 +1471,76 @@ public class MethodUtil {
 				return null;
 			}
 
-			Object v = JSON.parse(JSON.toJSONString(INSTANCE_GETTER.getInstance(type, null)));
+			Object v = INSTANCE_GETTER.getInstance(type, null);
 			//				DEFAULT_TYPE_VALUE_MAP.put(c, v);
+
+			try {
+				Class<?> cls = v.getClass(); // type ?
+				Field[] fields = cls == null ? null : cls.getDeclaredFields(); // cls.getFields();
+				int len = fields == null ? 0 : fields.length;
+//				Field[] dfs = cls == null ? null : cls.getDeclaredFields();
+//				if (len <= 0) {
+//					fields = dfs;
+//				}
+//				else if (dfs != null && dfs.length > 0) {
+//
+//					Field[] nfs = Arrays.copyOf(fields, len + dfs.length);
+//					for (int i = 0; i < dfs.length; i++) {
+//						nfs[len + i] = dfs[i];
+//					}
+//					fields = nfs;
+//				}
+
+				Class<?> sc = cls;
+				int d = depth;
+				while (sc != null && d >= 0) {
+					try {
+						d --;
+						sc = sc.getSuperclass();
+
+						Field[] sfs = sc == null ? null : sc.getDeclaredFields();
+						int sl = sfs == null ? 0 : sfs.length;
+						if (sl <= 0) {
+							continue;
+						}
+
+						Field[] nfs = Arrays.copyOf(fields, len + sl);
+						for (int i = 0; i < sl; i++) {
+							nfs[len + i] = sfs[i];
+						}
+
+						fields = nfs;
+					}
+					catch (Throwable e) {
+						e.printStackTrace();
+						break;
+					}
+				}
+
+				len = fields == null ? 0 : fields.length;
+
+				for (int i = 0; i < len; i++) {
+					try {
+						Field f = fields[i];
+						if (f == null) {
+							continue;
+						}
+
+						f.setAccessible(true);
+						Object fv = f.get(v);
+						if (fv == null && Modifier.isFinal(f.getModifiers()) != true) {
+							f.set(v, mockValue(f.getType(), f.getGenericType(), depth - 1));
+						}
+					}
+					catch (Throwable e) {
+						e.printStackTrace();
+					}
+				}
+			}
+			catch (Throwable e) {
+				e.printStackTrace();
+			}
+
 			return v;
 		}
 		catch (Throwable e) {

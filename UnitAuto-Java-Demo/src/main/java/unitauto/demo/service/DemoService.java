@@ -23,6 +23,7 @@ import java.util.Set;
 import org.springframework.stereotype.Component;
 
 import unitauto.StringUtil;
+import unitauto.demo.domain.Comment;
 import unitauto.demo.domain.User;
 
 /**
@@ -99,7 +100,7 @@ public class DemoService {
 		return addUserList((Collection<User>) list);
 	}
 	public List<User> addUserList(Collection<User> list) {
-		List<User> userList = listUser(10);
+		List<User> userList = listUser((int) (10*Math.random()));
 
 		for (User u : list) {
 			for (User user : userList) {
@@ -113,4 +114,41 @@ public class DemoService {
 		return userList;
 	}
 
+
+	public List<Comment> listComment(int count) {
+		List<Comment> list = new ArrayList<>();
+
+		double r = Math.random();
+		for (int i = 0; i < count; i++) {
+			Comment comment = new Comment();
+			comment.setId(i + 1L);
+			comment.setToId((long) (i - r*i));
+			comment.setUserId((long) (i * r));
+			comment.setContent("UnitAuto is an unit testing platform without writing any code - " + (i + 1));
+
+			User u = new User();
+			u.setId(comment.getUserId());
+			u.setSex(r < 0.5 ? 0 : 1);
+			u.setName("Test User " + comment.getUserId());
+			comment.setUser(u);
+
+			list.add(comment);
+		}
+
+		return list;
+	}
+
+
+	public int addComment(Comment comment) {
+		List<Comment> list = listComment((int) (15*Math.random()));
+
+		for (Comment c : list) {
+			if (c.getId() == comment.getId()) {
+				throw new IllegalArgumentException("已经存在评论，不能重复添加！");
+			}
+		}
+		list.add(comment);
+
+		return 1;
+	}
 }

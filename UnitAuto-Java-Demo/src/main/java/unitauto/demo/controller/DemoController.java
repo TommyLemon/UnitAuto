@@ -28,6 +28,7 @@ import com.alibaba.fastjson.JSONObject;
 
 import unitauto.MethodUtil;
 import unitauto.boot.UnitAutoController;
+import unitauto.demo.domain.Comment;
 import unitauto.demo.domain.User;
 import unitauto.demo.service.DemoService;
 
@@ -55,7 +56,7 @@ public class DemoController extends UnitAutoController {  // 继承是因为可�
 
 	@RequestMapping("listUser")
 	public String listUser(@RequestParam Integer count) {
-		List<User> list = demoService.listUser(count);
+		List<User> list = demoService.listUser(count == null ? 10 : count);
 		JSONObject result = MethodUtil.newSuccessResult();
 		result.put("data", list);
 		return result.toJSONString();
@@ -97,6 +98,32 @@ public class DemoController extends UnitAutoController {  // 继承是因为可�
 			return MethodUtil.newErrorResult(e);
 		}
 	}
+
+
+	@PostMapping("addComment")
+	public JSONObject addComment(@RequestParam Comment comment) {
+		try {
+			int count = demoService.addComment(comment);
+			JSONObject result = MethodUtil.newSuccessResult();
+			result.put("data", count);
+			return result;
+		} catch (Throwable e) {
+			return MethodUtil.newErrorResult(e);
+		}
+	}
+
+	@PostMapping("listComment")
+	public JSONObject listComment(@RequestParam Integer count) {
+		try {
+			List<Comment> list = demoService.listComment(count); // 这里有个 NPE bug，可用 UnitAuto 测试发现
+			JSONObject result = MethodUtil.newSuccessResult();
+			result.put("data", list);
+			return result;
+		} catch (Throwable e) {
+			return MethodUtil.newErrorResult(e);
+		}
+	}
+
 
 
 }

@@ -1525,6 +1525,8 @@ https://github.com/Tencent/APIJSON/issues
                 alert('多个类型用 , 隔开，可填类型:\nPARAM(GET ?a=1&b=c&key=value),\nJSON(POST application/json),\nFORM(POST x-www-form-urlencoded),\nDATA(POST form-data),\nGRPC(POST application/json 需要 GRPC 服务开启反射)')
               }
               else if (index == 16) {
+                this.showTestCase(false, this.isLocalShow)
+
                 vInput.value = this.getCache(this.project, 'request4MethodList') || '{'
                   + '\n    "query": 2,  // 查询类型：0-数据，1-总数，2-全部'
                   + '\n    "mock": true,  // 是否生成模拟参数值'
@@ -2643,13 +2645,13 @@ https://github.com/Tencent/APIJSON/issues
             }
             break
           case 16:
+              if (this.isSyncing) {
+                alert('正在同步，请等待完成')
+                return
+              }
+
               this.saveCache(this.project, 'request4MethodList', vInput.value)
               this.request(false, REQUEST_TYPE_JSON, this.project + this.exTxt.name, this.getRequest(vInput.value), this.getHeader(vHeader.value), function (url, res, err) {
-                if (App.isSyncing) {
-                  alert('正在同步，请等待完成')
-                  return
-                }
-
                 App.isSyncing = true
                 App.onResponse(url, res, err)
 

@@ -15,27 +15,18 @@ limitations under the License.*/
 
 package unitauto.demo.domain;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 /**用户
  * @author Lemon
  */
-public class User implements Serializable, Comparable<User> {
+public class User extends BaseBean<User> {
 	private static final long serialVersionUID = 1L;
 
-	private Long id; //主键
 	private Integer sex; //性别
 	private String name; //姓名
 	private List<Long> contactIdList;
-
-	public Long getId() {
-		return id;
-	}
-	public void setId(Long id) {
-		this.id = id;
-	}
 
 	public Integer getSex() {
 		return sex;
@@ -81,11 +72,6 @@ public class User implements Serializable, Comparable<User> {
 		}
 
 		return contactIdList;
-	}
-
-	@Override
-	public int compareTo(User o) {
-		return o == null || id > o.getId() ? 1 : (id == o.getId() ? 0 : -1);
 	}
 
 }

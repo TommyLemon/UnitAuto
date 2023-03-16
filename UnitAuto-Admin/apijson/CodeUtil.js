@@ -6106,53 +6106,53 @@ var CodeUtil = {
       }
     }
 
-    if (isRestful != true && key != null && key.startsWith('@') != true && key.endsWith('()')) { // 方法，查询完后处理，先用一个Map<key,function>保存？
-      if (['GET', 'HEAD'].indexOf(method) < 0) {
-        return ' ! 远程函数只能用于 GET,HEAD 请求！！';
-      }
-
-      if (value != null && valuesIsNotString) {
-        return ' ! 远程函数 value 必须是 String 类型！';
-      }
-
-      // if (value != null) {
-      //   var startIndex = value.indexOf("(");
-      //   if (startIndex <= 0 || value.endsWith(")") == false) {
-      //     return ' ! 远程函数 value 必须符合 fun(arg0,arg1..) 这种格式！且不要有任何多余的空格！';
-      //   }
-      //   var fun = value.substring(0, startIndex);
-      //   if (StringUtil.isName(fun) != true) {
-      //     return '! 函数名' + fun + '不合法！value 必须符合 fun(arg0,arg1..) 这种格式！且不要有任何多余的空格！';
-      //   }
-      // }
-
-      var c = ''
-      if (StringUtil.isNotEmpty(value)) { // isValueNotEmpty 居然不对
-        try {
-          c = CodeUtil.getComment4Function(value, method, language)
-        } catch (e) {
-          return ' ! ' + e.message
-        }
-      }
-
-      if (isWarning) {
-        return ' ';
-      }
-
-      var priority = '';
-      if (key.endsWith("-()")) {
-        priority = ' < 在解析所在对象前优先执行';
-      }
-      else if (key.endsWith("+()")) {
-        priority = ' < 在解析所在对象后滞后执行';
-      }
-      else {
-        priority = ' < 执行时机在解析所在对象后，解析子对象前，可以在 () 前用 + - 设置优先级，例如 key-() 优先执行';
-      }
-
-      return CodeUtil.getComment('远程函数' + (isValueNotEmpty ? (StringUtil.isEmpty(c, true) ? '' : '：' + c) + priority
-        : '，例如 "isContain(praiseUserIdList,userId)"'), false, ' ');
-    }
+    // if (isRestful != true && key != null && key.startsWith('@') != true && key.endsWith('()')) { // 方法，查询完后处理，先用一个Map<key,function>保存？
+    //   if (['GET', 'HEAD'].indexOf(method) < 0) {
+    //     return ' ! 远程函数只能用于 GET,HEAD 请求！！';
+    //   }
+    //
+    //   if (value != null && valuesIsNotString) {
+    //     return ' ! 远程函数 value 必须是 String 类型！';
+    //   }
+    //
+    //   // if (value != null) {
+    //   //   var startIndex = value.indexOf("(");
+    //   //   if (startIndex <= 0 || value.endsWith(")") == false) {
+    //   //     return ' ! 远程函数 value 必须符合 fun(arg0,arg1..) 这种格式！且不要有任何多余的空格！';
+    //   //   }
+    //   //   var fun = value.substring(0, startIndex);
+    //   //   if (StringUtil.isName(fun) != true) {
+    //   //     return '! 函数名' + fun + '不合法！value 必须符合 fun(arg0,arg1..) 这种格式！且不要有任何多余的空格！';
+    //   //   }
+    //   // }
+    //
+    //   var c = ''
+    //   if (StringUtil.isNotEmpty(value)) { // isValueNotEmpty 居然不对
+    //     try {
+    //       c = CodeUtil.getComment4Function(value, method, language)
+    //     } catch (e) {
+    //       return ' ! ' + e.message
+    //     }
+    //   }
+    //
+    //   if (isWarning) {
+    //     return ' ';
+    //   }
+    //
+    //   var priority = '';
+    //   if (key.endsWith("-()")) {
+    //     priority = ' < 在解析所在对象前优先执行';
+    //   }
+    //   else if (key.endsWith("+()")) {
+    //     priority = ' < 在解析所在对象后滞后执行';
+    //   }
+    //   else {
+    //     priority = ' < 执行时机在解析所在对象后，解析子对象前，可以在 () 前用 + - 设置优先级，例如 key-() 优先执行';
+    //   }
+    //
+    //   return CodeUtil.getComment('远程函数' + (isValueNotEmpty ? (StringUtil.isEmpty(c, true) ? '' : '：' + c) + priority
+    //     : '，例如 "isContain(praiseUserIdList,userId)"'), false, ' ');
+    // }
 
 
     // if (value == null) {
