@@ -14,6 +14,7 @@ import (
 	"time"
 )
 
+var isDebug = true // 改为 false 不打日志
 var port = 8082
 var addr = ":" + fmt.Sprint(port)
 var isInit = true // 你的项目不需要这些默认测试配置，可以改为 false，然后在项目中配置需要的
@@ -150,23 +151,35 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 		var reqStr = string(data)
 		fmt.Printf("request: %s", reqStr)
 
-		var called = []bool{false}
+		var called = false
 		var respMap map[string]any
 		if r.URL.Path == "/method/list" {
 			respMap = unitauto.ListMethodByStr(reqStr)
 		} else if r.URL.Path == "/method/invoke" {
+			w.Header().Set("Content-Length", "-1")
+
+			//timer := time.NewTimer(time.Minute)
+			//go func(t *time.Timer) {
+			//	called = true
+			//	timer.Stop()
+			//	w.WriteHeader(http.StatusInternalServerError)
+			//}(timer)
+
+			// 没用，只能阻塞，持续不断地发消息
+			//ticker := time.NewTicker(time.Millisecond)
+
 			if err := unitauto.InvokeMethodByStr(reqStr, nil, func(data any, method *reflect.Method, proxy *unitauto.InterfaceProxy, extras ...any) error {
-				if called[0] || r.Close {
+				if called || r.Close {
 					return nil
 				}
-				called[0] = true
+				called = true
 
 				if respBody, err := json.Marshal(data); err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
 				} else {
-					fmt.Println("respBody = ", string(respBody))
-					w.Header().Set("Content-Length", "-1")
-					w.Header().Set("Transfer-Encoding", "true")
+					if isDebug {
+						fmt.Println("respBody = ", string(respBody))
+					}
 					_, err2 := w.Write(respBody)
 					if err2 != nil {
 						w.WriteHeader(http.StatusInternalServerError)
@@ -176,8 +189,17 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 				}
 				r.Context().Done()
 
+				//ticker.Stop()
 				return nil
 			}); err == nil {
+				//go func(t *time.Ticker) {
+				for {
+					if called || r.Close {
+						break
+					}
+					w.Header().Set("Connection", "Keep-Alive")
+				}
+				//}(ticker)
 				return
 			} else {
 				respMap = unitauto.NewErrorResult(err)
@@ -186,10 +208,10 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 			respMap = unitauto.NewErrorResult(errors.New("URL 错误，只支持 /method/list 和 /method/invoke"))
 		}
 
-		if called[0] || r.Close {
+		if called || r.Close {
 			return
 		}
-		called[0] = true
+		called = true
 
 		if respBody, err := json.Marshal(respMap); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -226,4 +248,6 @@ func Cors(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Allow-Headers", "content-type")
 	w.Header().Set("Access-Control-Request-Method", "POST")
+	//w.Header().Set("Content-Length", "-1")
+	//w.Header().Set("Transfer-Encoding", "chunked")
 }
