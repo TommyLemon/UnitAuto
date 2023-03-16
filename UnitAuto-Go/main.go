@@ -159,6 +159,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 		var reqStr = string(data)
 		fmt.Printf("request: %s", reqStr)
 
+		//var done = false
 		var called = false
 		var respMap map[string]any
 		if r.URL.Path == "/method/list" {
@@ -183,11 +184,13 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 				called = true
 
 				if respBody, err := json.Marshal(data); err != nil {
+					//done = true
 					w.WriteHeader(http.StatusInternalServerError)
 				} else {
 					if isDebug {
 						fmt.Println("respBody = ", string(respBody))
 					}
+					//done = true
 					_, err2 := w.Write(respBody)
 					if err2 != nil {
 						w.WriteHeader(http.StatusInternalServerError)
@@ -195,14 +198,16 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 						w.WriteHeader(http.StatusOK)
 					}
 				}
+
+				//done = true
 				r.Context().Done()
 
 				//ticker.Stop()
 				return nil
 			}); err == nil {
 				//go func(t *time.Ticker) {
-				for {
-					if called || r.Close {
+				for { // FIXME 用 done 判断导致报错 concurrent modify map；用 called 有时返回空对象，尤其是高并发时
+					if called || r.Close { // done || r.Close {
 						break
 					}
 					w.Header().Set("Connection", "Keep-Alive")
@@ -232,6 +237,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		//done = true
 		r.Context().Done()
 	}
 }
