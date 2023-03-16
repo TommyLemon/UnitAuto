@@ -41,8 +41,13 @@ func Init() {
 	unitauto.CLASS_MAP["unitauto.test.Compare"] = test.Compare
 	unitauto.CLASS_MAP["unitauto.test.TestInterfaceCallback"] = test.TestInterfaceCallback
 	unitauto.CLASS_MAP["unitauto.test.Test"] = test.Test{}
+	unitauto.CLASS_MAP["*unitauto.test.Test"] = &test.Test{}
+	unitauto.CLASS_MAP["unitauto.test.Callback"] = Proxy{}   // new(test.Callback)
+	unitauto.CLASS_MAP["*unitauto.test.Callback"] = &Proxy{} // new(test.Callback)
 	unitauto.CLASS_MAP["unitauto.test.CallbackImpl"] = test.CallbackImpl{}
+	unitauto.CLASS_MAP["*unitauto.test.CallbackImpl"] = &test.CallbackImpl{}
 	unitauto.CLASS_MAP["main.Proxy"] = Proxy{}
+	unitauto.CLASS_MAP["*main.Proxy"] = &Proxy{}
 
 	// Struct 实例需要转换
 	var GetInstanceVal = unitauto.GetInstanceValue
@@ -52,24 +57,27 @@ func Init() {
 				toV, err := unitauto.Convert[test.Test](val, test.Test{})
 				return toV, err == nil
 			}
-			if typ.AssignableTo(reflect.TypeOf(test.CallbackImpl{})) {
+			if typ.AssignableTo(reflect.TypeOf(&test.Test{})) {
+				toV, err := unitauto.Convert[*test.Test](val, &test.Test{})
+				return toV, err == nil
+			}
+			if typ.AssignableTo(reflect.TypeOf(test.CallbackImpl{})) { // || typ.AssignableTo(reflect.Indirect(reflect.ValueOf(new(test.Callback))).Type()) {
 				toV, err := unitauto.Convert[test.CallbackImpl](val, test.CallbackImpl{})
 				return toV, err == nil
 			}
+			if typ.AssignableTo(reflect.TypeOf(&test.CallbackImpl{})) {
+				toV, err := unitauto.Convert[*test.CallbackImpl](val, &test.CallbackImpl{})
+				return toV, err == nil
+			}
 			if typ.AssignableTo(reflect.TypeOf(Proxy{})) {
-				toV, err := unitauto.Convert[Proxy](val, Proxy{
-					InterfaceProxy: proxy,
-				})
-				toV.InterfaceProxy = proxy
+				toV, err := unitauto.Convert[Proxy](val, Proxy{})
+				toV.InterfaceProxy = proxy // 组合 InterfaceProxy 的需要给它赋值
 				return toV, err == nil
 			}
 			if typ.AssignableTo(reflect.TypeOf(&Proxy{})) {
-				var toV = &Proxy{}
-				switch val.(type) {
-				case unitauto.InterfaceProxy:
-					toV.InterfaceProxy = val.(unitauto.InterfaceProxy)
-				}
-				return toV, true
+				toV, err := unitauto.Convert[*Proxy](val, &Proxy{})
+				toV.InterfaceProxy = proxy // 组合 InterfaceProxy 的需要给它赋值
+				return toV, err == nil
 			}
 			//TODO 加上其它的
 		}

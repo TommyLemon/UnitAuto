@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	orderedmap "github.com/TommyLemon/unitauto-go/iancoleman"
-	"github.com/TommyLemon/unitauto-go/unitauto/test"
 	"go/importer"
 	"go/token"
 	"go/types"
@@ -821,7 +820,7 @@ var GetInvokeClass = func(pkgName string, clsName string) (any, error) {
 	if cls != nil {
 		var v = reflect.ValueOf(cls)
 		var k = v.Kind()
-		if k == reflect.Struct || k == reflect.Func {
+		if k == reflect.Struct || k == reflect.Func || k == reflect.Pointer {
 			return cls, nil
 		}
 	}
@@ -1083,7 +1082,7 @@ func getInvokeResult(typ reflect.Value, returnType reflect.Type, methodName stri
 	var k = typ.Kind()
 	var method reflect.Value
 
-	if k == reflect.Struct {
+	if k == reflect.Struct || k == reflect.Pointer {
 		//var t = reflect.TypeOf(typ)
 		//var m, exists = t.MethodByName(methodName)
 		//if exists {
@@ -1093,8 +1092,13 @@ func getInvokeResult(typ reflect.Value, returnType reflect.Type, methodName stri
 		//}
 	} else if k == reflect.Func {
 		method = typ
-	} else if k == reflect.Pointer {
-		method = reflect.Indirect(typ) // runtime.FuncForPC(typ.UnsafeAddr())
+		//} else if k == reflect.Pointer { // func 没有指针，只有 struct 才有
+		//	var rv = reflect.Indirect(typ)
+		//	if rv.Kind() == reflect.Struct {
+		//		method = typ.MethodByName(methodName)
+		//	} else {
+		//		method = rv // runtime.FuncForPC(typ.UnsafeAddr())
+		//	}
 	} else {
 		return nil, errors.New("typ 不合法, 必须为 Struct, Func 中的一种！")
 	}
@@ -1813,6 +1817,7 @@ func getMethodListGroupByClass(pkgName string, clsName string, methodName string
 			if !isFunc && (k == reflect.Struct || strings.Contains(ts, " struct{")) { // (k == reflect.Pointer && t.Underlying() != &types.Interface{})) {
 				var path = pkg + "." + cn
 				codeStr += "\n        " + `unitauto.CLASS_MAP["` + path + `"] = ` + path + "{};"
+				codeStr += "\n        " + `unitauto.CLASS_MAP["*` + path + `"] = &` + path + "{};"
 				insCodeStr += `
             if typ.AssignableTo(reflect.TypeOf(` + path + `{})) {
                 toV, err := unitauto.Convert[` + path + `](val, ` + path + `{});
@@ -2702,7 +2707,7 @@ func getType(name string, value any, defaultType bool) (reflect.Type, error) {
 
 var TYPE_INTERFACE_PROXY = reflect.TypeOf(InterfaceProxy{})
 var TYPE_FUNC = reflect.TypeOf(func() {})
-var TYPE_METHOD = reflect.TypeOf(test.Test.GetId)
+var TYPE_METHOD = reflect.TypeOf(reflect.Method{})
 var TYPE_ANY = reflect.TypeOf((any)(nil))
 var TYPE_INTERFACE = TYPE_ANY
 var TYPE_BOOL = reflect.TypeOf(false)

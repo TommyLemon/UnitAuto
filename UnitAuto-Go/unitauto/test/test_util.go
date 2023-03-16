@@ -81,23 +81,23 @@ type Test struct {
 	Name string `json:"Name"`
 }
 
-func (test Test) GetId() int {
+func (test *Test) GetId() int {
 	return test.Id
 }
 
-func (test Test) GetName() string {
+func (test *Test) GetName() string {
 	return test.Name
 }
 
-func (test Test) SetId(id int) {
+func (test *Test) SetId(id int) {
 	test.Id = id
 }
 
-func (test Test) SetName(name string) {
+func (test *Test) SetName(name string) {
 	test.Name = name
 }
 
-func (test Test) String() string {
+func (test *Test) String() string {
 	return "{id: " + fmt.Sprint(test.Id) + ", name: " + test.Name + "}"
 }
 
