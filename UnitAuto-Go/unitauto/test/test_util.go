@@ -77,8 +77,8 @@ func TestInterfaceCallback(a int, callback Callback) {
 }
 
 type Test struct {
-	Id   int    `json:"Id"`
-	Name string `json:"Name"`
+	Id   int
+	Name string
 }
 
 func (test *Test) GetId() int {
