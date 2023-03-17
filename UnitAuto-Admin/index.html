@@ -205,65 +205,65 @@
           <textarea v-show="! isEditResponse" id="vWarning" style="width: 100%; height: 100%; position: absolute; z-index: 0; color: orangered; background-color: #0000;" wrap="off" disabled>
           </textarea>
           <textarea id="vInput" @keyup="onChange(true)" style="width: 100%;height: 100%; position: absolute; z-index: 100; background: #0000;" wrap="off" placeholder="{
-  'static': false,  // 是否为静态方法，false 时可能会用 constructor & classArgs 来初始化一个类的实例或用 this 直接反序列化成一个类的实例
-  'ui': false,  // 放 UI 线程执行，仅 Android 可用
-  'timeout': 0,  // 超时时间
-  'package': 'apijson.demo.server',  // 被测方法所在的包名
-  'class': 'DemoFunction',  // 被测方法所在的类名
-  'constructor': 'getInstance',  // 如果是类似单例模式的类，不能用默认构造方法，可以自定义获取实例的方法，传参仍用 classArgs
-  'classArgs': [  // 构造方法的参数值，可以和 methodArgs 结构一样。这里用了简化形式，只传值不传类型，注意简化形式只能在所有值完全符合构造方法的类型定义时才可用
+  'static': false, // 是否为静态方法，false 时可能会用 constructor & classArgs 来初始化一个类的实例或用 this 直接反序列化成一个类的实例
+  'ui': false, // 放 UI 线程执行，仅 Android 可用
+  'timeout': 0, // 超时时间
+  'package': 'apijson.demo.server', // 被测方法所在的包名
+  'class': 'DemoFunction', // 被测方法所在的类名
+  'constructor': 'getInstance', // 如果是类似单例模式的类，不能用默认构造方法，可以自定义获取实例的方法，传参仍用 classArgs
+  'classArgs': [ // 构造方法的参数值，可以和 methodArgs 结构一样。这里用了简化形式，只传值不传类型，注意简化形式只能在所有值完全符合构造方法的类型定义时才可用
     null,
     null,
     0,
     null
   ],
-  'this': {  // 当前类实例，和 constructor & classArgs 二选一
-    'type': 'apijson.demo.server.model.User',  // 不可缺省，且必须全称
-    'value': {  // User 的示例值，会根据 type 来转为 Java 类型，这里执行等价于 JSON.parseObject(JSON.toJSONString(value), User.class)
+  'this': { // 当前类实例，和 constructor & classArgs 二选一
+    'type': 'apijson.demo.server.model.User', // 不可缺省，且必须全称
+    'value': { // User 的示例值，会根据 type 来转为 Java 类型，这里执行等价于 JSON.parseObject(JSON.toJSONString(value), User.class)
       'id': 1,
       'name': 'Tommy'
     }
   },
-  'method': 'plus',  // 被测方法名
-  'methodArgs': [  // 被测方法的参数值
+  'method': 'plus', // 被测方法名
+  'methodArgs': [ // 被测方法的参数值
     {
-      'type': 'Integer',  // Boolean, Integer, Number, String, JSONObject, JSONArray 都可缺省，自动根据 value 来判断
+      'type': 'Integer', // Boolean, Integer, Number, String, JSONObject, JSONArray 都可缺省，自动根据 value 来判断
       'value': 1
     },
     {
-      'type': 'String',  // 可缺省，自动根据 value 来判断
+      'type': 'String', // 可缺省，自动根据 value 来判断
       'value': 'APIJSON'
     },
     {
-      'type': 'JSONObject',  // 可缺省，JSONObject 已缓存到 CLASS_MAP，也可以写全称 com.alibaba.fastjson.JSONObject
+      'type': 'JSONObject', // 可缺省，JSONObject 已缓存到 CLASS_MAP，也可以写全称 com.alibaba.fastjson.JSONObject
       'value': {}
     },
     {
-      'type': 'int[]',  // 不可缺省，且必须全称
+      'type': 'int[]', // 不可缺省，且必须全称
       'value': [1, 2, 3]
     },
     {
-      'type': 'java.util.List<apijson.demo.server.model.User>',  // 不可缺省，且必须全称
-      'value': [  // TODO 未验证，可能需要解析 type，改用 JSON.parseArray(JSON.toJSONString(value), User.class)，或遍历和递归子项来逐个用 TypeUtils.cast
-        {  // apijson.demo.server.model.User
+      'type': 'java.util.List<apijson.demo.server.model.User>', // 不可缺省，且必须全称
+      'value': [ // TODO 未验证，可能需要解析 type，改用 JSON.parseArray(JSON.toJSONString(value), User.class)，或遍历和递归子项来逐个用 TypeUtils.cast
+        { // apijson.demo.server.model.User
           'id': 1,
           'name': 'Tommy'
         },
-        {  // apijson.demo.server.model.User
+        { // apijson.demo.server.model.User
           'id': 2,
           'name': 'Lemon'
         }
       ]
     },
     {
-      'type': 'android.content.Context',  // 不可缺省，且必须全称
-      'reuse': true  // 复用实例池 INSTANCE_MAP 里的
+      'type': 'android.content.Context', // 不可缺省，且必须全称
+      'reuse': true // 复用实例池 INSTANCE_MAP 里的
     },
     {
-      'type': 'unitauto.test.TestUtil$Callback',  // interface 示例，注意内部类用 $ 隔开外部类名和内部类名
+      'type': 'unitauto.test.TestUtil$Callback', // interface 示例，注意内部类用 $ 隔开外部类名和内部类名
       'value': {
-        'setData(D)': {  // 回调方法签名
-          'callback': true  // 设置为最终回调方法，会自动等待它被调用，并自动记录回调的时间点和传入参数值
+        'setData(D)': { // 回调方法签名
+          'callback': true // 设置为最终回调方法，会自动等待它被调用，并自动记录回调的时间点和传入参数值
         }
       }
     }
@@ -308,11 +308,11 @@ Ctrl + S 或 Command + S 保存当前用例；
 {
     "static": true,
     "methodArgs": [
-        {   // 可省略来自动判断的 type : Boolean,Integer,BigDecimal,String,JSONObject,JSONArray
+        {  // 可省略来自动判断的 type : Boolean,Integer,BigDecimal,String,JSONObject,JSONArray
             "type": "long",
             "value": 1
         },
-        {   // 这个对象还可以简化为 "long:2" 这种字符串形式，方便手动调试。在键值对后按 Enter 回车键自动智能生成补全提示
+        {  // 这个对象还可以简化为 "long:2" 这种字符串形式，方便手动调试。在键值对后按 Enter 回车键自动智能生成补全提示
             "type": "long",
             "value": 2
         }
@@ -446,25 +446,25 @@ Ctrl + S 或 Command + S 保存当前用例；
 
                         <textarea id="vRandom" @copy="doOnCopy" @paste="doOnPaste" style="width: 100%;height: 100%;" wrap="off"
                                   placeholder="# 常用：
-RANDOM_IN(val0:Any, val1:Any ...)  // 从选项内随机取值
-RANDOM_INT(min:Integer, max:Integer)  // 从范围内随机取整数
-RANDOM_DB(min:Integer, max:Integer, table:String, column:String)  // 从数据库随机取值
-RANDOM_NUM(min:Number, max:Number, precision:Integer)  // 从范围内随机取小数
-RANDOM_STR(minLength:Integer, maxLength:Integer, regexp:String)  // 从长度范围内随机取字符串
-ORDER_IN(val0:Any, val1:Any ...)  // 从选项内顺序取值
-ORDER_INT(min:Integer, max:Integer)  // 从范围内顺序取整数
-ORDER_DB(min:Integer, max:Integer, table:String, column:String)  // 从数据库顺序取值
+RANDOM_IN(val0:Any, val1:Any ...) // 从选项内随机取值
+RANDOM_INT(min:Integer, max:Integer) // 从范围内随机取整数
+RANDOM_DB(min:Integer, max:Integer, table:String, column:String) // 从数据库随机取值
+RANDOM_NUM(min:Number, max:Number, precision:Integer) // 从范围内随机取小数
+RANDOM_STR(minLength:Integer, maxLength:Integer, regexp:String) // 从长度范围内随机取字符串
+ORDER_IN(val0:Any, val1:Any ...) // 从选项内顺序取值
+ORDER_INT(min:Integer, max:Integer) // 从范围内顺序取整数
+ORDER_DB(min:Integer, max:Integer, table:String, column:String) // 从数据库顺序取值
 其中 RANDOM 开头的是随机函数；ORDER 开头的是顺序函数，可以使用 + - 升降序 和 step 跨步，例如 ORDER_IN-(1, 2, 3) 降序取值，ORDER_INT+3(0, 100) 间隔 step = 3 位来升序取整数。
 # 模板：
-format: ORDER_IN(true, false, null, undefined)  // 从选项中顺序取值
-User/id: RANDOM_DB()  // 从数据库随机取值，等价于 User/id: RANDOM_DB(null, null, 'User', 'id')
-[]/page: Math.round(100*Math.random())  // 通过 JavaScript 代码来自定义 [] 内的 page
+format: ORDER_IN(true, false, null, undefined) // 从选项中顺序取值
+User/id: RANDOM_DB() // 从数据库随机取值，等价于 User/id: RANDOM_DB(null, null, 'User', 'id')
+[]/page: Math.round(100*Math.random()) // 通过 JavaScript 代码来自定义 [] 内的 page
 ">
-methodArgs/0/type: ORDER_IN('long', 'double', 'Number', 'int', 'Float')  // 顺序取值
-methodArgs/0/value: RANDOM_IN(1, 0.1, -10, 9.99, null)  // 随机取值
+methodArgs/0/type: ORDER_IN('long', 'double', 'Number', 'int', 'Float') // 顺序取值
+methodArgs/0/value: RANDOM_IN(1, 0.1, -10, 9.99, null) // 随机取值
 
-methodArgs/1/type: ORDER_IN('long', 'double', 'Number', 'int', 'Float')  // 顺序取值
-methodArgs/1/value: ORDER_INT(-10, 100)  // 顺序整数
+methodArgs/1/type: ORDER_IN('long', 'double', 'Number', 'int', 'Float') // 顺序取值
+methodArgs/1/value: ORDER_INT(-10, 100) // 顺序整数
 
 // 从数据库随机取值  methodArgs/1/value: RANDOM_DB(0, 1000, 'Random', 'count')
 

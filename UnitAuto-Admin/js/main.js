@@ -1536,11 +1536,11 @@ https://github.com/Tencent/APIJSON/issues
                 this.showTestCase(false, this.isLocalShow)
 
                 vInput.value = this.getCache(this.project, 'request4MethodList') || '{'
-                  + '\n    "query": 2,  // 查询类型：0-数据，1-总数，2-全部'
-                  + '\n    "mock": true,  // 是否生成模拟参数值'
-                  + '\n    "package": "' + this.getPackage() + '",  // 包名，不填默认全部'
-                  + '\n    "class": "' + this.getClass() + '",  // 类名，不填默认全部'
-                  + '\n    "types": null  // 类型，不填默认全部，填 ["int", "String"] 这种则只查对应参数的方法 '
+                  + '\n    "query": 2, // 查询类型：0-数据，1-总数，2-全部'
+                  + '\n    "mock": true, // 是否生成模拟参数值'
+                  + '\n    "package": "' + this.getPackage() + '", // 包名，不填默认全部'
+                  + '\n    "class": "' + this.getClass() + '", // 类名，不填默认全部'
+                  + '\n    "types": null // 类型，不填默认全部，填 ["int", "String"] 这种则只查对应参数的方法 '
                   + '\n}'
                 this.onChange(false)
                 this.request(false, REQUEST_TYPE_JSON, this.project + this.exTxt.name
@@ -2536,10 +2536,10 @@ https://github.com/Tencent/APIJSON/issues
             if (isId) {
               config += prefix + 'ORDER_IN(undefined, null, ' + value + ')'
               if (value >= 1000000000) { //PHP 等语言默认精确到秒 1000000000000) {
-                config += '\n  // 可替代上面的 ' + prefix.substring(1) + 'RANDOM_INT(' + Math.round(0.9 * value) + ', ' + Math.round(1.1 * value) + ')'
+                config += '\n // 可替代上面的 ' + prefix.substring(1) + 'RANDOM_INT(' + Math.round(0.9 * value) + ', ' + Math.round(1.1 * value) + ')'
               }
               else {
-                config += '\n  // 可替代上面的 ' + prefix.substring(1) + 'RANDOM_INT(1, ' + (10 * value) + ')'
+                config += '\n // 可替代上面的 ' + prefix.substring(1) + 'RANDOM_INT(1, ' + (10 * value) + ')'
               }
             }
             else {
@@ -2565,16 +2565,16 @@ https://github.com/Tencent/APIJSON/issues
                 var hasDot = String(value).indexOf('.') >= 0
 
                 if (value < 0) {
-                  config += '\n  // 可替代上面的 ' + prefix.substring(1) + (hasDot ? 'RANDOM_NUM' : 'RANDOM_INT') + '(' + (100 * value) + ', 0)'
+                  config += '\n // 可替代上面的 ' + prefix.substring(1) + (hasDot ? 'RANDOM_NUM' : 'RANDOM_INT') + '(' + (100 * value) + ', 0)'
                 }
-                else if (value > 0 && value < 1) {  // 0-1 比例
-                  config += '\n  // 可替代上面的 ' + prefix.substring(1) + 'RANDOM_NUM(0, 1)'
+                else if (value > 0 && value < 1) { // 0-1 比例
+                  config += '\n // 可替代上面的 ' + prefix.substring(1) + 'RANDOM_NUM(0, 1)'
                 }
-                else if (value >= 0 && value <= 100) {  // 10% 百分比
-                  config += '\n  // 可替代上面的 ' + prefix.substring(1) + 'RANDOM_INT(0, 100)'
+                else if (value >= 0 && value <= 100) { // 10% 百分比
+                  config += '\n // 可替代上面的 ' + prefix.substring(1) + 'RANDOM_INT(0, 100)'
                 }
                 else {
-                  config += '\n  // 可替代上面的 ' + prefix.substring(1) + (hasDot != true && value < 10 ? 'ORDER_INT(0, 9)' : ((hasDot ? 'RANDOM_NUM' : 'RANDOM_INT') + '(0, ' + 100 * value + ')'))
+                  config += '\n // 可替代上面的 ' + prefix.substring(1) + (hasDot != true && value < 10 ? 'ORDER_INT(0, 9)' : ((hasDot ? 'RANDOM_NUM' : 'RANDOM_INT') + '(0, ' + 100 * value + ')'))
                 }
               }
             }
