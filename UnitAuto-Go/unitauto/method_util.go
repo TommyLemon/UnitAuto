@@ -179,7 +179,7 @@ var CLASS_MAP = map[string]any{
 	"*Map":              &types.Map{},
 }
 
-var DEFAULT_TYPE_VALUE_MAP = map[string]any{}
+var DEFAULT_TYPE_VALUE_MAP = map[reflect.Type]any{}
 var INSTANCE_MAP = map[reflect.Type]any{}
 
 func GetBool(m map[string]any, k string) bool {
@@ -516,7 +516,7 @@ InvokeMethod 执行方法
 func InvokeMethod(req map[string]any, instance any, listener Listener[any]) error {
 	defer func() {
 		if err := recover(); err != nil {
-			completeWithError("", "", "", 0, errors.New("unknown error ! "+fmt.Sprint(err)), listener)
+			completeWithError("", "", "", 0, errors.New(fmt.Sprint(err)), listener)
 		}
 	}()
 
@@ -598,12 +598,12 @@ func InvokeMethod(req map[string]any, instance any, listener Listener[any]) erro
 	}
 
 	if timeout > 0 {
-		timer := time.NewTimer(time.Duration(timeout))
+		timer := time.NewTimer(time.Duration(timeout) * time.Millisecond)
 		go func() {
 			<-timer.C
 			timer.Stop()
-			fmt.Println("子协程可以打印了，因为定时器的时间到")
 			completeWithError(pkgName, clsName, methodName, startTime, errors.New("处理超时，应该在期望时间 "+fmt.Sprint(timeout)+"ms 内！"), listener)
+			//panic("处理超时，应该在期望时间 " + fmt.Sprint(timeout) + "ms 内！")
 		}()
 	}
 
@@ -1533,10 +1533,10 @@ func getMethodListGroupByClass(pkgName string, clsName string, methodName string
 			} else {
 				for j := 0; j < v.NumMethod(); j++ {
 					var m = v.Method(j)
-					var name = m.String()
-					if len(name) < 2 {
-						continue
-					}
+					var name = m.Type().Name() // m.String()
+					//if len(name) < 2 {
+					//	continue
+					//}
 
 					if allMethod || name == methodName {
 						var mObj = parseMethodObject(fmt.Sprint(m), mock)
@@ -1552,15 +1552,13 @@ func getMethodListGroupByClass(pkgName string, clsName string, methodName string
 								methodList = append(methodList, mObj)
 							}
 
-							if isFunc {
-								var n = GetStr(mObj, "name")
-								if len(n) < 1 || !PATTERN_UPPER_CASE.MatchString(n[0:1]) {
-									continue
-								}
-
-								var path = pkg + "." + n
-								codeStr += "\n        " + `unitauto.CLASS_MAP["` + path + `"] = ` + path + ";"
+							var n = GetStr(mObj, "name")
+							if len(n) < 1 || !PATTERN_UPPER_CASE.MatchString(n[0:1]) {
+								continue
 							}
+
+							var path = pkg + "." + n
+							codeStr += "\n        " + `unitauto.CLASS_MAP["` + path + `"] = ` + path + ";"
 						}
 					}
 				}
@@ -1712,6 +1710,10 @@ func parseMethodObject(m any, mock bool) map[string]any {
 		if dotInd >= 0 {
 			n = n[dotInd+1:]
 		}
+		dotInd = strings.LastIndex(n, "/")
+		if dotInd >= 0 {
+			n = n[dotInd+1:]
+		}
 		if strings.HasPrefix(n, "func ") {
 			n = n[len("func "):]
 		}
@@ -1796,7 +1798,7 @@ func parseMethodObject(m any, mock bool) map[string]any {
 	if mock && len(types) > 0 { // genericTypes != nil && genericTypes.length > 0) {
 		var vs = make([]any, len(types))
 		for i := 0; i < len(types); i++ {
-			vs[i] = mockValue(types[i], types[i]) //FIXME 这里应该用 ParameterTypes 还是 GenericParameterTypes ?
+			vs[i] = mockValue(types[i], types[i], 3) //FIXME 这里应该用 ParameterTypes 还是 GenericParameterTypes ?
 		}
 
 		obj["parameterDefaultValueList"] = vs
@@ -1805,39 +1807,39 @@ func parseMethodObject(m any, mock bool) map[string]any {
 	return obj
 }
 
-func mockValue(typ reflect.Type, genericType reflect.Type) any {
+func mockValue(typ reflect.Type, genericType reflect.Type, depth int) any {
 	//避免缓存穿透
-	//		var v = DEFAULT_TYPE_VALUE_MAP[t)
-	//		if (v != nil) {
-	//			return v
-	//		}
+	var v = DEFAULT_TYPE_VALUE_MAP[typ]
+	if v != nil {
+		return v
+	}
 
-	//		if (DEFAULT_TYPE_VALUE_MAP.containsKey(t)) {
-	//			return DEFAULT_TYPE_VALUE_MAP[t)
-	//		}
 	if typ == nil {
 		return nil
 	}
 
+	var kind = typ.Kind()
 	var typStr = typ.String()
 
-	if typStr == "any" || typStr == "any" {
+	if kind == reflect.Invalid || kind == reflect.Chan || typStr == "any" || typStr == "interface{}" {
+		return nil
+	}
+	if kind == reflect.Pointer || kind == reflect.UnsafePointer {
 		return nil
 	}
 
 	var r = rand.Float64()
 
-	if typStr == "bool" {
+	if kind == reflect.Bool || typStr == "bool" {
 		return r >= 0.5
 	}
 
 	var sign = -1.0
-	if r > 0.1 {
+	if r > 0.1 || kind == reflect.Uint || kind == reflect.Uint8 || kind == reflect.Uint16 || kind == reflect.Uint32 || kind == reflect.Uint64 {
 		sign = 1
 	}
 
-	//常规业务不会用 int, long 之外的整型，一般是驱动、算法之类的才会用
-	if typStr == "string" {
+	if kind == reflect.String || typStr == "string" {
 		var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 		b := make([]rune, int32(100*r))
 		for i := range b {
@@ -1846,251 +1848,141 @@ func mockValue(typ reflect.Type, genericType reflect.Type) any {
 		return string(b)
 	}
 
+	//常规业务不会用 int 之外的整型，一般是驱动、算法之类的才会用
 	if typStr == "byte" {
 		return byte(128 * r)
 	}
-	if typStr == "int" {
+
+	if kind == reflect.Int || kind == reflect.Int8 || kind == reflect.Int16 || kind == reflect.Int32 ||
+		kind == reflect.Uint || kind == reflect.Uint8 || kind == reflect.Uint16 || kind == reflect.Uint32 || typStr == "int" {
 		if sign < 0 {
 			return int(sign * 2 * r)
 		}
 		return int(sign * 10 * r)
 	}
-	if typStr == "int32" {
-		if sign < 0 {
-			return int32(sign * 2.0 * r)
-		}
-		return int32(sign * 10 * r)
-	}
-	if typStr == "int64" {
+	//if kind == reflect.Int32 || typStr == "int32" {
+	//	if sign < 0 {
+	//		return int32(sign * 2.0 * r)
+	//	}
+	//	return int32(sign * 10 * r)
+	//}
+	if kind == reflect.Int64 || kind == reflect.Uint64 || typStr == "int64" {
 		if sign < 0 {
 			return int64(sign * 10 * r)
 		}
 		return int64(sign * 100 * r)
 	}
-	if typStr == "float32" {
-		if sign < 0 {
-			return float32(sign * 10 * r)
-		}
-		return float32(sign * 100 * r)
-	}
-	if typStr == "float64" {
+	//if kind == reflect.Float32 || typStr == "float32" {
+	//	if sign < 0 {
+	//		return float32(sign * 10 * r)
+	//	}
+	//	return float32(sign * 100 * r)
+	//}
+	if kind == reflect.Float64 || typStr == "float64" {
 		if sign < 0 {
 			return float64(sign * 10 * r)
 		}
 		return float64(sign * 100 * r)
 	}
 
-	// TODO
-	//		if (typ instanceof Class) {
-	//			Class c = (Class) typ
-	//try {
-	//	if (CharSequence.class.isAssignableFrom(typ)) {
-	//	var size = (int) (r*5)
-	//	char[] cs = new char[size]
-	//	for i := 0; i < size; i++ {
-	//	cs[i] = (char) ('A' + ('z' - 'A') * r)
-	//	}
-	//	return String.valueOf(cs)
-	//	}
-	//
-	//	if (Date.class.isAssignableFrom(typ) || java.sql.Date.class.isAssignableFrom(typ)) {
-	//	return new Date((long) (time.Now().UnixMilli() * r))
-	//	}
-	//	if (Timestamp.class.isAssignableFrom(typ) || java.security.Timestamp.class.isAssignableFrom(typ)) {
-	//	return new Timestamp((long) (time.Now().UnixMilli() * r))
-	//	}
-	//
-	//	if (Map.class.isAssignableFrom(typ)) {
-	//	var obj = map[string]any{}
-	//
-	//	Type[] ts = getTypeArguments(typ, genericType)
-	//	Class mt
-	//	if (ts == nil || ts.length < 2 || ts[1] instanceof Class == false) {
-	//	mt = int.class  // return obj
-	//	} else {
-	//	mt = (Class) ts[1]
-	//	}
-	//
-	//	for i := 0; i < r*3; i++ {
-	//	var v = mockValue(mt, ts[1])
-	//	if (v != nil) {
-	//	obj.put((String) mockValue(String.class, String.class), v)
-	//	}
-	//	}
-	//
-	//	return obj
-	//	}
-	//
-	//	if (Collection.class.isAssignableFrom(typ) || Array.class.isAssignableFrom(typ) || typ.isArray()) {
-	//	var arr = new JSONArray()
-	//
-	//	Type[] ts = getTypeArguments(typ, genericType)
-	//	Class mt
-	//	if (ts == nil || ts.length < 1 || ts[0] instanceof Class == false) {
-	//	mt = int.class  // return arr
-	//	}
-	//	else {
-	//	mt = (Class) ts[0]
-	//	}
-	//
-	//	for i := 0; i < r*5; i++ {
-	//	var v = mockValue(mt, ts[0])
-	//	if (v != nil) {
-	//	arr.add(v)
-	//	}
-	//	}
-	//
-	//	return arr
-	//	}
-	//}
-	//catch (err error) {
-	//	fmt.Println(err.Error())
-	//}
-	//
-	////后面也只处理了 isInterface
-	////			if (c.isPrimitive() || c.isEnum() || c.isAnnotation() || unitauto.JSON.isBooleanOrNumberOrString(t)) {
-	////				return nil
-	////			}
-	//
-	//try {
-	//	if (typ.isInterface()) {
-	//		Method[] ms = typ.getMethods()
-	//		if (ms != nil) {
-	//			var mo = map[string]any{}
-	//
-	//			for (var j = 0 j < ms.length j++) {
-	//			var name = ms[j].getName()
-	//			if (IsEmpty(name, true) || "toString" == (name) || "equals" == (name) || "hashCode" == (name)
-	//			|| "clone" == (name) || "getClass" == (name) || "wait" == (name) || "notify" == (name) || "notifyAll" == (name)) {
-	//				continue
-	//			}
-	//
-	//			var key = name  + "(" + trimTypes(ms[j].getGenericParameterTypes()) + ")"
-	//			var val = map[string]any{}
-	//
-	//
-	//			var rt = ms[j].Type.String()
-	//			if (rt == nil || rt == void.class || rt == Void.class) {
-	//				if (strings.HasPrefix(name, "get") || strings.HasPrefix(name, "set") || strings.HasPrefix(name, "add")
-	//				|| strings.HasPrefix(name, "put") || strings.HasPrefix(name, "remove")) {  // 只留空对象
-	//				}
-	//				else {
-	//				val.put(KEY_CALLBACK, true)
-	//				}
-	//			}
-	//			else {
-	//				val.put(KEY_TYPE, trimType(rt))  //以下 isAssignableFrom 是为了及时中断，避免死循环
-	//				val.put(KEY_RETURN, rt.isInterface() ? new JSONObject() : mockValue(rt, ms[j].getGenericReturnType())) //仍然死循环  || t.isAssignableFrom(rt) || rt.isAssignableFrom(t) ? nil : mockValue(rt))
-	//			}
-	//
-	//			mo.put(key, val)
-	//			}
-	//
-	//			//						DEFAULT_TYPE_VALUE_MAP.put(c, mo)
-	//			return mo
-	//		}
-	//
-	//		return nil
-	//	}
-	//
-	//	var v = JSON.parse(ToJSONString(GetInstance(typ, nil)))
-	//	//				DEFAULT_TYPE_VALUE_MAP.put(c, v)
-	//	return v
-	//}
-	//catch (err error) {
-	//	fmt.Println(err.Error())
-	//}
-	////		}
+	if depth < 0 {
+		return nil
+	}
+
+	if kind == reflect.Array || kind == reflect.Slice {
+		var l = int(r * 10)
+		var arr = make([]any, l)
+		for j := 0; j < l; j++ {
+			arr[j] = mockValue(TYPE_INT, TYPE_INT, depth-1)
+		}
+		return arr
+	}
+
+	var obj = map[string]any{}
+
+	if kind == reflect.Map {
+		var l = int(r * 10)
+		for j := 0; j < l; j++ {
+			var k = mockValue(TYPE_STRING, TYPE_STRING, depth-1)
+			obj[fmt.Sprint(k)] = mockValue(TYPE_INT, TYPE_INT, depth-1)
+		}
+		return obj
+	}
+
+	if kind == reflect.Func {
+		var ts = make([]string, typ.NumOut())
+		var rs = make([]any, typ.NumOut())
+		for j := 0; j < typ.NumOut(); j++ {
+			var rt = typ.Out(j)
+			ts[j] = trimReflectType(rt)
+			rs[j] = mockValue(rt, rt, depth-1)
+		}
+
+		obj[KEY_TYPE] = strings.Join(ts, ",")
+		obj[KEY_RETURN] = rs
+		obj[KEY_CALLBACK] = true
+		return obj
+	}
+
+	if kind == reflect.Struct {
+		for i := 0; i < typ.NumField(); i++ {
+			var f = typ.Field(i)
+			var t = f.Type
+			var k = t.Kind()
+
+			if k == reflect.Struct || k == reflect.Interface || k == reflect.Map || k == reflect.Func {
+				obj[f.Name] = mockValue(f.Type, f.Type, depth-1)
+				continue
+			}
+
+			if k == reflect.Array || k == reflect.Slice {
+				obj[f.Name] = mockValue(f.Type, f.Type, depth-1)
+				continue
+			}
+
+			if k == reflect.Pointer || k == reflect.UnsafePointer {
+				continue
+			}
+
+			obj[f.Name] = mockValue(f.Type, f.Type, depth-1)
+		}
+
+		return obj
+	}
+
+	if kind == reflect.Interface {
+		for i := 0; i < typ.NumMethod(); i++ {
+			var m = typ.Method(i)
+			var t = m.Type
+
+			var n = m.Name + "("
+			for j := 0; j < t.NumIn(); j++ {
+				if j > 0 {
+					n += ","
+				}
+				n += trimReflectType(t.In(j))
+			}
+
+			var ts = make([]string, t.NumOut())
+			var rs = make([]any, t.NumOut())
+			for j := 0; j < t.NumOut(); j++ {
+				var rt = t.Out(j)
+				ts[j] = trimReflectType(rt)
+				rs[j] = mockValue(rt, rt, depth-1)
+			}
+
+			obj[n+")"] = map[string]any{
+				"type":     strings.Join(ts, ","),
+				"return":   rs,
+				"callback": true,
+			}
+		}
+
+		return obj
+	}
 
 	return nil
 }
-
-//func getTypeArguments(typ reflect.Type, genericType reflect.Type) []reflect.Type {
-//	if (typ == nil) {
-//		typ = genericType
-//	}
-//	if (typ == nil) {
-//		return nil
-//	}
-//
-//	if (genericType == nil) {
-//		genericType = typ
-//	}
-//
-//	Type[] ts = nil
-//
-//	var tn = genericType.getTypeName()
-//
-//	var index = tn.indexOf("[")
-//	if (index > 0) {
-//		tn = tn[index + 1 :)
-//		index = tn.lastIndexOf("]")
-//		if (index <= 0) {
-//			return nil
-//		}
-//
-//		tn = tn[0 : index)
-//
-//		String[] tns = StringUtil.split(tn, true)
-//
-//		if (tns != nil && tns.length > 0) {
-//			ts = new Type[tns.length]
-//			for i := 0; i < tns.length; i++ {
-//				try {
-//					ts[i] = getType(tns[i], nil, false)
-//				} catch (err error) {
-//					fmt.Println(err.Error())
-//				}
-//			}
-//
-//			return ts
-//		}
-//	}
-//
-//	var cp = typ.getComponentType()
-//	if (cp != nil) {
-//		return []reflect.Type{cp}
-//	}
-//
-//	var tps = typ.getTypeParameters()
-//	if (tps != nil && tps.length > 0) {
-//		return tps
-//	}
-//
-//	// Cannot cast from Class to ParameterizedType
-//	//		if (ParameterizedType.class.isAssignableFrom(typ)) {
-//	//			return ((ParameterizedType) typ).getActualTypeArguments()
-//	//		}
-//
-//
-//	var pType = nil
-//	var typ = typ.getGenericSuperclass()  //TODO 改用 getTypeName 获取 List<User> 这种，然后截取 <> 中的 User 就知道参数类型了
-//	if (typ instanceof ParameterizedType) {
-//		pType = (ParameterizedType) typ
-//
-//		var rt = pType.getRawType()
-//		if (rt != nil && rt != any.class && rt != void.class && rt != Void.class) {
-//			return new Type[]{rt}
-//		}
-//		//		} else {
-//		//			Type[] ts = typ.getGenericInterfaces()
-//		//			if (ts != nil && ts.length > 0 && ts[0] instanceof Class) {
-//		//				return ts
-//		//			}
-//	}
-//
-//	//		TypeVariable<?>[] tps = typ.getTypeParameters()
-//	//		if (tps != nil && tps.length > 0) {
-//	//			return tps
-//	//		}
-//
-//	var ts = pType == nil ? nil : pType.getActualTypeArguments()
-//	if len(ts) > 0 {
-//		return ts
-//	}
-//
-//	return nil
-//}
 
 /**转为 var {"typ": t, "value": v }
  * @param typ
@@ -2275,9 +2167,32 @@ func getType(name string, value any, defaultType bool) (reflect.Type, error) {
 			return typ, nil
 		}
 
-		typ = reflect.TypeOf(CLASS_MAP[name])
+		var n = strings.TrimSpace(name)
+		var dotInd = strings.LastIndex(n, "/")
+		if dotInd >= 0 {
+			n = n[dotInd+1:]
+		}
+
+		var v = CLASS_MAP[n]
+		if v != nil {
+			typ = reflect.TypeOf(v)
+		} else {
+			dotInd = strings.LastIndex(n, ".")
+			if dotInd >= 0 {
+				n = n[dotInd+1:]
+				v = CLASS_MAP[n]
+			}
+
+			if v != nil {
+				typ = reflect.TypeOf(v)
+			} else {
+				typ = reflect.TypeOf(CLASS_MAP[name])
+			}
+		}
+
 		if typ == nil {
 			index = strings.LastIndex(name, ".")
+
 			var err error
 			if index < 0 {
 				if typ, err = LoadStruct("", name, defaultType); err != nil {

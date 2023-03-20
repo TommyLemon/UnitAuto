@@ -42,10 +42,33 @@ func Init() {
 	unitauto.CLASS_MAP["unitauto.test.TestInterfaceCallback"] = test.TestInterfaceCallback
 	unitauto.CLASS_MAP["unitauto.test.Test"] = test.Test{}
 	unitauto.CLASS_MAP["*unitauto.test.Test"] = &test.Test{}
+	unitauto.CLASS_MAP["unitauto.test.User"] = test.User{}
+	unitauto.CLASS_MAP["*unitauto.test.User"] = &test.User{}
+	unitauto.CLASS_MAP["unitauto.test.Comment"] = test.Comment{}
+	unitauto.CLASS_MAP["*unitauto.test.Comment"] = &test.Comment{}
 	unitauto.CLASS_MAP["unitauto.test.Callback"] = Proxy{}   // new(test.Callback)
 	unitauto.CLASS_MAP["*unitauto.test.Callback"] = &Proxy{} // new(test.Callback)
 	unitauto.CLASS_MAP["unitauto.test.CallbackImpl"] = test.CallbackImpl{}
 	unitauto.CLASS_MAP["*unitauto.test.CallbackImpl"] = &test.CallbackImpl{}
+	unitauto.CLASS_MAP["test.Hello"] = test.Hello
+	unitauto.CLASS_MAP["test.Add"] = test.Add
+	unitauto.CLASS_MAP["test.Minus"] = test.Minus
+	unitauto.CLASS_MAP["test.Multiply"] = test.Multiply
+	unitauto.CLASS_MAP["test.Divide"] = test.Divide
+	unitauto.CLASS_MAP["test.ComputeAsync"] = test.ComputeAsync
+	unitauto.CLASS_MAP["test.New"] = test.New
+	unitauto.CLASS_MAP["test.Compare"] = test.Compare
+	unitauto.CLASS_MAP["test.TestInterfaceCallback"] = test.TestInterfaceCallback
+	unitauto.CLASS_MAP["test.Test"] = test.Test{}
+	unitauto.CLASS_MAP["*test.Test"] = &test.Test{}
+	unitauto.CLASS_MAP["test.User"] = test.User{}
+	unitauto.CLASS_MAP["*test.User"] = &test.User{}
+	unitauto.CLASS_MAP["test.Comment"] = test.Comment{}
+	unitauto.CLASS_MAP["*test.Comment"] = &test.Comment{}
+	unitauto.CLASS_MAP["test.Callback"] = Proxy{}   // new(test.Callback)
+	unitauto.CLASS_MAP["*test.Callback"] = &Proxy{} // new(test.Callback)
+	unitauto.CLASS_MAP["test.CallbackImpl"] = test.CallbackImpl{}
+	unitauto.CLASS_MAP["*test.CallbackImpl"] = &test.CallbackImpl{}
 	unitauto.CLASS_MAP["main.Proxy"] = Proxy{}
 	unitauto.CLASS_MAP["*main.Proxy"] = &Proxy{}
 
@@ -59,6 +82,22 @@ func Init() {
 			}
 			if typ.AssignableTo(reflect.TypeOf(&test.Test{})) {
 				toV, err := unitauto.Convert[*test.Test](val, &test.Test{})
+				return toV, err == nil
+			}
+			if typ.AssignableTo(reflect.TypeOf(test.User{})) {
+				toV, err := unitauto.Convert[test.User](val, test.User{})
+				return toV, err == nil
+			}
+			if typ.AssignableTo(reflect.TypeOf(&test.User{})) {
+				toV, err := unitauto.Convert[*test.User](val, &test.User{})
+				return toV, err == nil
+			}
+			if typ.AssignableTo(reflect.TypeOf(test.Comment{})) {
+				toV, err := unitauto.Convert[test.Comment](val, test.Comment{})
+				return toV, err == nil
+			}
+			if typ.AssignableTo(reflect.TypeOf(&test.Comment{})) {
+				toV, err := unitauto.Convert[*test.Comment](val, &test.Comment{})
 				return toV, err == nil
 			}
 			if typ.AssignableTo(reflect.TypeOf(test.CallbackImpl{})) { // || typ.AssignableTo(reflect.Indirect(reflect.ValueOf(new(test.Callback))).Type()) {

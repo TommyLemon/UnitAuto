@@ -111,11 +111,44 @@ func Compare(t1 Test, t2 Test) int {
 	return 1
 }
 
-//	func New() *Test {
-//		return new(Test)
-//	}
 func New() Test {
 	return Test{
 		Name: "Test",
 	}
+}
+
+type User struct {
+	Id        int
+	Name      string
+	Sex       int
+	Certified bool
+	Balance   float64
+	Date      int64
+}
+
+func (user *User) AddBalance(amount float64) {
+	user.Balance += amount
+}
+
+type Comment struct {
+	Id      int
+	ToId    int
+	Content string
+	UserId  int
+	Date    int64
+	User    User
+}
+
+func (comment *Comment) Reply(c Comment) bool {
+	comment.ToId = c.Id
+	return true
+}
+
+func (comment Comment) GetPublisher(c Comment) User {
+	return comment.User
+}
+
+func ReplyTo(c Comment, c2 Comment) bool {
+	c.ToId = c2.Id
+	return true
 }
