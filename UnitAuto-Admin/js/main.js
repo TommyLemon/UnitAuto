@@ -1534,11 +1534,12 @@ https://github.com/Tencent/APIJSON/issues
               }
               else if (index == 16) {
                 this.showTestCase(false, this.isLocalShow)
+                var pkg = this.getPackage()
 
                 vInput.value = this.getCache(this.project, 'request4MethodList') || '{'
                   + '\n    "query": 2, // 查询类型：0-数据，1-总数，2-全部'
                   + '\n    "mock": true, // 是否生成模拟参数值'
-                  + '\n    "package": "' + this.getPackage() + '", // 包名，不填默认全部'
+                  + '\n    "package": "' + (pkg.startsWith("*") ? pkg.substring(1) : pkg) + '", // 包名，不填默认全部'
                   + '\n    "class": "' + this.getClass() + '", // 类名，不填默认全部'
                   + '\n    "types": null // 类型，不填默认全部，填 ["int", "String"] 这种则只查对应参数的方法 '
                   + '\n}'
@@ -2213,6 +2214,8 @@ https://github.com/Tencent/APIJSON/issues
 
           var rsp = JSON.parse(JSON.stringify(currentResponse || {}))
           rsp = JSONResponse.array2object(rsp, 'methodArgs', ['methodArgs'], true)
+          rsp = JSONResponse.array2object(rsp, 'return', ['return'], true)
+          rsp = JSONResponse.array2object(rsp, 'type', ['type'], true)
 
           const isML = this.isMLEnabled;
           const stddObj = isML ? JSONResponse.updateStandard({}, rsp) : {};
@@ -2315,6 +2318,17 @@ https://github.com/Tencent/APIJSON/issues
             //   commentObj = JSONResponse.updateStandard({}, mapReq2);
             // }
 
+            var returnType = currentResponse == null ? null : currentResponse.type
+            if (returnType instanceof Array) {
+              if (returnType.length <= 0) {
+                returnType = null
+              } else if (returnType.length == 1) {
+                returnType = returnType[0]
+              } else {
+                returnType = returnType.join() // "(" + returnType.join() + ")"
+              }
+            }
+
             const extName = App.exTxt.name;
             const baseUrl = App.getBaseUrl();
             const url = App.server + (isExportRandom || isEditResponse || did == null ? '/post' : '/put')
@@ -2337,10 +2351,11 @@ https://github.com/Tencent/APIJSON/issues
               'Method': isEditResponse ? null : {
                 'id': did == null ? undefined : did,
 //                'testAccountId': currentAccountId,
+                'language': StringUtil.isEmpty(currentResponse.language, true) ? this.language : currentResponse.language,
                 'method': App.getMethod(),
                 'detail': App.exTxt.name,
-                'type': (currentResponse.type || App.type) || null,
-                'genericType': (currentResponse.type || App.type) || null,
+                'type': returnType,
+                'genericType': returnType,
                 'class': App.getClass(),
                 'package': App.getPackage(),
                 'methodArgs': JSON.stringify(currentResponse.methodArgs),
@@ -2701,7 +2716,7 @@ https://github.com/Tencent/APIJSON/issues
                       if (StringUtil.isEmpty(classItem['package'], true)) {
                     	  classItem['package'] = packageItem['package']
                       }
-                      App.sync2DB(classItem)
+                      App.sync2DB(classItem, data.language)
                     } catch (e) {
                       App.uploadFailCount++
                       App.exTxt.button = 'All:' + App.uploadTotal + '\nDone:' + App.uploadDoneCount + '\nFail:' + App.uploadFailCount
@@ -2718,7 +2733,7 @@ https://github.com/Tencent/APIJSON/issues
        * @param classItem
        * @param callback
        */
-      sync2DB: function(classItem) {
+      sync2DB: function(classItem, language) {
         if (classItem == null) {
           this.log('postApi', 'classItem == null  >> return')
           return
@@ -2731,9 +2746,8 @@ https://github.com/Tencent/APIJSON/issues
         var currentAccount = this.accounts[this.currentAccountIndex]
         var classArgs = this.getArgs4Sync(classItem.parameterTypeList)
 
-        var methodItem
         for (var k = 0; k < methodList.length; k++) {
-          methodItem = methodList[k]
+          var methodItem = methodList[k]
           if (methodItem == null || methodItem.name == null) {
             this.uploadFailCount ++
             this.exTxt.button = 'All:' + this.uploadTotal + '\nDone:' + this.uploadDoneCount + '\nFail:' + this.uploadFailCount
@@ -2748,7 +2762,7 @@ https://github.com/Tencent/APIJSON/issues
             } else if (returnType.length == 1) {
               returnType = returnType[0]
             } else {
-              returnType = "(" + returnType.join() + ")"
+              returnType = returnType.join() // "(" + returnType.join() + ")"
             }
           }
 
@@ -2757,6 +2771,7 @@ https://github.com/Tencent/APIJSON/issues
             'Method': {
               'userId': this.User.id,
               // 'testAccountId': currentAccountId,
+              'language': StringUtil.isEmpty(language, true) ? this.language : language,
               'package': classItem.package == null ? null : classItem.package,  // .replace(/[.]/g, '/'),
               'class': classItem.class,
               'method': methodItem.name,
@@ -3165,8 +3180,19 @@ https://github.com/Tencent/APIJSON/issues
           packagePrefix = packagePrefix.trim()
 
           var langauges = StringUtil.split(this.language, ',', true)
+          var langCond = {}
           if (langauges == null || langauges.length <= 0) {
             langauges = undefined
+          } else {
+            var combineStr = StringUtil.isEmpty(search) ? 'language{}' : '(package*~ | class*~ | method*~ | type*~ | detail*~) & (language{}'
+            for (var i = 0; i < langauges.length; i++) {
+              langCond['lang' + i + '{}'] = "find_in_set('" + langauges[i] + "',language)"
+              combineStr += ' | lang' + i + '{}'
+            }
+            langCond['@combine'] = combineStr + (StringUtil.isEmpty(search) ? '' : ')')
+
+            langauges.push('')
+            langauges.push(null)
           }
 
           var req = {
@@ -3174,7 +3200,7 @@ https://github.com/Tencent/APIJSON/issues
             '[]': {
               'count': this.testCaseCount || 100, //200 条测试直接卡死 0,
               'page': this.testCasePage || 0,
-              'Method': {  // 不管是 item.Method.constructor 还是 item.Method['constructor'] 都取到了 js 语言构造器而不是 JSON 中的 value
+              'Method': Object.assign({  // 不管是 item.Method.constructor 还是 item.Method['constructor'] 都取到了 js 语言构造器而不是 JSON 中的 value
                 '@column': 'id,userId,static,ui,type,genericType,package,class,constructor:cttr,classArgs,genericClassArgs,method,methodArgs,genericMethodArgs,exceptions,genericExceptions,request,demo,detail,date',
                 '@order': 'date-',
                 'userId{}': [0, this.User.id],
@@ -3183,6 +3209,7 @@ https://github.com/Tencent/APIJSON/issues
                 'constructorArguments()': 'getMethodArguments(genericClassArgs)',
                 'request()': 'getMethodRequest()',
                 'language{}': langauges,
+                // 'language|{}': "find_in_set('" + langauges[0] + "',language)",
                 'package$': StringUtil.isEmpty(packagePrefix) ? null : packagePrefix + '%',
                 'class$': StringUtil.isEmpty(classPrefix) ? null : classPrefix + '%',
                 'package*~': search,
@@ -3191,7 +3218,7 @@ https://github.com/Tencent/APIJSON/issues
                 'type*~': search,
                 'detail*~': search,
                 '@combine': StringUtil.isEmpty(search) ? null : 'package*~,class*~,method*~,type*~,detail*~'
-              },
+              }, langCond),
               'TestRecord': {
                 'documentId@': '/Method/id',
                 'userId': this.User.id,
@@ -7583,6 +7610,8 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
           var rsp = JSON.parse(JSON.stringify(this.removeDebugInfo(response) || {}))
           rsp = JSONResponse.array2object(rsp, 'methodArgs', ['methodArgs'], true)
+          rsp = JSONResponse.array2object(rsp, 'return', ['return'], true)
+          rsp = JSONResponse.array2object(rsp, 'type', ['type'], true)
 
           tr.compare = JSONResponse.compareResponse(standard, rsp, '', this.isMLEnabled, null, ['call()[]'], ignoreTrend) || {}
           tr.compare.duration = it.durationHint
@@ -9110,6 +9139,9 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         if (StringUtil.isEmpty(language, true) == false) {
           this.language = CodeUtil.language = language
         }
+
+        // vUrl.value = this.language == CodeUtil.LANGUAGE_GO ? 'test.Divide.Divide' : 'unitauto.test.TestUtil.divide'
+
         var types = this.getCache('', 'types')
         if (types != null && types.length > 0) {
           this.types = types instanceof Array ? types : StringUtil.split(types)

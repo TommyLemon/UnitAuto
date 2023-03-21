@@ -1004,6 +1004,8 @@ var JSONResponse = {
 
     var rsp = JSON.parse(JSON.stringify(currentResponse || {}))
     rsp = JSONResponse.array2object(rsp, 'methodArgs', ['methodArgs'], true)
+    rsp = JSONResponse.array2object(rsp, 'return', ['return'], true)
+    rsp = JSONResponse.array2object(rsp, 'type', ['type'], true)
 
     var find = false;
     if (isCodeChange && hasCode) {  // 走异常分支
@@ -1625,7 +1627,7 @@ var JSONResponse = {
         if (k != null) {
           var v = value[k]
 
-          if (containChild != true && (v instanceof Array == false || (onlyKeys != null && onlyKeys.indexOf(name) < 0))) {
+          if (containChild != true && (v instanceof Object == false || (onlyKeys != null && onlyKeys.indexOf(name) < 0))) {
             continue
           }
 

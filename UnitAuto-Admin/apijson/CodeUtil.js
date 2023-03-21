@@ -6497,7 +6497,7 @@ var CodeUtil = {
         case 'warn':
           return isWarning ? '' : '警告';
         case 'time':
-          if (CodeUtil.getType4Request(value) == 'number') {
+          if (CodeUtil.getType4Request(value) == 'integer') {
             return isWarning ? '' : '调用时间';
           }
         case 'static':

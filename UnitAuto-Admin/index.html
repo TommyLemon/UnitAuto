@@ -309,11 +309,11 @@ Ctrl + S 或 Command + S 保存当前用例；
     "static": true,
     "methodArgs": [
         {  // 可省略来自动判断的 type : Boolean,Integer,BigDecimal,String,JSONObject,JSONArray
-            "type": "long",
+            "type": "int",
             "value": 1
         },
-        {  // 这个对象还可以简化为 "long:2" 这种字符串形式，方便手动调试。在键值对后按 Enter 回车键自动智能生成补全提示
-            "type": "long",
+        {  // 这个对象还可以简化为 "int:2" 这种字符串形式，方便手动调试。在键值对后按 Enter 回车键自动智能生成补全提示
+            "type": "int",
             "value": 2
         }
     ]
@@ -460,10 +460,10 @@ format: ORDER_IN(true, false, null, undefined) // 从选项中顺序取值
 User/id: RANDOM_DB() // 从数据库随机取值，等价于 User/id: RANDOM_DB(null, null, 'User', 'id')
 []/page: Math.round(100*Math.random()) // 通过 JavaScript 代码来自定义 [] 内的 page
 ">
-methodArgs/0/type: ORDER_IN('long', 'double', 'Number', 'int', 'Float') // 顺序取值
+methodArgs/0/type: ORDER_IN('int', 'long', 'double', 'int', 'Number') // 顺序取值
 methodArgs/0/value: RANDOM_IN(1, 0.1, -10, 9.99, null) // 随机取值
 
-methodArgs/1/type: ORDER_IN('long', 'double', 'Number', 'int', 'Float') // 顺序取值
+methodArgs/1/type: ORDER_IN('int', 'long', 'double', 'int', 'Number') // 顺序取值
 methodArgs/1/value: ORDER_INT(-10, 100) // 顺序整数
 
 // 从数据库随机取值  methodArgs/1/value: RANDOM_DB(0, 1000, 'Random', 'count')
@@ -687,7 +687,9 @@ fun(true, 1, 'a'..);
                 </div>
 
                 <ul class="dropdown-menu" id="vOption" style="display: block; left: 0px; top: 0px; max-height: 100%; max-width: 100%; overflow: scroll; overflow-x: scroll; overflow-y:scroll;" v-show="options != null && options.length > 0">
-                  <li class="dropdown-item" style="width: 100%" :style="{'color': (index == selectIndex ? 'orangered' : 'black')}" v-for="(item, index) in options" :id="'option' + index" @click="onClickSelectInput(item, index)" >{{StringUtil.get(item.name) + ': ' + StringUtil.get(item.type) + ', ' + StringUtil.trim(item.comment)}}</li>
+                  <li class="dropdown-item" style="width: 100%" :style="{'color': (index == selectIndex ? 'orangered' : 'black')}" v-for="(item, index) in options" :id="'option' + index" @click="onClickSelectInput(item, index)" >{{
+                          StringUtil.get(item.name) + ': ' + (item.type instanceof Array ? StringUtil.join(item.type) : StringUtil.get(item.type)) + ', ' + StringUtil.trim(item.comment)
+                      }}</li>
                 </ul>
             </div>
 
@@ -968,7 +970,8 @@ fun(true, 1, 'a'..);
   var vVerify = document.getElementById("vVerify");
   var vRemember = document.getElementById("vRemember");
 
-  vUrl.value = new String('unitauto.test.TestUtil.divide'); // 'countArray'); //main.js里访问不到，可能是script引用顺序问题
+  var lang = App == null ? null : App.language;
+  vUrl.value = lang == CodeUtil.LANGUAGE_GO ? 'test.Divide.Divide' : 'unitauto.test.TestUtil.divide'  //main.js里访问不到，可能是script引用顺序问题
 
   var vRequestMarkdown = document.getElementById('vRequestMarkdown');
   var vMarkdown = document.getElementById('vMarkdown');
