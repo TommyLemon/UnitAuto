@@ -22,8 +22,12 @@ func Multiply(a float32, b float32) float64 {
 	return float64(a * b)
 }
 
-func Divide(a float64, b float64) float64 {
-	return a / b
+func Divide(a int, b int) float64 {
+	return float64(a) / float64(b)
+}
+
+func TestGeneric[T int | int8 | int16 | int32 | int64 | uint | uint8 | uint16 | uint32 | uint64 | float32 | float64, R int | float64](a T, b R) float64 {
+	return float64(a) + float64(b)
 }
 
 func ComputeAsync(a int, b int, callback func(a int, b int) int) int {

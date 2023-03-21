@@ -54,6 +54,7 @@ var CODE_SUCCESS = 200
 var CODE_SERVER_ERROR = 500
 var MSG_SUCCESS = "success"
 
+var KEY_LANGUAGE = "language"
 var KEY_REUSE = "reuse"
 var KEY_UI = "ui"
 var KEY_TIME = "time"
@@ -634,6 +635,7 @@ var InvokeReflectMethod = func(typ reflect.Value, instance any, pkgName string, 
 			}
 		}
 
+		result[KEY_LANGUAGE] = "Go"
 		if instance != nil {
 			result[KEY_THIS] = parseJson(reflect.TypeOf(instance), instance) //TODO InterfaceProxy proxy 改成泛型 I instance ？
 		}
@@ -661,18 +663,6 @@ var completeWithError = func(pkgName string, clsName string, methodName string, 
 	if err == nil {
 		err = errors.New("unknown error")
 	}
-	//if (e instanceof NoSuchMethodException) {
-	//e = new IllegalArgumentException("字符 " + methodName + " 对应的方法不在 " + pkgName +  "." + clsName + " 内！"
-	//+ "\n请检查函数名和参数数量是否与已定义的函数一致！\n" + err.Error())
-	//}
-	//if (e instanceof InvocationTargetException) {
-	//Throwable te = ((InvocationTargetException) e).getTargetException()
-	//if (IsEmpty(terr.Error(), true) == false) { //到处把函数声明error改成error挺麻烦
-	//e = te instanceof Exception ? (Exception) te : new Exception(terr.Error())
-	//}
-	//e = new IllegalArgumentException("字符 " + methodName + " 对应的方法传参类型错误！"
-	//+ "\n请检查 key:value 中value的类型是否满足已定义的函数的要求！\n" + err.Error())
-	//}
 
 	var duration = endTime - startTime
 	var throwName = reflect.TypeOf(err).String() // e.getClass().getTypeName(
@@ -1024,21 +1014,15 @@ func getInvokeResult(typ reflect.Value, returnType reflect.Type, methodName stri
 		var result = map[string]any{}
 		var t = method.Type() // nil
 
-		var s = ""
-		var numOut = 0
-		if t != nil {
-			numOut = t.NumOut()
-			for i := 0; i < numOut; i++ {
-				if i > 0 {
-					s += ","
-				}
-				s += trimReflectType(t.Out(i))
+		if t != nil && t.NumOut() > 0 {
+			var ts = make([]string, t.NumOut())
+			for i := 0; i < t.NumOut(); i++ {
+				ts[i] = trimReflectType(t.Out(i))
 			}
-			//if t.NumOut() > 0 {
-			//	s = "(" + s + ")"
-			//}
-			if len(s) > 0 {
-				result[KEY_TYPE] = s //给 UnitAuto 共享用的 trimType(val.getClass()))
+			if len(ts) > 1 {
+				result[KEY_TYPE] = ts
+			} else if len(ts) == 1 {
+				result[KEY_TYPE] = ts[0]
 			}
 		}
 
@@ -1054,9 +1038,10 @@ func getInvokeResult(typ reflect.Value, returnType reflect.Type, methodName stri
 				var v = args[i]
 				finalMethodArgs = append(finalMethodArgs, parseJSON(t.String(), v))
 			}
+
+			result[KEY_METHOD_ARGS] = finalMethodArgs
 		}
 
-		result[KEY_METHOD_ARGS] = finalMethodArgs
 		result[KEY_TIME_DETAIL] = fmt.Sprint(startTime) + "|" + fmt.Sprint(duration) + "|" + fmt.Sprint(endTime)
 
 		if listener != nil {
@@ -1160,16 +1145,23 @@ func getInvokeResult(typ reflect.Value, returnType reflect.Type, methodName stri
 										lm[ck] = func(data any, method *reflect.Method, proxy *InterfaceProxy, extras ...any) error {
 											var fcm = value.(map[string]any)
 
-											var cm = GetArr(fcm, KEY_CALL_MAP)
+											var cm = GetMap(fcm, KEY_CALL_MAP)
 											var cl = GetArr(fcm, KEY_CALL_LIST)
 
 											var cm2, exist = proxy.Get(KEY_CALL_MAP)
 											if exist {
-												fcm[KEY_CALL_MAP] = append(cm, cm2)
+												if len(cm) <= 0 {
+													cm = cm2.(map[string]any)
+												} else {
+													for k, v := range cm2.(map[string]any) {
+														cm[k] = v
+													}
+												}
+												fcm[KEY_CALL_MAP] = cm
 											}
 											var cl2, exist3 = proxy.Get(KEY_CALL_LIST)
 											if exist3 {
-												fcm[KEY_CALL_LIST] = append(cl, cl2)
+												fcm[KEY_CALL_LIST] = append(cl, cl2.([]any)...)
 											}
 
 											args[callbackIndex] = fcm
@@ -1860,25 +1852,14 @@ func mockValue(typ reflect.Type, genericType reflect.Type, depth int) any {
 		}
 		return int(sign * 10 * r)
 	}
-	//if kind == reflect.Int32 || typStr == "int32" {
-	//	if sign < 0 {
-	//		return int32(sign * 2.0 * r)
-	//	}
-	//	return int32(sign * 10 * r)
-	//}
+
 	if kind == reflect.Int64 || kind == reflect.Uint64 || typStr == "int64" {
 		if sign < 0 {
 			return int64(sign * 10 * r)
 		}
 		return int64(sign * 100 * r)
 	}
-	//if kind == reflect.Float32 || typStr == "float32" {
-	//	if sign < 0 {
-	//		return float32(sign * 10 * r)
-	//	}
-	//	return float32(sign * 100 * r)
-	//}
-	if kind == reflect.Float64 || typStr == "float64" {
+	if kind == reflect.Float32 || kind == reflect.Float64 || typStr == "int32" || typStr == "float64" {
 		if sign < 0 {
 			return float64(sign * 10 * r)
 		}
@@ -1918,8 +1899,14 @@ func mockValue(typ reflect.Type, genericType reflect.Type, depth int) any {
 			rs[j] = mockValue(rt, rt, depth-1)
 		}
 
-		obj[KEY_TYPE] = strings.Join(ts, ",")
-		obj[KEY_RETURN] = rs
+		if len(ts) > 1 {
+			obj[KEY_TYPE] = ts
+			obj[KEY_RETURN] = rs
+		} else if len(ts) == 1 {
+			obj[KEY_TYPE] = ts[0]
+			obj[KEY_RETURN] = rs[0]
+		}
+
 		obj[KEY_CALLBACK] = true
 		return obj
 	}
@@ -1971,11 +1958,17 @@ func mockValue(typ reflect.Type, genericType reflect.Type, depth int) any {
 				rs[j] = mockValue(rt, rt, depth-1)
 			}
 
-			obj[n+")"] = map[string]any{
-				"type":     strings.Join(ts, ","),
-				"return":   rs,
-				"callback": true,
+			var om = map[string]any{}
+			if len(ts) > 1 {
+				om[KEY_TYPE] = ts
+				om[KEY_RETURN] = rs
+			} else if len(ts) == 1 {
+				om[KEY_TYPE] = ts[0]
+				om[KEY_RETURN] = rs[0]
 			}
+			om[KEY_CALLBACK] = true
+
+			obj[n+")"] = om
 		}
 
 		return obj
@@ -2935,23 +2928,25 @@ func (ip *InterfaceProxy) OnInvoke(method string, types []reflect.Type, args []a
 	var value any = nil     // callSuper ? super.invoke(proxy, method, args) : nil
 	if callSuper == false { //TODO default 方法如何执行里面的代码块？可能需要参考热更新，把方法动态加进去
 		//FIXME value = method.Func.Call(args)
-		if value == nil || len(value.([]reflect.Value)) <= 0 { //正常情况不会进这个分支，因为 interface 中 static 方法不允许用实例来调用
-
-		} else {
-			switch handlerValue.(type) {
-			case map[string]any:
-				var handler = handlerValue.(map[string]any)
-				value = handler[KEY_RETURN] //TODO 可能根据传参而返回不同值
-				typeStr = fmt.Sprint(handler[KEY_TYPE])
-			default:
-				value = handlerValue
-			}
+		//if value == nil || len(value.([]reflect.Value)) <= 0 { //正常情况不会进这个分支，因为 interface 中 static 方法不允许用实例来调用
+		//
+		//} else {
+		switch handlerValue.(type) {
+		case map[string]any:
+			var handler = handlerValue.(map[string]any)
+			value = handler[KEY_RETURN] //TODO 可能根据传参而返回不同值
+			typeStr = fmt.Sprint(handler[KEY_TYPE])
+		default:
+			value = handlerValue
 		}
+		//}
 	}
 
 	var methodObj = map[string]any{} //只需要简要信息	var methodObj = parseMethodObject(method)
 	methodObj[KEY_TIME] = time.Now().UnixMilli()
-	methodObj[KEY_RETURN] = value
+	if value != nil {
+		methodObj[KEY_RETURN] = value
+	}
 
 	var finalMethodArgs = make([]any, len(args)) // list.New()
 	if args != nil {
@@ -2964,21 +2959,25 @@ func (ip *InterfaceProxy) OnInvoke(method string, types []reflect.Type, args []a
 
 			finalMethodArgs[i] = parseJSON(t, v)
 		}
+
+		methodObj[KEY_METHOD_ARGS] = finalMethodArgs
 	}
-	methodObj[KEY_METHOD_ARGS] = finalMethodArgs
 
 	//方法调用记录列表分组对象，按方法分组，且每组是按调用顺序排列的数组，同一个方法可能被调用多次
 	cm, exists := ip.Get(KEY_CALL_MAP)
 	if exists == false || cm == nil {
 		cm = map[string]any{}
 	}
+
 	callMap := cm.(map[string]any)
-	var cList = GetArr(callMap, key)
-	if cList == nil {
-		cList = []any{}
+	var cl = callMap[key]
+	if cl == nil || len(cl.([]any)) <= 0 {
+		cl = []any{methodObj}
+	} else {
+		cl = append(cl.([]any), methodObj)
 	}
-	cList = append([]any{methodObj}, cList...) //倒序，因为要最上方显示最终状态
-	callMap[key] = cList
+
+	callMap[key] = cl //倒序，因为要最上方显示最终状态
 	ip.Set(KEY_CALL_MAP, callMap)
 
 	//方法调用记录列表，按调用顺序排列的数组，同一个方法可能被调用多次

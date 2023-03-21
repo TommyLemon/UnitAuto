@@ -55,6 +55,9 @@ func Init() {
 	unitauto.CLASS_MAP["test.Minus"] = test.Minus
 	unitauto.CLASS_MAP["test.Multiply"] = test.Multiply
 	unitauto.CLASS_MAP["test.Divide"] = test.Divide
+	unitauto.CLASS_MAP["test.TestGeneric"] = test.TestGeneric[float64, float64]
+	unitauto.CLASS_MAP["test.TestGeneric[int,int]"] = test.TestGeneric[int, int]
+	unitauto.CLASS_MAP["test.TestGeneric[int,float64]"] = test.TestGeneric[int, float64]
 	unitauto.CLASS_MAP["test.ComputeAsync"] = test.ComputeAsync
 	unitauto.CLASS_MAP["test.New"] = test.New
 	unitauto.CLASS_MAP["test.Compare"] = test.Compare
