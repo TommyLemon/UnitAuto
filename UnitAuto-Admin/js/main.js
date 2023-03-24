@@ -21,6 +21,7 @@
         var vComment = {value: ''};
         var vHeader = {value: ''};
         var vRandom = {value: ''};
+        var vScript = {value: ''};
         var vOutput = {value: ''};
 
         var vAccount = {value: ''};
@@ -527,6 +528,7 @@ https://github.com/Tencent/APIJSON/issues
           v = JSON.parse(v)
         }
         catch (e) {
+          console.log(e)
         }
       }
 
@@ -538,7 +540,7 @@ https://github.com/Tencent/APIJSON/issues
 
 
   function markdownToHTML(md, isRequest) {
-    if (editormd == null) {
+    if (typeof editormd == 'undefined' || editormd == null) {
       return;
     }
 
@@ -894,9 +896,7 @@ https://github.com/Tencent/APIJSON/issues
           "standard":"{\"notnull\":true,\"type\":\"object\",\"valueLevel\":0,\"values\":[{\"msg\":{\"notnull\":true,\"type\":\"string\",\"valueLevel\":3,\"values\":[],\"lengthLevel\":1,\"lengths\":[7]},\"type\":{\"notnull\":true,\"type\":\"string\",\"valueLevel\":3,\"values\":[],\"lengthLevel\":1,\"lengths\":[6]},\"return\":{\"notnull\":true,\"type\":\"number\",\"valueLevel\":1,\"values\":[0.5],\"lengthLevel\":1,\"lengths\":[1]},\"methodArgs\":{\"notnull\":true,\"type\":\"object\",\"valueLevel\":0,\"values\":[{\"0\":{\"notnull\":true,\"type\":\"object\",\"valueLevel\":0,\"values\":[{\"type\":{\"notnull\":true,\"type\":\"string\",\"valueLevel\":3,\"values\":[],\"lengthLevel\":1,\"lengths\":[4]},\"value\":{\"notnull\":true,\"type\":\"integer\",\"valueLevel\":0,\"values\":[1],\"lengthLevel\":1,\"lengths\":[]}}]},\"1\":{\"notnull\":true,\"type\":\"object\",\"valueLevel\":0,\"values\":[{\"type\":{\"notnull\":true,\"type\":\"string\",\"valueLevel\":3,\"values\":[],\"lengthLevel\":1,\"lengths\":[4]},\"value\":{\"notnull\":true,\"type\":\"integer\",\"valueLevel\":0,\"values\":[2],\"lengthLevel\":1,\"lengths\":[]}}]}}]}}],\"code\":200}"
         }
       },
-      currentRandomItem: {
-
-      },
+      currentRandomItem: {},
       isAdminOperation: false,
       loginType: 'login',
       isExportRemote: false,
@@ -943,7 +943,7 @@ https://github.com/Tencent/APIJSON/issues
       language: 'Java,Kotlin,Go', // CodeUtil.LANGUAGE_JAVA,
       header: {},
       page: 0,
-      count: 20,
+      count: 15,
       search: '',
       testCasePage: 0,
       testCaseCount: 50,
@@ -2188,6 +2188,8 @@ https://github.com/Tencent/APIJSON/issues
           const after = isSingle ? this.switchQuote(inputted) : inputted;  // this.toDoubleJSON(inputted);
           const inputObj = this.getRequest(after, {});
 
+          const rawInputStr = JSON.stringify(inputObj)
+
           var commentObj = null;
           if (isExportRandom != true) {
             var m = this.getMethod();
@@ -2199,7 +2201,7 @@ https://github.com/Tencent/APIJSON/issues
               log(e)
             }
             var code_ = inputObj.code
-            inputObj.code = null  // delete inputObj.code
+            inputObj.code = null // delete inputObj.code
 
             commentObj = JSONResponse.updateStandard(commentStddObj, inputObj);
             CodeUtil.parseComment(after, docObj == null ? null : docObj['[]'], m, this.database, this.language, isEditResponse != true, commentObj, true);
@@ -2207,10 +2209,11 @@ https://github.com/Tencent/APIJSON/issues
             inputObj.code = code_
           }
 
+          var rawRspStr = JSON.stringify(currentResponse || {})
           const code = currentResponse.code;
           const thrw = currentResponse.throw;
-          delete currentResponse.code; //code必须一致
-          delete currentResponse.throw; //throw必须一致
+          delete currentResponse.code; // currentResponse.code = null; //code必须一致
+          delete currentResponse.throw; // currentResponse.throw = null; // throw必须一致
 
           var rsp = JSON.parse(JSON.stringify(currentResponse || {}))
           rsp = JSONResponse.array2object(rsp, 'methodArgs', ['methodArgs'], true)
@@ -2342,7 +2345,7 @@ https://github.com/Tencent/APIJSON/issues
                 config: config
               },
               'TestRecord': {
-                'response': JSON.stringify(currentResponse),
+                'response': rawRspStr,
                 'standard': isML ? JSON.stringify(stddObj) : null
               },
               'tag': 'Random'
@@ -2367,7 +2370,7 @@ https://github.com/Tencent/APIJSON/issues
                 'randomId': 0,
                 'host': App.getBaseUrl(),
 //                'testAccountId': currentAccountId,
-                'response': JSON.stringify(isEditResponse ? inputObj : currentResponse),
+                'response': isEditResponse ? rawInputStr : rawRspStr,
                 'standard': isML || isEditResponse ? JSON.stringify(isEditResponse ? commentObj : stddObj) : undefined
                 // 没必要，直接都在请求中说明，查看也方便 'detail': (isEditResponse ? App.getExtraComment() : null) || ((App.currentRemoteItem || {}).TestRecord || {}).detail,
               },
@@ -5412,7 +5415,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
       	var isTSQL = ['ORACLE', 'DAMENG'].indexOf(this.database) >= 0
       	var isNotTSQL = ! isTSQL
-        var count = 15 // this.count || 20  //超过就太卡了
+        var count = this.count || 15  //超过就太卡了
         var page = this.page || 0
 
         var search = StringUtil.isEmpty(this.search, true) ? null : StringUtil.trim(this.search)
@@ -7604,16 +7607,18 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           }
         }
         else {
-          var standardKey = this.isMLEnabled != true ? 'response' : 'standard'
-          var rsp = tr[standardKey]
-          var standard = typeof rsp != 'string' ? rsp : (StringUtil.isEmpty(rsp, true) ? null : JSON.parse(rsp))
+          var isML = this.isMLEnabled
+          var standardKey = isML ? 'standard' : 'response'
+          var stdd = tr[standardKey]
+          var standard = typeof stdd != 'string' ? stdd : (StringUtil.isEmpty(stdd, true) ? null : JSON.parse(stdd))
 
           var rsp = JSON.parse(JSON.stringify(this.removeDebugInfo(response) || {}))
-          rsp = JSONResponse.array2object(rsp, 'methodArgs', ['methodArgs'], true)
-          rsp = JSONResponse.array2object(rsp, 'return', ['return'], true)
-          rsp = JSONResponse.array2object(rsp, 'type', ['type'], true)
-
-          tr.compare = JSONResponse.compareResponse(standard, rsp, '', this.isMLEnabled, null, ['call()[]'], ignoreTrend) || {}
+          if (isML) {
+            rsp = JSONResponse.array2object(rsp, 'methodArgs', ['methodArgs'], true)
+            rsp = JSONResponse.array2object(rsp, 'return', ['return'], true)
+            rsp = JSONResponse.array2object(rsp, 'type', ['type'], true)
+          }
+          tr.compare = JSONResponse.compareResponse(standard, rsp, '', isML, null, ['call()[]'], ignoreTrend) || {}
           tr.compare.duration = it.durationHint
         }
 
@@ -8091,6 +8096,8 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           isRandom ? (random.id > 0 ? random.id : (random.toId + '' + random.id)) : 0
         ] || {}
 
+        var rawRspStr = JSON.stringify(currentResponse)
+
         const list = isRandom ? (random.toId == null || random.toId <= 0 ? this.randoms : this.randomSubs) : this.testCases
 
         var isBefore = item.showType == 'before'
@@ -8098,8 +8105,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           item.showType = isBefore ? 'after' : 'before'
           Vue.set(list, index, item);
 
-          var res = isBefore ? JSON.stringify(currentResponse) : testRecord.response
-
+          var res = isBefore ? rawRspStr : testRecord.response
           this.view = 'code'
           this.jsoncon = res || ''
         }
@@ -8147,7 +8153,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 item.TestRecord = null
               }
 
-              App.updateTestRecord(0, list, index, item, currentResponse, isRandom, true, App.currentAccountIndex, isCross)
+              App.updateTestRecord(0, list, index, item, JSON.parse(rawRspStr), isRandom, true, App.currentAccountIndex, isCross)
             })
           }
           else { //上传新的校验标准
@@ -8194,7 +8200,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             }
             else {
               standard = (StringUtil.isEmpty(testRecord.standard, true) ? null : JSON.parse(testRecord.standard)) || {}
-              stddObj = JSONResponse.updateFullStandard(standard, currentResponse, isML)
+              stddObj = JSONResponse.updateFullStandard(standard, JSON.parse(rawRspStr), isML)
             }
 
             const isNewRandom = isRandom && random.id <= 0
@@ -8224,7 +8230,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 host: this.getBaseUrl(),
                 testAccountId: this.getCurrentAccountId(),
                 compare: JSON.stringify(testRecord.compare || {}),
-                response: JSON.stringify(currentResponse || {}),
+                response: rawRspStr,
                 standard: isML ? JSON.stringify(stddObj) : null
               },
               tag: isNewRandom ? 'Random' : 'TestRecord'
@@ -8268,7 +8274,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                     code: 0,
                     msg: '结果正确'
                   }
-                  testRecord.response = JSON.stringify(currentResponse)
+                  testRecord.response = rawRspStr
                   // testRecord.standard = stdd
                 }
 
@@ -8297,7 +8303,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 //   }
                 // }
 
-                App.updateTestRecord(0, list, index, item, currentResponse, isRandom, true, App.currentAccountIndex, isCross)
+                App.updateTestRecord(0, list, index, item, JSON.parse(rawRspStr), isRandom, true, App.currentAccountIndex, isCross)
               }
 
             })
