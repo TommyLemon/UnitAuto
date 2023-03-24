@@ -541,7 +541,7 @@ var JSONResponse = {
       }
       else if (max.code < JSONResponse.COMPARE_KEY_MORE && real.length > target.length) {
         max = {
-          code: JSONResponse.COMPARE_KEY_LESS,
+          code: JSONResponse.COMPARE_KEY_MORE,
           msg: '是新增的',
           path: JSONResponse.getAbstractPath(folder, target.length),
           value: real[target.length]
