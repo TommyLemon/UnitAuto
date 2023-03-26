@@ -17,6 +17,7 @@ if (typeof window == 'undefined') {
     eval(`
       var StringUtil = require("./StringUtil");
       var JSONObject = require("./JSONObject");
+      var JSON5 = require('json5');
     `)
   } catch (e) {
     console.log(e)
@@ -5881,7 +5882,7 @@ var CodeUtil = {
     OWNER: '拥有者',
     ADMIN: '管理员'
   },
-  DATABASE_KEYS: ['MYSQL', 'POSTGRESQL', 'SQLSERVER', 'ORACLE', 'DB2', 'DAMENG', 'CLICKHOUSE', 'SQLITE', 'TDENGINE'],
+  DATABASE_KEYS: ['MYSQL', 'POSTGRESQL', 'SQLSERVER', 'ORACLE', 'DB2', 'DAMENG', 'KINGBASE', 'MARIADB', 'SQLITE', 'INFLUXDB', 'TDENGINE', 'PRESTO', 'TRINO', 'HIVE', 'TIDB', 'CLICKHOUSE', 'ELASTICSEARCH', 'REDIS'], // , 'KAFKA'],
 
   getComment4Function: function (funCallStr, method, language) {
     if (typeof funCallStr != 'string') {
