@@ -7646,6 +7646,10 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           var isML = this.isMLEnabled
           var standardKey = isML ? 'standard' : 'response'
           var stdd = tr[standardKey]
+          if (isRandom) {
+            stdd = stdd || ((this.currentRemoteItem || {}).TestRecord || {})[standardKey]
+          }
+          
           var standard = typeof stdd != 'string' ? stdd : (StringUtil.isEmpty(stdd, true) ? null : JSON.parse(stdd))
 
           var rsp = JSON.parse(JSON.stringify(this.removeDebugInfo(response) || {}))
@@ -8142,6 +8146,10 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           Vue.set(list, index, item);
 
           var res = isBefore ? rawRspStr : testRecord.response
+          if (isRandom && ! isBefore) {
+            res = res || ((this.currentRemoteItem || {}).TestRecord || {}).response
+          }
+
           this.view = 'code'
           this.jsoncon = res || ''
         }
