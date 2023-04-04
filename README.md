@@ -443,10 +443,10 @@ https://github.com/TommyLemon/APIAuto/issues/12
 https://github.com/TommyLemon/APIAuto/issues/13
 
 #### 5.如何统计行覆盖率/分支覆盖率？
-Java/Kotlin 可以用 Jacoco(on the fly 动态插桩模式)  <br />
+Java/Kotlin 可以用 Jacoco(on-the-fly 运行时动态插桩模式)  <br />
 https://www.jacoco.org/jacoco/trunk/doc/agent.html  <br />
 https://www.jacoco.org/jacoco/trunk/doc/cli.html  <br />
-  <br />
+<br />
 还可以搜索并参考 "Jacoco" 相关文章，例如：  <br />
 Java 覆盖率 Jacoco 插桩的不同形式总结和踩坑记录  <br />
 https://testerhome.com/topics/20632
