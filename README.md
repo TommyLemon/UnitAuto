@@ -442,6 +442,16 @@ https://github.com/TommyLemon/APIAuto/issues/12
 托管服务地址改为 http://47.98.196.224:8080  <br />
 https://github.com/TommyLemon/APIAuto/issues/13
 
+#### 5.如何统计行覆盖率/分支覆盖率？
+Java/Kotlin 可以用 Jacoco(on the fly 动态插桩模式)
+https://www.jacoco.org/jacoco/trunk/doc/agent.html
+https://www.jacoco.org/jacoco/trunk/doc/cli.html
+
+还可以搜索并参考 "Jacoco" 相关文章，例如：
+Java 覆盖率 Jacoco 插桩的不同形式总结和踩坑记录
+https://testerhome.com/topics/20632
+
+
 更多常见问题 <br />
 https://github.com/TommyLemon/APIAuto/issues
 
