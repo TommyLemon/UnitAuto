@@ -355,7 +355,7 @@ unitauto.test.TestUtil.computeAsync
 
 
 对应调用 Java 方法  <br />
-unitauto.test.TestUtil.divide(double, double)
+unitauto.test.TestUtil.computeAsync(long, long, Callback)
 ```java
 	public static Number computeAsync(long a, long b, Callback callback) {
 
