@@ -180,8 +180,8 @@
               <li v-for="(item, index) in testCases" :id="'docItem' + index" >
                   <div style="display: inline-table; height: 24px">
                       <div style="display: inline-flex; height: 100%">
-                          <a class="hint--rounded hint--no-animate" style="position: absolute; left: 10px; top: 6px; font-size: small; color: dimgray" ref="testCaseMethodTexts" @mouseover="setRequestHint(index, item)" href="javascript:void(0)" @click="restoreRemote(index, item)" :style="{ color: index == currentDocIndex ? 'black' : 'gray' }" >{{item.Method.defination + (StringUtil.isEmpty(item.Method.detail) || item.Method.detail == item.Method.method ? '' : '  // ' + StringUtil.trim(item.Method.detail))}}</a>
-                          <a class="hint--rounded hint--no-animate" style="position: absolute; left: 10px; bottom: 4px; font-size: small" ref="testCaseClassTexts" @mouseover="setRequestHint(index, item, false, true)" href="javascript:void(0)" @click="restoreRemote(index, item)" :style="{ color: index == currentDocIndex ? 'black' : 'gray' }" >{{item.Method.package + '.' + item.Method.class + (StringUtil.isEmpty(item.Method.cttr, true) ? '' : '.' + item.Method.cttr) + (item.Method.static && StringUtil.isEmpty(item.Method.cttr, true) ? '' : '(' + StringUtil.trim(item.Method.constructorArguments) + ')')}}</a>
+                          <a class="hint--rounded hint--no-animate" style="position: absolute; left: 10px; top: 6px; font-size: small; color: dimgray" ref="testCaseMethodTexts" @mouseover="setRequestHint(index, item)" href="javascript:void(0)" @click="restoreRemote(index, item)" :style="{ color: index == currentDocIndex ? 'black' : 'gray' }" >{{getMethodDefinition(item.Method) + (StringUtil.isEmpty(item.Method.detail) || item.Method.detail == item.Method.method ? '' : ' // ' + StringUtil.trim(item.Method.detail))}}</a>
+                          <a class="hint--rounded hint--no-animate" style="position: absolute; left: 10px; bottom: 4px; font-size: small" ref="testCaseClassTexts" @mouseover="setRequestHint(index, item, false, true)" href="javascript:void(0)" @click="restoreRemote(index, item)" :style="{ color: index == currentDocIndex ? 'black' : 'gray' }" >{{item.Method.package + '.' + item.Method.class + (StringUtil.isEmpty(item.Method.cttr, true) ? '' : '.' + item.Method.cttr) + (item.Method.static && StringUtil.isEmpty(item.Method.cttr, true) ? '' : '(' + StringUtil.trim(getArgumentTypes(item.Method, true)) + ')')}}</a>
                       </div>
 
                       <div :style="{ background: item.compareColor }" v-show="item.compareType != null" style="position: absolute; top: 4px; bottom: 4px; right: 36px; display: inline-block;">
@@ -308,7 +308,7 @@ Ctrl + S 或 Command + S 保存当前用例；
 {
     "static": true,
     "methodArgs": [
-        {  // 可省略来自动判断的 type : Boolean,Integer,BigDecimal,String,JSONObject,JSONArray
+        {  // 可省略来自动判断的 type: Boolean,Integer,BigDecimal,String,JSONObject,JSONArray
             "type": "long",
             "value": 1
         },
@@ -972,6 +972,46 @@ fun(true, 1, 'a'..);
 
   var lang = App == null ? null : App.language;
   vUrl.value = lang == CodeUtil.LANGUAGE_GO ? 'test.Divide.Divide' : 'unitauto.test.TestUtil.divide'  //main.js里访问不到，可能是script引用顺序问题
+  vInput.value = (lang == CodeUtil.LANGUAGE_GO ? `{
+    "methodArgs": [
+        {  // 可省略来自动判断的 type: bool,float64,string,map[string]any,[]any
+            "type": "int",
+            "value": 1
+        },
+        {  // 这个对象还可以简化为 "int:2" 这种字符串形式，方便手动调试。在键值对后按 Enter 回车键自动智能生成补全提示
+            "type": "int",
+            "value": 2
+        }
+    ]
+}` : `{
+    "static": true,
+    "methodArgs": [
+        {  // 可省略来自动判断的 type: Boolean,Integer,BigDecimal,String,JSONObject,JSONArray
+            "type": "long",
+            "value": 1
+        },
+        {  // 这个对象还可以简化为 "int:2" 这种字符串形式，方便手动调试。在键值对后按 Enter 回车键自动智能生成补全提示
+            "type": "long",
+            "value": 2
+        }
+    ]
+}`) + `
+
+/*
+以上 JSON 文本支持 JSON5 格式。清空文本内容可查看规则。
+注释可省略。行注释前必须有 1 个空格；段注释必须在 JSON 下方。
+
+## 快捷键
+Ctrl + I 或 Command + I 格式化输入框，清除所有注释和无效空格、换行等；
+Ctrl + / 或 Command + / 对选中行 新增行注释 或 取消行注释；
+Ctrl + D 或 Command + D 删除 选中行；
+Ctrl + S 或 Command + S 保存当前用例；
+
+#### 右上角设置项 > 预览请求输入框，显示对应的预览效果
+*/
+
+
+`
 
   var vRequestMarkdown = document.getElementById('vRequestMarkdown');
   var vMarkdown = document.getElementById('vMarkdown');

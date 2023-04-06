@@ -3205,12 +3205,12 @@ https://github.com/Tencent/APIJSON/issues
               'count': this.testCaseCount || 100, //200 条测试直接卡死 0,
               'page': this.testCasePage || 0,
               'Method': Object.assign({  // 不管是 item.Method.constructor 还是 item.Method['constructor'] 都取到了 js 语言构造器而不是 JSON 中的 value
-                '@column': 'id,userId,static,ui,type,genericType,package,class,constructor:cttr,classArgs,genericClassArgs,method,methodArgs,genericMethodArgs,exceptions,genericExceptions,request,demo,detail,date',
+                '@column': 'id,userId,language,static,ui,type,genericType,package,class,constructor:cttr,classArgs,genericClassArgs,method,methodArgs,genericMethodArgs,exceptions,genericExceptions,request,demo,detail,date',
                 '@order': 'date-',
                 'userId{}': [0, this.User.id],
-                'arguments()': 'getMethodArguments(genericMethodArgs)',
-                'defination()': 'getMethodDefination(method,arguments,type,exceptions,null)',
-                'constructorArguments()': 'getMethodArguments(genericClassArgs)',
+                // 'arguments()': 'getMethodArguments(genericMethodArgs)',
+                // 'defination()': 'getMethodDefination(method,arguments,type,exceptions,null)',
+                // 'constructorArguments()': 'getMethodArguments(genericClassArgs)',
                 'request()': 'getMethodRequest()',
                 'language{}': langauges,
                 // 'language|{}': "find_in_set('" + langauges[0] + "',language)",
@@ -5495,7 +5495,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             		'@raw': '@column',
             		'@column': "DISTINCT package,class,constructor;(CASE genericClassArgs WHEN '[]' THEN NULL ELSE genericClassArgs END):genericClassArgs",
             		'@order': 'class+,constructor+,genericClassArgs+',
-            		'arguments()': 'getMethodArguments(genericClassArgs)'
+            		// 'arguments()': 'getMethodArguments(genericClassArgs)'
             	}, condition),
             	'Method:count': Object.assign({
             		'package@': '[]/Method/package',
@@ -5587,12 +5587,11 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         				  log('getDoc [] for ' + i + ': columnList = \n' + format(JSON.stringify(columnList)));
         			  }
 
-        			  var name;
         			  for (var j = 0; j < columnList.length; j++) {
         				  column = columnList[j];
         				  //class
-        				  clazz = column == null ? null : column.Method;
-        				  cls = clazz == null ? null : clazz['class'];
+        				  var clazz = column == null ? null : column.Method;
+        				  var cls = clazz == null ? null : clazz['class'];
         				  if (StringUtil.isEmpty(cls, true)) {
         					  continue;
         				  }
@@ -5602,7 +5601,12 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         				  }
 
         				  doc += '\n' + (j + 1) + ') ' + cls;
-        				  if (StringUtil.isEmpty(clazz.arguments, true) == false) {
+                          var args = clazz.arguments
+                          if (StringUtil.isEmpty(args, true) == false) {
+                            args = App.getArgumentTypes(clazz, true);
+                          }
+
+        				  if (StringUtil.isEmpty(args, true) == false) {
         					  doc += '(' + StringUtil.get(clazz.arguments) + ')';
         				  }
 
@@ -6522,10 +6526,78 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           if (item == null || item.method == null) {
             continue
           }
-          doc += '\n\n#### ' + item.method  + '    ' + item.defination
+          doc += '\n\n#### ' + item.method  + '    ' + this.getMethodDefinition(item) // item.defination
           doc += '\n```json\n' + item.request + '\n```\n'
         }
         return doc
+      },
+
+      getArgumentTypes: function (method, isClass) {
+        var curObj = method || {}
+        var types = curObj.arguments || '';
+        if (StringUtil.isEmpty(types, true)) {
+          var args = isClass ? (curObj.genericClassArgs || curObj.classArgs) : (curObj.genericMethodArgs || curObj.methodArgs)
+          if (args instanceof Array == false || args.length <= 0) {
+            var req = this.getRequest(method.request, {});
+            args = isClass ? req.classArgs : req.methodArgs;
+          }
+
+          if (args instanceof Array) {
+            var l = method.language || this.language
+
+            for (var i = 0; i < args.length; i++) {
+              var arg = args[i];
+              var type = JSONResponse.getType(arg);
+              var t = null;
+              if (type == 'string' && arg != null) {
+                var ind = arg.indexOf(':');
+                t = ind < 0 ? null : arg.substring(0, ind).trim().toLowerCase();
+                if (t == null || t == '') {
+                  t = CodeUtil.getType4String(l);
+                }
+              }
+              else if (type == 'object' && arg != null) {
+                t = arg.type;
+                if (t == null) {
+                  t = CodeUtil.getType4Language(l, JSONResponse.getType(arg.value), false);
+                }
+              }
+              else {
+                t = CodeUtil.getType4Language(l, JSONResponse.getType(arg), false);
+              }
+
+              types += (i <= 0 ? '' : ',') + (t == null ? CodeUtil.getType4Any(l) : t);
+            }
+          }
+        }
+        return types;
+      },
+
+      getMethodDefinition: function (method, isClass) {
+        var curObj = method || {}
+        var n = curObj.method || curObj.name;
+        if (StringUtil.isEmpty(n, true)) {
+          throw new Error("getMethodDefinition  StringUtil.isEmpty(n, true) !");
+        }
+        var a = this.getArgumentTypes(method, isClass);
+
+        var t = curObj.type;
+        var e = curObj.exceptions;
+        // var l = curObj.language || '';
+
+        // 同一格式更好
+        // switch (l) {
+        //   case CodeUtil.LANGUAGE_TYPE_SCRIPT:
+        //     return n + "(" + (StringUtil.isEmpty(a, true) ? "" : a) + ")" + (StringUtil.isEmpty(t, true) ? "" : ": " + t) + (StringUtil.isEmpty(e, true) ? "" : " throws " + e);
+        //   case CodeUtil.LANGUAGE_GO:
+        //     var isMulti = t != null && t.indexOf(',') > 0;
+        //     return n + "(" + (StringUtil.isEmpty(a, true) ? "" : a ) + ")" + (StringUtil.isEmpty(t, true) ? "" : " " + (isMulti ? '(' + t + ')' : t));
+        //   default:
+            //类型可能很长，Eclipse, Idea 代码提示都是类型放后面			return (StringUtil.isEmpty(t, true) ? "" : t + " ") + n + "(" + (StringUtil.isEmpty(a, true) ? "" : a) + ")";
+            // return n + "(" + (StringUtil.isEmpty(a, true) ? "" : a) + ")" + (StringUtil.isEmpty(t, true) ? "" : ": " + t) + (StringUtil.isEmpty(e, true) ? "" : " throws " + e);
+        // }
+
+        return n + "(" + (StringUtil.isEmpty(a, true) ? "" : a) + ")" + (StringUtil.isEmpty(t, true) ? "" : ": " + t) + (StringUtil.isEmpty(e, true) ? "" : " # " + e);
       },
 
       enableCross: function (enable) {
@@ -8400,17 +8472,40 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             return '';
           }
 
-          var req = this.getRequest(d.request, {});
-          var args = req[isClass ? 'classArgs' : 'methodArgs']
+          var args = isClass ? (d.genericClassArgs || d.classArgs) : (d.genericMethodArgs || d.methodArgs);
+          if (args instanceof Array == false || args.length <= 0) {
+            var req = this.getRequest(d.request, {});
+            args = isClass ? req.classArgs : req.methodArgs;
+          }
 
-          var s = '('
+          var s = '(';
           if (args != null) {
-            for (var i in args) {
-              var val = (args[i] || {}).value
-              s += (i <= 0 ? '' : ', ') + (val == null ? 'null' : JSON.stringify(val, null, ' '))
+            var l = d.language || this.language
+
+            for (var i = 0; i < args.length; i ++) {
+              var arg = args[i];
+              var type = JSONResponse.getType(arg);
+              var val = type == 'object' ? (arg || {}).value : arg;
+
+              if (type == 'string' && arg != null) {
+                var ind = arg.indexOf(':');
+                var t = ind < 0 ? null : arg.substring(0, ind).trim().toLowerCase();
+                val = ind < 0 ? arg : arg.substring(ind + 1);
+
+                if (t != '' && t != 'string' && t != 'str') {
+                  try {
+                    val = JSON.parse(val);
+                  } catch (e) {
+                    log(e)
+                  }
+                }
+              }
+
+              s += (i <= 0 ? '' : ', ') + (val == null ? CodeUtil.getCode4Value(l, null) : JSON.stringify(val, null, ' '));
             }
           }
-          s += ')'
+          s += ')';
+
           this.$refs[isClass ? 'testCaseClassTexts' : 'testCaseMethodTexts'][index].setAttribute('data-hint', s);
         }
       },
