@@ -6614,6 +6614,16 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         //   this.isEnvCompareEnabled = false
         //   this.saveCache(this.server, 'isEnvCompareEnabled', this.isEnvCompareEnabled)
         // }
+
+        var accountIndex = this.currentAccountIndex
+        if (accountIndex == -1) {
+          this.logoutSummary = this.resetCount(this.logoutSummary, false, accountIndex)
+        }
+        else if (accountIndex >= 0 && accountIndex < (this.accounts || []).length) {
+          var accountItem = this.resetCount(this.getSummary(accountIndex), false, accountIndex)
+          this.accounts[accountIndex] = accountItem
+        }
+
         this.remotes = null
         this.showTestCase(true, false)
       },
