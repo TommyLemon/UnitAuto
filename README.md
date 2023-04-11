@@ -6,6 +6,7 @@
 <p align="center">零代码、全方位、自动化 测试 方法/函数 的正确性、可用性和性能</p>
 <p align="center" >
   <a href="https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo"><img src="https://img.shields.io/badge/Java-1.8%2B-brightgreen.svg?style=flat"></a>
+  <a href="https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Java-Demo"><img src="https://img.shields.io/badge/Kotlin-1.2%2B-brightgreen.svg?style=flat"></a>
   <a href="https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Go"><img src="https://img.shields.io/badge/Go-1.20%2B-brightgreen.svg?style=flat"></a>
   <a href="https://github.com/TommyLemon/UnitAuto/tree/master/UnitAuto-Android"><img src="https://img.shields.io/badge/Android-26%2B-brightgreen.svg?style=flat"></a>
 </p>
