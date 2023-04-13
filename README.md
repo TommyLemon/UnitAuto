@@ -250,11 +250,11 @@ https://github.com/TommyLemon/UnitAuto/blob/master/README.md#%E8%BF%9C%E7%A8%8B%
 #### 2.调用 /delegate 代理接口来录制请求的方法、参数、响应等信息
 https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server/APIJSONBoot-MultiDataSource#%E4%BB%A3%E7%90%86%E6%8E%A5%E5%8F%A3%E5%8F%8A%E5%BD%95%E5%88%B6%E6%B5%81%E9%87%8F
 
-#### 3.打开分享链接来自动填充 URL、参数 JSON、请求头、参数注入配置、设置项 等
+#### 3.打开分享链接来自动填充 方法 URI、参数 JSON、请求头、参数注入配置、设置项 等
 例如：
 http://apijson.cn/unit/?send=true&type=JSON&url=unitauto.test.TestUtil.minus&json={%22static%22:true,%22methodArgs%22:[{%22type%22:%22long%22,%22value%22:1},{%22type%22:%22long%22,%22value%22:2}]}
 
-#### 4.在界面手动填写 URI、参数 JSON 等再点击上传/分享按钮
+#### 4.在界面手动填写 方法 URI、参数 JSON 等再点击上传/分享按钮
 可点击分享按钮生成分享链接，用浏览器打开即可自动填充。
 
 <br />
