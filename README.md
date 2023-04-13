@@ -252,7 +252,7 @@ https://github.com/APIJSON/APIJSON-Demo/tree/master/APIJSON-Java-Server/APIJSONB
 
 #### 3.打开分享链接来自动填充 URL、参数 JSON、请求头、参数注入配置、设置项 等
 例如：
-https://apijson.cn/unit/?send=true&type=JSON&url=unitauto.test.TestUtil.minus&json={%22static%22:true,%22methodArgs%22:[{%22type%22:%22long%22,%22value%22:1},{%22type%22:%22long%22,%22value%22:2}]}
+http://apijson.cn/unit/?send=true&type=JSON&url=unitauto.test.TestUtil.minus&json={%22static%22:true,%22methodArgs%22:[{%22type%22:%22long%22,%22value%22:1},{%22type%22:%22long%22,%22value%22:2}]}
 
 #### 4.在界面手动填写 URI、参数 JSON 等再点击上传/分享按钮
 可点击分享按钮生成分享链接，用浏览器打开即可自动填充。
