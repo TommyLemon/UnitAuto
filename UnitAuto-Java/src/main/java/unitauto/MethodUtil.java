@@ -127,6 +127,7 @@ public class MethodUtil {
 	public static String KEY_STATIC = "static";
 	public static String KEY_NAME = "name";
 	public static String KEY_METHOD = "method";
+	public static String KEY_TRACE = "trace";
 	public static String KEY_MOCK = "mock";
 	public static String KEY_QUERY = "query";
 	public static String KEY_RETURN = "return";
@@ -422,6 +423,7 @@ public class MethodUtil {
 		String clsName = req.getString(KEY_CLASS);
 		String cttName = req.getString(KEY_CONSTRUCTOR);
 		String methodName = req.getString(KEY_METHOD);
+		Boolean trace = req.getBoolean(KEY_TRACE);
 
 		long startTime = System.currentTimeMillis();
 		try {
@@ -477,7 +479,7 @@ public class MethodUtil {
 							e.printStackTrace();
 						}
 
-						completeWithError(pkgName, clsName, methodName, startTime, new TimeoutException("处理超时，应该在期望时间 " + timeout + "ms 内！"), listener);
+						completeWithError(pkgName, clsName, methodName, startTime, new TimeoutException("处理超时，应该在期望时间 " + timeout + "ms 内！"), listener, trace);
 					}
 				}, timeout, Long.MAX_VALUE);
 			}
@@ -528,7 +530,7 @@ public class MethodUtil {
 				GLOBAL_CALLBACK_MAP.put(clazz, globalInterfaceProxy);
 			}
 
-			invokeMethod(clazz, instance, pkgName, clsName, methodName, methodArgs, listener, hasGlobalCallback ? globalInterfaceProxy : null);
+			invokeMethod(clazz, instance, pkgName, clsName, methodName, methodArgs, listener, hasGlobalCallback ? globalInterfaceProxy : null, trace);
 
 			// 后端服务只允许在当前线程执行，只有客户端才允许设置在 UI 线程(主线程) 执行
 			//			if (threadStr == null || THREAD_CURRENT_STRING.equals(threadStr) || THREAD_MAIN_STRING.equals(threadStr)) {
@@ -561,13 +563,13 @@ public class MethodUtil {
 			//			}
 		}
 		catch (Throwable e) {
-			completeWithError(pkgName, clsName, methodName, startTime, e, listener);
+			completeWithError(pkgName, clsName, methodName, startTime, e, listener, trace);
 		}
 	}
 
 
 	public static void invokeMethod(Class<?> clazz, final Object instance, String pkgName, String clsName
-			, String methodName, List<Argument> methodArgs, Listener<JSONObject> listener, InterfaceProxy globalInterfaceProxy) throws Exception {
+			, String methodName, List<Argument> methodArgs, Listener<JSONObject> listener, InterfaceProxy globalInterfaceProxy, Boolean trace) throws Exception {
 
 		long startTime = System.currentTimeMillis();
 		try {
@@ -584,6 +586,11 @@ public class MethodUtil {
 						result.put(KEY_THIS, parseJSON(instance.getClass(), instance)); //TODO InterfaceProxy proxy 改成泛型 I instance ？
 					}
 
+					if (trace != null && trace) {
+						Thread thread = Thread.currentThread();
+						result.put(KEY_TRACE, thread.getStackTrace());
+					}
+
 					if (listener != null) {
 						listener.complete(result);
 					}
@@ -591,11 +598,11 @@ public class MethodUtil {
 			}, globalInterfaceProxy);
 		}
 		catch (Throwable e) {
-			completeWithError(pkgName, clsName, methodName, startTime, e, listener);
+			completeWithError(pkgName, clsName, methodName, startTime, e, listener, trace);
 		}
 	}
 
-	private static void completeWithError(String pkgName, String clsName, String methodName, long startTime, Throwable e, Listener<JSONObject> listener) {
+	private static void completeWithError(String pkgName, String clsName, String methodName, long startTime, Throwable e, Listener<JSONObject> listener, Boolean trace) {
 		long endTime = System.currentTimeMillis();
 		e.printStackTrace();
 		if (e instanceof NoSuchMethodException) {
@@ -619,7 +626,9 @@ public class MethodUtil {
 		result.put(KEY_TIME_DETAIL, startTime + "|" + duration + "|" + endTime);
 		result.put("throw", throwName);
 		result.put("cause", e.getCause());
-		result.put("trace", e.getStackTrace());
+		if (trace == null || trace) {
+			result.put(KEY_TRACE, e.getStackTrace());
+		}
 
 		if (listener != null) {
 			try {
