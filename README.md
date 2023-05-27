@@ -12,7 +12,7 @@
 </p>
 <p align="center" >
   <a href="https://github.com/TommyLemon/UnitAuto#%E9%9B%86%E6%88%90%E5%88%B0%E8%A2%AB%E6%B5%8B%E9%A1%B9%E7%9B%AE">使用文档</a>
-  <a href="https://www.bilibili.com/video/BV1Tk4y1R7Yo">视频教程</a>
+  <a href="https://search.bilibili.com/all?keyword=UnitAuto">视频教程</a>
   <a href="http://apijson.cn/unit">在线体验</a>
 </p>
 
@@ -117,6 +117,9 @@ https://www.bilibili.com/video/BV1Tk4y1R7Yo
 UnitAuto-异步回调方法的零代码单元测试 <br />
 https://www.bilibili.com/video/BV1kk4y1z7bW
 <br />
+
+其它
+https://search.bilibili.com/all?keyword=UnitAuto
 <br />
 
 ### 集成到被测项目
