@@ -2,7 +2,11 @@
 
 
 def test():
-    return 'ok'
+    return 'UnitAuto@Python'
+
+
+def hello(name: str = None) -> str:
+    return 'Hello, ' + ('UnitAuto' if name is None or len(name) <= 0 else name) + '!'
 
 
 def add(a, b):
@@ -25,7 +29,7 @@ def multiply(a, b):
     return a * b
 
 
-def divide(a, b):
+def divide(a: float, b: float):
     return a / b
 
 
