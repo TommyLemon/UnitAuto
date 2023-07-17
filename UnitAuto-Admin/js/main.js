@@ -7822,7 +7822,8 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
       compareResponse: function (allCount, list, index, item, response, isRandom, accountIndex, justRecoverTest, err, ignoreTrend, isCross, callback) {
         var it = item || {} //请求异步
-        var d = (isRandom ? this.currentRemoteItem.Method : it.Method) || {} //请求异步
+        var cri = this.currentRemoteItem || {} //请求异步
+        var d = (isRandom ? cri.Method : it.Method) || {} //请求异步
         var r = isRandom ? it.Random : null //请求异步
         var tr = it.TestRecord || {} //请求异步
 
