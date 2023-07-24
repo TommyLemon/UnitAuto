@@ -2830,16 +2830,16 @@ https://github.com/Tencent/APIJSON/issues
       },
 
       getArgs4Sync: function (typeList, valueList) {
-        if (typeList == null) {
+        var size = Math.max(typeList == null ? 0 : typeList.length, valueList == null ? 0 : valueList.length)
+        if (size <= 0) {
           return null
         }
 
-
         var args = []
-        for (var l = 0; l < typeList.length; l++) {
+        for (var l = 0; l < size; l++) {
 
-          var type = typeList[l] == null ? null : typeList[l]  //保持用 . 分割  .replace(/[.]/g, '/')
-          var value = valueList[l] == null ? this.mockValue4Type(type) : valueList[l];
+          var type = typeList == null ? null : typeList[l]  //保持用 . 分割  .replace(/[.]/g, '/')
+          var value = valueList == null ? this.mockValue4Type(type) : valueList[l];
 
           args.push({
             type: type,
@@ -2858,19 +2858,35 @@ https://github.com/Tencent/APIJSON/issues
         switch (type) {
           case 'Boolean':
           case 'boolean':
+          case 'bool':
             return randomInt(0, 1) == 1
+          case 'number':
           case 'Number':
           case 'Double':
           case 'Float':
           case 'double':
           case 'float':
+          case 'float32':
+          case 'float64':
             return randomNum(-100, 200, randomInt(0, 2))
           case 'Long':
           case 'long':
+          case 'int64':
+          case 'uint64':
             return randomInt(-100, 200)
           case 'Integer':
+          case 'integer':
           case 'int':
+          case 'int8':
+          case 'int16':
+          case 'int32':
+          case 'uint':
+          case 'uint8':
+          case 'uint16':
+          case 'uint32':
             return randomInt(-10, 20)
+          case 'str':
+          case 'string':
           case 'String':
           case 'CharSequence':
             return randomStr(0, 5)
@@ -2888,7 +2904,7 @@ https://github.com/Tencent/APIJSON/issues
           }
         }
 
-        if (type.endsWith('[]') || type.endsWith('List') || type.endsWith('Array') || type.endsWith('Set') || type.endsWith('Collection')) {
+        if (type.startsWith('list') || type.startsWith('[]') || type.endsWith('[]') ||type.endsWith('List') || type.endsWith('Array') || type.endsWith('Set') || type.endsWith('Collection')) {
           var size = randomInt(0, 10)
           var arr = []
           for (var i = 0; i < size; i ++) {
@@ -2900,7 +2916,7 @@ https://github.com/Tencent/APIJSON/issues
           return arr
         }
 
-        if (type.endsWith('Map') || type.endsWith('Table') || type.endsWith('JSONObject')) {
+        if (type.startsWith('map') || type.startsWith('dict') || type.endsWith('Map') || type.endsWith('Table') || type.endsWith('JSONObject')) {
           var size = randomInt(0, 10)
 
           var index = ct.indexOf(',')
@@ -2918,7 +2934,7 @@ https://github.com/Tencent/APIJSON/issues
           return this.mockValue4Type('Number')
         }
 
-        return type == 'Object' || type == 'java.lang.Object' ? null : {}
+        return null // type == 'Object' || type == 'java.lang.Object' ? null : {}
       },
 
       // 切换主题
