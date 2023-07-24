@@ -7756,9 +7756,9 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 "class": document.class,
                 "this": document.this,
                 "constructor": document.constructor,
-                "classArgs": this.getRequest(document.classArgs, []),
+                "classArgs": this.getRequest(document.classArgs),
                 "method": document.method,
-                "methodArgs": this.getRequest(document.methodArgs, []),
+                "methodArgs": this.getRequest(document.methodArgs),
                 "static": document.static,
                 "timeout": document.timeout,
                 "ui": document.ui
@@ -7779,10 +7779,10 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 httpReq.constructor = document.constructor
               }
               if (httpReq.classArgs == null) {
-                httpReq.classArgs = this.getRequest(document.classArgs, [])
+                httpReq.classArgs = this.getRequest(document.classArgs)
               }
               if (httpReq.methodArgs == null) {
-                httpReq.methodArgs = this.getRequest(document.methodArgs, [])
+                httpReq.methodArgs = this.getRequest(document.methodArgs)
               }
               if (httpReq.this == null) {
                 httpReq.this = document.this
