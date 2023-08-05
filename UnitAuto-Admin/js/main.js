@@ -8486,6 +8486,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             }
 
             const isNewRandom = isRandom && random.id <= 0
+            const userId = this.User.id
 
             //TODO 先检查是否有重复名称的！让用户确认！
             // if (isML != true) {
@@ -8493,6 +8494,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             const req = {
               Random: isNewRandom != true ? null : {
                 toId: random.toId,
+                userId: userId,
                 documentId: random.documentId,
                 name: random.name,
                 count: random.count,
@@ -8501,12 +8503,14 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               TestRecord: isDuration ? Object.assign(testRecord, {
                 id: undefined,
                 host: this.getBaseUrl(),
+                userId: userId,
                 testAccountId: this.getCurrentAccountId(),
                 duration: item.duration,
                 minDuration: minDuration,
                 maxDuration: maxDuration,
                 compare: JSON.stringify(testRecord.compare || {}),
               }) : {
+                userId: userId,
                 documentId: isNewRandom ? null : (isRandom ? random.documentId : document.id),
                 randomId: isRandom && ! isNewRandom ? random.id : null,
                 host: this.getBaseUrl(),
