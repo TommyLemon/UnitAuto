@@ -117,6 +117,7 @@ func Compare(t1 Test, t2 Test) int {
 
 func New() Test {
 	return Test{
+		Id:   1,
 		Name: "Test",
 	}
 }

@@ -129,8 +129,15 @@ var PRIMITIVE_CLASS_MAP = map[string]any{
 	"bool":        false,
 	"byte":        byte(0),
 	"int":         int(0),
+	"int8":        int8(0),
+	"int16":       int16(0),
 	"int32":       int32(0),
 	"int64":       int64(0),
+	"uint":        uint(0),
+	"uint8":       uint8(0),
+	"uint16":      uint16(0),
+	"uint32":      uint32(0),
+	"uint64":      uint64(0),
 	"float32":     float32(0),
 	"float64":     float64(0),
 	"string":      "",
@@ -142,8 +149,15 @@ var BASE_CLASS_MAP = map[string]any{
 	"bool":        false,
 	"byte":        byte(0),
 	"int":         int(0),
+	"int8":        int8(0),
+	"int16":       int16(0),
 	"int32":       int32(0),
 	"int64":       int64(0),
+	"uint":        uint(0),
+	"uint8":       uint8(0),
+	"uint16":      uint16(0),
+	"uint32":      uint32(0),
+	"uint64":      uint64(0),
 	"float32":     float32(0),
 	"float64":     float64(0),
 	"string":      "",
@@ -154,16 +168,30 @@ var CLASS_MAP = map[string]any{
 	"bool":              false,
 	"byte":              byte(0),
 	"int":               int(0),
+	"int8":              int8(0),
+	"int16":             int16(0),
 	"int32":             int32(0),
 	"int64":             int64(0),
+	"uint":              uint(0),
+	"uint8":             uint8(0),
+	"uint16":            uint16(0),
+	"uint32":            uint32(0),
+	"uint64":            uint64(0),
 	"float32":           float32(0),
 	"float64":           float64(0),
 	"string":            "",
 	"[]bool":            []bool{},
 	"[]byte":            []byte{},
 	"[]int":             []int{},
+	"[]int8":            []int8{},
+	"[]int16":           []int16{},
 	"[]int32":           []int32{},
 	"[]int64":           []int64{},
+	"[]uint":            []uint{},
+	"[]uint8":           []uint8{},
+	"[]uint16":          []uint16{},
+	"[]uint32":          []uint32{},
+	"[]uint64":          []uint64{},
 	"[]float32":         []float32{},
 	"[]float64":         []float64{},
 	"[]string":          []string{},
@@ -547,7 +575,15 @@ func InvokeMethod(req map[string]any, instance any, listener Listener[any]) erro
 	var cn = clsName
 	if len(cn) <= 0 {
 		cn = methodName
+	} else if static_ {
+		if len(pkgName) <= 0 {
+			pkgName = cn
+		} else {
+			pkgName += "." + cn
+		}
+		cn = methodName
 	}
+
 	var cls, err = GetInvokeClass(pkgName, cn)
 	fmt.Println("cls = ", cls)
 	if err != nil || (cls == nil && this_ != nil) {
@@ -581,7 +617,9 @@ func InvokeMethod(req map[string]any, instance any, listener Listener[any]) erro
 		} else {
 			var cc any
 			if cc, err = GetInvokeClass(pkgName, cttName); err == nil {
-				instance, err = getInvokeResult(reflect.ValueOf(cc), typ, cttName, clsArgs, nil)
+				instance, err = getInvokeResult(reflect.ValueOf(cc), typ, cttName, clsArgs, func(data any, method *reflect.Method, proxy *InterfaceProxy, extras ...any) error {
+					return nil
+				})
 			}
 		}
 	}
@@ -1333,6 +1371,7 @@ func getInvokeResult(typ reflect.Value, returnType reflect.Type, methodName stri
 			vs[i] = val.Convert(returnType)
 			continue
 		}
+
 		var vt = val.Type()
 		if val.CanInt() {
 			vs[i] = val.Int()
@@ -1344,6 +1383,8 @@ func getInvokeResult(typ reflect.Value, returnType reflect.Type, methodName stri
 			vs[i] = val.String()
 		} else if val.CanConvert(vt) {
 			vs[i] = val.Convert(vt)
+		} else {
+			vs[i] = reflect.Indirect(val)
 		}
 	}
 
@@ -1495,14 +1536,14 @@ func getMethodListGroupByClass(pkgName string, clsName string, methodName string
 			}
 
 			if (allMethod == false && argTypes != nil) || isFunc {
-				//var m = v
-				//if k == reflect.Struct {
-				//	m = v.MethodByName(methodName)
-				//}
 				var mObj = parseMethodObject(ts, mock)
-				//if len(mObj) <= 0 {
-				//	mObj = parseMethodObject(m, mock)
-				//}
+				if len(mObj) <= 0 {
+					var m = v
+					if k == reflect.Struct {
+						m = v.MethodByName(methodName)
+					}
+					mObj = parseMethodObject(m, mock)
+				}
 
 				if len(mObj) > 0 {
 					//mObj["name"] = fmt.Sprint(m) // m.String()
@@ -1532,9 +1573,9 @@ func getMethodListGroupByClass(pkgName string, clsName string, methodName string
 
 					if allMethod || name == methodName {
 						var mObj = parseMethodObject(fmt.Sprint(m), mock)
-						//if len(mObj) <= 0 {
-						//	mObj = parseMethodObject(m, mock)
-						//}
+						if len(mObj) <= 0 {
+							mObj = parseMethodObject(m, mock)
+						}
 
 						if len(mObj) > 0 {
 							//mObj["name"] = fmt.Sprint(m) // m.String()
@@ -1691,6 +1732,8 @@ func parseMethodObject(m any, mock bool) map[string]any {
 	var t = reflect.TypeOf(m)
 	if t.Kind() == reflect.String {
 		var s = m.(string)
+		var isStatic = strings.Contains(strings.TrimSpace(s), ")(")
+
 		var start = strings.Index(s, "(")
 		var end = strings.LastIndex(s, ")")
 		if start < 0 || start >= end {
@@ -1759,8 +1802,22 @@ func parseMethodObject(m any, mock bool) map[string]any {
 		obj["genericParameterTypeList"] = inTypes //不能用泛型，会导致解析崩溃 m.getGenericParameterTypes()))
 		obj["returnType"] = outTypes              //不能用泛型，会导致解析崩溃m.getGenericReturnType()))
 		obj["genericReturnType"] = outTypes       //不能用泛型，会导致解析崩溃m.getGenericReturnType()))
+		obj["static"] = isStatic
 	} else {
-		obj["name"] = t.Name() // m.Name
+		var v reflect.Value
+		switch m.(type) {
+		case reflect.Value:
+			v = reflect.Indirect(m.(reflect.Value))
+		//case *reflect.Value:
+		//	var = reflect.Indirect(m.(*reflect.Value))
+		default:
+			v = reflect.Indirect(reflect.ValueOf(m))
+		}
+		obj["name"] = fmt.Sprint(v) // v.Name
+		t = v.Type()
+		if t != nil && t.Kind() != reflect.Func {
+			return nil
+		}
 
 		//var t = m.Type() // reflect.TypeOf(m)
 		types = make([]reflect.Type, t.NumIn())
@@ -1779,6 +1836,7 @@ func parseMethodObject(m any, mock bool) map[string]any {
 		obj["genericParameterTypeList"] = inTypes // trimTypes(genericTypes)  //不能用泛型，会导致解析崩溃 m.getGenericParameterTypes()))
 		obj["returnType"] = outTypes              //不能用泛型，会导致解析崩溃m.getGenericReturnType()))
 		obj["genericReturnType"] = outTypes       //不能用泛型，会导致解析崩溃m.getGenericReturnType()))
+		obj["static"] = t.Kind() == reflect.Func
 	}
 
 	//var genericTypes = m.getGenericParameterTypes()
