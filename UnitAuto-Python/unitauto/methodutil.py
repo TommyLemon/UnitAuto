@@ -87,8 +87,18 @@ KEY_METHOD_LIST = "methodList"
 MILLIS_TIME = 1000000
 
 PATTERN_ALPHABET = re.compile('^[A-Za-z]+$')
+PATTERN_UPPER_ALPHABET = re.compile('^[A-Z]+$')
+PATTERN_LOWER_ALPHABET = re.compile('^[a-z]+$')
 PATTERN_NUMBER = re.compile('^[0-9]+$')
 PATTERN_NAME = re.compile('^[A-Za-z0-9_]+$')
+
+
+class Config:
+    DEFAULT_MODULE_PATH: str = ''
+
+
+config = Config()
+
 
 PRIMITIVE_CLASS_MAP = {
     None: any,
@@ -339,7 +349,7 @@ def list_method(req, import_fun: callable = null) -> dict:
                             if is_file:
                                 continue
 
-                            mtd = parse_method(cls) if is_all_mtd or cls.__name__ == method else null
+                            mtd = parse_method(cls, import_fun=import_fun) if is_all_mtd or cls.__name__ == method else null
                             if is_empty(mtd):
                                 continue
 
@@ -413,7 +423,7 @@ def list_method(req, import_fun: callable = null) -> dict:
 
                     mtd_list = []
                     for mtd in ml:
-                        m = parse_method(mtd)
+                        m = parse_method(mtd, import_fun=import_fun)
                         if not_empty(m):
                             mtd_list.append(m)
 
@@ -462,21 +472,68 @@ def list_method(req, import_fun: callable = null) -> dict:
         }
 
 
-def parse_method(func) -> dict:
+def get_type_str_by_str(s: str, keep_prefix: bool = false, import_fun: callable = null) -> str:
+    start = s.index("'") if is_contain(s, "'") else -1
+    if start >= 0:
+        s = s[start + 1:]
+        end = s.index("'") if is_contain(s, "'") else -1
+        if end >= 0:
+            s = s[:end]
+        s = s.strip()
+
+    if s in (null, '', '_empty', 'inspect._empty', 'NoneType', 'POSITIONAL_OR_KEYWORD'):
+        return null
+
+    dmp = null if keep_prefix else config.DEFAULT_MODULE_PATH
+    if not_empty(dmp) and s.startswith(dmp):
+        s = s[len(dmp) + 1:]
+
+    # if s.startswith('__init__.'):
+    #     return s[len('__init__.'):]
+
+    s = s.replace('.__init__.', '$')
+    if '$' not in s and '.' in s:
+        ks = split(s, '.')
+        # util.Test.Test2 会误判为 util.Test$Test2，实际应该为 util$Test.Test2  s = '.'.join(ks[:-1]) + '$' + ks[-1]
+
+        ns = ks[0]
+        ks = ks[1:]
+        is_inner_cls = false
+        for k in ks:
+            if (not is_inner_cls) and not is_module_path(ns + '.' + k, import_fun):  # is_big_name(k)
+                is_inner_cls = true
+
+            ns += ('$' if is_inner_cls else '.') + k
+
+        return ns
+
+    return s
+
+
+def is_module_path(path: str, import_fun: callable = null) -> bool:
+    try:
+        import_fun = import_fun or __import__
+        m = import_fun(path)
+        return not_none(m)
+    except Exception as e:
+        print(e)
+    return false
+
+
+def get_type_str(return_annotation, instance: any = null, keep_prefix: bool = false, import_fun: callable = null) -> str:
+    rt = get_type_str_by_str(str(return_annotation), keep_prefix=keep_prefix, import_fun=import_fun)
+    if is_empty(rt):
+        rt = get_type_str_by_str(str(type(instance)), keep_prefix=keep_prefix, import_fun=import_fun)
+    return rt
+
+
+def parse_method(func, import_fun: callable = null) -> dict:
     signature = null if func is None else inspect.signature(func)
     if signature is None:
         return {}
 
     return_annotation = signature.return_annotation
-    rt = null
-    if return_annotation is not None:
-        try:
-            rt = return_annotation.__name__
-        except Exception as e:
-            rt = str(return_annotation)
-
-    if rt in ('_empty', 'POSITIONAL_OR_KEYWORD'):
-        rt = null
+    rt = get_type_str(return_annotation, keep_prefix=true, import_fun=import_fun)
 
     types = []
     for param in signature.parameters.values():
@@ -508,21 +565,13 @@ def parse_method(func) -> dict:
 
 def wrap_result(
     instance, func, method_args, ma_types, ma_values, result, start_time,
-    json_dumps: callable = null, json_loads: callable = null
+    json_dumps: callable = null, json_loads: callable = null, import_fun: callable = null
 ):
     time_detail = get_time_detail(start_time)
 
     signature = inspect.signature(func)
     return_annotation = null if signature is None else signature.return_annotation
-    rt = null
-    if return_annotation is not None:
-        try:
-            rt = return_annotation.__name__
-            if rt in ('_empty', 'POSITIONAL_OR_KEYWORD'):
-                rt = type(result).__name__
-        except Exception as e:
-            print(e)
-            rt = type(result).__name__  # str(return_annotation)
+    rt = get_type_str(return_annotation, result, import_fun=import_fun)
 
     mal = size(method_args)
     mas = [null] * mal
@@ -551,6 +600,16 @@ def wrap_result(
             }
 
     if is_none(instance):
+        if result is None and is_empty(rt):
+            return {
+                KEY_LANGUAGE: LANGUAGE,
+                KEY_OK: true,
+                KEY_CODE: CODE_SUCCESS,
+                KEY_MSG: MSG_SUCCESS,
+                KEY_METHOD_ARGS: mas,
+                KEY_TIME_DETAIL: time_detail
+            }
+
         return {
             KEY_LANGUAGE: LANGUAGE,
             KEY_OK: true,
@@ -583,6 +642,17 @@ def wrap_result(
                 print(e3)  # FIXME instance.__dict__ , dir(instance)
                 this[KEY_VALUE] = str(instance)
                 this[KEY_WARN] = str(e)
+
+    if result is None and is_empty(rt):
+        return {
+            KEY_LANGUAGE: LANGUAGE,
+            KEY_OK: true,
+            KEY_CODE: CODE_SUCCESS,
+            KEY_MSG: MSG_SUCCESS,
+            KEY_METHOD_ARGS: mas,
+            KEY_THIS: this,
+            KEY_TIME_DETAIL: time_detail
+        }
 
     return {
         KEY_LANGUAGE: LANGUAGE,
@@ -678,7 +748,10 @@ def invoke_method(
 
         def final_callback(*args, **kwargs):
             if not_none(callback):  # callable(callback):
-                callback(wrap_result(final_result.get(KEY_THIS), func, method_args, ma_types, ma_values, final_result.get(KEY_VALUE), start_time))
+                callback(wrap_result(
+                    final_result.get(KEY_THIS), func, method_args, ma_types, ma_values,
+                    final_result.get(KEY_VALUE), start_time, import_fun=import_fun
+                ))
 
         is_wait = init_args(method_args, ma_keys, ma_types, ma_values, m_kwargs, true, final_callback, import_fun=import_fun)
 
@@ -691,11 +764,19 @@ def invoke_method(
         cls: any = null
         if l > 1:
             i = -1
+            m = module
             for n in fl:
                 i += 1
                 if i <= 0:
                     continue
-                cls = getattr(module, n)
+                # if i > 1:
+                #     n = 'Test$InnerTest'  # 'Test.InnerTest'
+                #     # 'Test' object has no attribute 'InnerTest'  #     m = m()
+                m = getattr(m, n)  # FIXME Test.InnerTest raise Exception: type object 'Test' has no attribute 'InnerTest'
+
+            cls = m
+            # 'testutil' object has no attribute 'Test.InnerTest'  cls = getattr(module, '.'.join(fl[1:]))
+            # 'testutil' object has no attribute 'Test.InnerTest'  cls = getattr(module, '$'.join(fl[1:]))
 
         if cls is None:
             func = getattr(module, method)
@@ -724,7 +805,7 @@ def invoke_method(
         final_result[KEY_VALUE] = result
         res = wrap_result(
             instance, func, method_args, ma_types, ma_values, result, start_time,
-            json_dumps=json_dumps, json_loads=json_loads
+            json_dumps=json_dumps, json_loads=json_loads, import_fun=import_fun
         )
     except Exception as e:
         res = {
@@ -1013,6 +1094,12 @@ def is_instance(obj, typ):
 
 def is_name(s: str) -> bool:
     if is_empty(s) or PATTERN_NUMBER.match(s[:1]):
+        return false
+    return not_none(PATTERN_NAME.match(s))
+
+
+def is_big_name(s: str) -> bool:
+    if is_empty(s) or not PATTERN_UPPER_ALPHABET.match(s[:1]):
         return false
     return not_none(PATTERN_NAME.match(s))
 

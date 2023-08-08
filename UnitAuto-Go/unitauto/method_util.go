@@ -76,6 +76,7 @@ var KEY_RETURN = "return"
 var KEY_TIME_DETAIL = "time:start|duration|end"
 var KEY_CLASS_ARGS = "classArgs"
 var KEY_METHOD_ARGS = "methodArgs"
+var KEY_ARGS = "args"
 var KEY_CALLBACK = "callback"
 var KEY_GLOBAL = "global"
 
@@ -565,6 +566,16 @@ func InvokeMethod(req map[string]any, instance any, listener Listener[any]) erro
 	var this_ = GetMap(req, KEY_THIS)
 	var clsArgs = GetArgList(req, KEY_CLASS_ARGS)
 	var methodArgs = GetArgList(req, KEY_METHOD_ARGS)
+	var args = GetArgList(req, KEY_ARGS)
+	if len(args) > 0 {
+		if methodArgs != nil {
+			err := errors.New(KEY_ARGS + " 和 " + KEY_METHOD_ARGS + " 不能同时传！")
+			completeWithError(pkgName, clsName, methodName, startTime, err, listener)
+			return err
+		}
+
+		methodArgs = args
+	}
 
 	if IsEmpty(cttName, true) && len(clsArgs) > 0 {
 		err := errors.New("Go 没有构造函数，不允许单独传 " + KEY_CLASS_ARGS + " ，必须配合 " + KEY_CONSTRUCTOR + " 一起用！")

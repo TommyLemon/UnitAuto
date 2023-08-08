@@ -136,6 +136,18 @@ class Test(JSONDecoder):
     def get_sex_str(self) -> str:
         return 'Male' if self.is_male() else 'Female'
 
+    class InnerTest:
+        id: int = 0
+        name: str = 'InnerTest'
+
+        def __init__(self, id: int = 0, name: str = ''):
+            self.id = id
+            self.name = name
+
+        @staticmethod
+        def get_instance(id: int = 0, name: str = '') -> 'Test.InnerTest':
+            return Test.InnerTest(id=id, name=name)
+
 
 def get_test_instance(id: int = 0, sex: int = 0, name: str = '') -> Test:
     return Test(id=id, sex=sex, name=name)

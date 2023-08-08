@@ -6036,6 +6036,7 @@ var CodeUtil = {
         return valuesIsNotString ? ' ! value必须是String类型！且必须符合 countArray 这种方法名格式！' : (isWarning ? '' : CodeUtil.getComment('被调用方法名', false, ' '));
       case 'constructor':
         return valuesIsNotString ? ' ! value必须是String类型！且必须符合 getInstance 这种方法名格式！' : (isWarning ? '' : CodeUtil.getComment('获取类实例的方法名，一般用于单例模式类', false, ' '));
+      case 'args':
       case 'methodArgs':
       case 'classArgs':
         if (value == null || value instanceof Array) {
@@ -6535,6 +6536,7 @@ var CodeUtil = {
           if (CodeUtil.getType4Request(value) == 'string') {
             return isWarning ? '' : '获取类实例的方法名，一般用于单例模式类';
           }
+        case 'args':
         case 'methodArgs':
         case 'classArgs':
           if (value == null || value instanceof Array) {
