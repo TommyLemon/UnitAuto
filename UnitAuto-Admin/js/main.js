@@ -1120,7 +1120,7 @@ https://github.com/Tencent/APIJSON/issues
       },
       getUrl: function () {
         var url = StringUtil.get(this.host) + new String(vUrl.value)
-        return url.replace(/ /g, '')
+        return url.replaceAll(' ', '')
       },
       //获取基地址
       getBaseUrl: function (url_) {
@@ -1152,13 +1152,19 @@ https://github.com/Tencent/APIJSON/issues
         url = url || this.getUrl()
         var index = url.lastIndexOf('.')
         if (index <= 0) {
-          throw new Error('必须要有类名！完整的 URL 必须符合格式 package.Class.method ！')
+          throw new Error('完整的 URI 必须符合格式 Java/Kotlin: package.Class.method, Go: package.func / package.Struct.method, ' +
+              '\n Python: package.function / package.file.function / package.Class.method / package.file.Class.method ！')
         }
         url = url.substring(0, index)
         index = url.lastIndexOf('.')
         var clazz = StringUtil.trim(index < 0 ? url : url.substring(index + 1))
-        if (this.language == 'Java' || this.language == 'JavaScript' || this.language == 'TypeScript') {
-          if (/[A-Z]{0}[A-Za-z0-9_]/.test(clazz) != true) {
+        var lang = this.language
+        if (StringUtil.isBigName(clazz) != true) {
+          if (lang == CodeUtil.LANGUAGE_GO) {
+            return ''
+          }
+
+          if ([CodeUtil.LANGUAGE_JAVA, CodeUtil.LANGUAGE_KOTLIN].indexOf(lang) >= 0) {
             alert('类名 ' + clazz + ' 不符合规范！')
           }
         }
@@ -1169,11 +1175,18 @@ https://github.com/Tencent/APIJSON/issues
         url = url || this.getUrl()
         var index = url.lastIndexOf('.')
         if (index <= 0) {
-          throw new Error('必须要有类名！完整的 URL 必须符合格式 package.Class.method ！')
+          throw new Error('完整的 URI 必须符合格式 Java/Kotlin: package.Class.method, Go: package.func / package.Struct.method, ' +
+              '\n Python: package.function / package.file.function / package.Class.method / package.file.Class.method ！')
         }
         url = url.substring(0, index)
         index = url.lastIndexOf('.')
-        return StringUtil.trim(index < 0 ? '' : url.substring(0, index))
+        var cls = url.substring(index + 1)
+        var pkg = index < 0 ? '' : url.substring(0, index)
+
+        if (this.language == CodeUtil.LANGUAGE_GO && StringUtil.isBigName(cls) != true) {
+          pkg = StringUtil.isEmpty(pkg) ? cls : pkg + '.' + cls
+        }
+        return StringUtil.trim(pkg)
       },
       //获取请求的tag
       getTag: function () {
@@ -4456,58 +4469,56 @@ https://github.com/Tencent/APIJSON/issues
           return
         }
 
-        var header
         try {
-          header = this.getHeader(vHeader.value)
-        } catch (e) {
-          // alert(e.message)
-          return
-        }
+          var header = this.getHeader(vHeader.value)
 
-        var req = this.getRequest(vInput.value, {})
+          var req = this.getRequest(vInput.value, {})
 
-        var url = this.getUrl()
+          var url = this.getUrl()
 
-        var httpReq = Object.assign({
-          "package": this.getPackage(url),
-          "class": this.getClass(url),
-          "method": this.getMethod(url)
-        }, req)
+          var httpReq = Object.assign({
+            "package": this.getPackage(url),
+            "class": this.getClass(url),
+            "method": this.getMethod(url)
+          }, req)
 
-        vOutput.value = "requesting... \nURL = " + url
+          vOutput.value = "requesting... \nURL = " + url
 
-        errHandler = function () {
-          vOutput.value = "requesting... \nURL = " + url + "\n\n可能" + ERR_MSG
-        }
-        setTimeout(errHandler, 5000)
-
-        this.view = 'output';
-
-        var caseScript = (caseScript_ != null ? caseScript_ : ((this.scripts || {}).case || {})[this.getCurrentDocumentId() || 0]) || {}
-
-        this.setBaseUrl()
-        this.request(isAdminOperation, REQUEST_TYPE_JSON, this.project + '/method/invoke', httpReq, isAdminOperation ? {} : header, callback, caseScript, accountScript_, globalScript_, ignorePreScript)
-
-        this.locals = this.locals || []
-        if (this.locals.length >= 1000) { //最多1000条，太多会很卡
-          this.locals.splice(999, this.locals.length - 999)
-        }
-        var method = this.getMethod()
-        this.locals.unshift({
-          'Method': {
-            'userId': this.User.id,
-            'name': this.formatDateTime() + (StringUtil.isEmpty(req.tag, true) ? '' : ' ' + req.tag),
-            'method': this.getMethod(url),
-            'class': this.getClass(url),
-            'package': this.getPackage(url),
-            'type': this.type,
-            'url': method,
-            'request': JSON.stringify(req, null, '    '),
-            'header': vHeader.value,
-            'scripts': this.scripts
+          errHandler = function () {
+            vOutput.value = "requesting... \nURL = " + url + "\n\n可能" + ERR_MSG
           }
-        })
-        this.saveCache('', 'locals', this.locals)
+          setTimeout(errHandler, 5000)
+
+          this.view = 'output';
+
+          var caseScript = (caseScript_ != null ? caseScript_ : ((this.scripts || {}).case || {})[this.getCurrentDocumentId() || 0]) || {}
+
+          this.setBaseUrl()
+          this.request(isAdminOperation, REQUEST_TYPE_JSON, this.project + '/method/invoke', httpReq, isAdminOperation ? {} : header, callback, caseScript, accountScript_, globalScript_, ignorePreScript)
+
+          this.locals = this.locals || []
+          if (this.locals.length >= 1000) { //最多1000条，太多会很卡
+            this.locals.splice(999, this.locals.length - 999)
+          }
+          var method = this.getMethod()
+          this.locals.unshift({
+            'Method': {
+              'userId': this.User.id,
+              'name': this.formatDateTime() + (StringUtil.isEmpty(req.tag, true) ? '' : ' ' + req.tag),
+              'method': this.getMethod(url),
+              'class': this.getClass(url),
+              'package': this.getPackage(url),
+              'type': this.type,
+              'url': method,
+              'request': JSON.stringify(req, null, '    '),
+              'header': vHeader.value,
+              'scripts': this.scripts
+            }
+          })
+          this.saveCache('', 'locals', this.locals)
+        } catch (e) {
+          this.onResponse(url, {}, e)
+        }
       },
 
       //请求
