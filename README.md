@@ -465,13 +465,25 @@ https://github.com/TommyLemon/APIAuto/issues/12
 https://github.com/TommyLemon/APIAuto/issues/13
 
 #### 5.如何统计行覆盖率/分支覆盖率？
-Java/Kotlin 可以用 Jacoco(on-the-fly 运行时动态插桩模式)  <br />
+##### Java/Kotlin 可以用 Jacoco(on-the-fly 运行时动态插桩模式)
 https://www.jacoco.org/jacoco/trunk/doc/agent.html  <br />
 https://www.jacoco.org/jacoco/trunk/doc/cli.html  <br />
 <br />
 还可以搜索并参考 "Jacoco" 相关文章，例如：  <br />
 Java 覆盖率 Jacoco 插桩的不同形式总结和踩坑记录  <br />
 https://testerhome.com/topics/20632
+
+##### Go 可以用 goc 或 gcov 
+我们是如何做go语言系统测试覆盖率收集的？
+https://zhuanlan.zhihu.com/p/149890900
+
+Gcov 查看代码覆盖率
+https://zhuanlan.zhihu.com/p/410077415
+
+##### Python 可以使用 coverage
+
+Python单元测试框架覆盖率-Coverage
+https://cloud.tencent.com/developer/article/1513269
 
 
 更多常见问题 <br />
