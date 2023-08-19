@@ -959,7 +959,11 @@ https://github.com/Tencent/APIJSON/issues
       deepDoneCount: 0,
       deepAllCount: 0,
       randomDoneCount: 0,
-      randomAllCount: 0
+      randomAllCount: 0,
+      coverage: {
+        json: {},
+        html: ''
+      }
     },
 
     methods: {
@@ -5454,7 +5458,22 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           return false;
         }
         doc = d;
-        vOutput.value = (this.isTestCaseShow ? '' : output) + (
+        var url = StringUtil.trim((this.coverage || {}).url)
+        if (url != null && url.startsWith('/')) {
+          url = this.project + url
+          this.view = 'html'
+          vHtml.innerHTML = '<iframe width="100%" height="100%" src="' + url + '"></iframe><br>'
+          return true
+        }
+        var html = null // (this.coverage || {}).html
+        if (StringUtil.isEmpty(html) != true) {
+          this.view = 'html'
+          vHtml.innerHTML = html
+          return true
+        }
+
+        vOutput.value = (StringUtil.isEmpty(url, true) ? (StringUtil.isEmpty(html, true) ? '' : StringUtil.trim(html) + '<br>') : '<iframe src="' + url + '"></iframe><br>')
+          + (this.isTestCaseShow ? '' : output) + (
           '\n\n\n## 包和类文档\n自动查数据库表和字段属性来生成 \n\n' + d
           + '<h3 align="center">关于</h3>'
           + '<p align="center">UnitAuto-零代码单元测试'
@@ -7579,7 +7598,20 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           cs.totalCount = total
         }
 
-        this.test(false, accountIndex, isCross, callback)
+        this.coverage = {}
+        this.request(false, REQUEST_TYPE_JSON, this.project + '/coverage/start', {}, {}, function (url, res, err) {
+          try {
+            App.onResponse(url, res, err)
+            if (DEBUG) {
+              App.log('test  App.request >> res.data = ' + JSON.stringify(res.data, null, '  '))
+            }
+          } catch (e) {
+            App.log('test  App.request >> } catch (e) {\n' + e.message)
+          }
+
+          App.test(false, accountIndex, isCross, callback)
+        })
+
       },
       /**回归测试
        * 原理：
@@ -8077,6 +8109,31 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                   if (typeof autoTestCallback == 'function') {
                     autoTestCallback('已完成回归测试')
                   }
+
+                  App.request(false, REQUEST_TYPE_JSON, App.project + '/coverage/report', {}, {}, function (url, res, err) {
+                    try {
+                      App.onResponse(url, res, err)
+                      if (DEBUG) {
+                        App.log('test  App.request >> res.data = ' + JSON.stringify(res.data, null, '  '))
+                      }
+                    } catch (e) {
+                      App.log('test  App.request >> } catch (e) {\n' + e.message)
+                    }
+
+                    App.coverage = res.data
+                    if (IS_BROWSER) {
+                      setTimeout(function () {
+                        var url = StringUtil.trim((App.coverage || {}).url)
+                        if (StringUtil.isEmpty(url, false)) {
+                          url = App.project + "/htmlcov/index.html"
+                        }
+                        if (url.startsWith('/')) {
+                          url = App.project + url
+                        }
+                        window.open(url)
+                      }, 2000)
+                    }
+                  })
                 }
               }
             }
