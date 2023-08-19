@@ -3232,6 +3232,9 @@ https://github.com/Tencent/APIJSON/issues
             langauges.push(null)
           }
 
+          this.coverage = {}
+          this.view = 'markdown'
+
           var req = {
             format: false,
             '[]': {
