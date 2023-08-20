@@ -449,6 +449,33 @@ npm i xxx
 链接 host 后可以加上 /unit，例如 http://localhost:3001/unit/test/start <br />
 通过这个接口来放宽前端执行时查询测试用例、参数配置等列表的条数，一次可批量执行更多用例。
 
+<br />
+
+### 统计覆盖率
+<img width="1495" alt="image" src="https://github.com/TommyLemon/UnitAuto/assets/5738175/e3e54fd5-9a42-4a26-a58d-853168fe0682">
+
+
+#### 1.点右侧 Maven > Lifecycle > package 或 运行以下命令 来把项目打成 jar 包：
+```sh
+mvn clean package
+```
+完成后 target 目录应该有 unitauto-java-demo.jar(springboot-maven-plugin 重新打包) 和 unitauto-java-demo.jar.original(maven 直接打包) 这样的两个 jar 包
+
+#### 2.使用 JaCoCo Agent 作为 Java Agent 来运行 jar 包
+```sh
+java -javaagent:libs/jacocoagent.jar=destfile=../jacoco.exec,includes=*,output=tcpserver,port=6300,address=127.0.0.1 -jar target/unitauto-java-demo-2.9.0.jar
+```
+
+#### 3.点右侧 Maven > Plugins > jacoco > jacoco:dump > jacoco:report 或 运行以下命令 来导出覆盖率数据和生成查看报告的 HTML 网页
+```sh
+jacoco dump
+jacoco report 
+```
+完成后 target 目录应该有 jacoco.exec(覆盖率数据) 和 site/jacoco 目录且里面有 index.html 网页入口文件、jacoco-resources 资源文件夹 等。 <br />
+用 Chrome/Firefox 浏览器打开 index.html，可以看到覆盖率报告。
+
+<img width="1495" alt="image" src="https://github.com/TommyLemon/UnitAuto/assets/5738175/4c643a5a-b693-42a1-bb55-3eee61b97f2a">
+
 <br /><br />
 
 ### 常见问题
@@ -473,7 +500,7 @@ https://github.com/TommyLemon/APIAuto/issues/13
 https://www.jacoco.org/jacoco/trunk/doc/agent.html  <br />
 https://www.jacoco.org/jacoco/trunk/doc/cli.html  <br />
 <br />
-还可以搜索并参考 "Jacoco" 相关文章，例如：  <br />
+还可以搜索并参考 "JaCoCo" 相关文章，例如：  <br />
 Java 覆盖率 Jacoco 插桩的不同形式总结和踩坑记录  <br />
 https://testerhome.com/topics/20632
 
