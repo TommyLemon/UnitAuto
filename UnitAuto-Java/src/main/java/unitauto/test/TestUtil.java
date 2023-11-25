@@ -15,6 +15,8 @@ limitations under the License.*/
 
 package unitauto.test;
 
+import java.util.Arrays;
+
 /**测试工具类
  * @author Lemon
  */
@@ -78,6 +80,46 @@ public class TestUtil {
 	}
 	public static double sqrt(Number a) {
 		return sqrt(a.doubleValue());
+	}
+
+	public static int[] sort(int[] arr) {
+		Arrays.sort(arr);
+		return arr;
+	}
+
+	protected static void sort(Number[] arr) {
+		Arrays.sort(arr);
+	}
+
+	private static void sort(String[] arr) {
+		Arrays.sort(arr);
+	}
+
+	public static TestBean findBean(TestBean[] beans, Long id) {
+		if (id == null || beans == null || beans.length <= 0) {
+			return null;
+		}
+		for (TestBean bean : beans) {
+			if (bean != null && bean.getId() == id) {
+				return bean;
+			}
+		}
+		return null;
+	}
+
+	public static void setPoint(Object[][] points, int x, int y, Object val) {
+		int rows = points == null ? 0 : points.length;
+		if (x < 0 || x >= rows) {
+			throw new ArrayIndexOutOfBoundsException("x = " + x + " 超出了矩阵行数！");
+		}
+
+		Object[] ps = points[x];
+		int cols = ps == null ? 0 : ps.length;
+		if (y < 0 || y >= cols) {
+			throw new ArrayIndexOutOfBoundsException("y = " + y + " 超出了矩阵宽度！");
+		}
+
+		points[x][y] = val;
 	}
 
 	public static Long computeAsync(long a, long b, TestInterface callback) {

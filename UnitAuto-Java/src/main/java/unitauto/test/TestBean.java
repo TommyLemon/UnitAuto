@@ -79,13 +79,15 @@ public class TestBean {
 	public static String toString(Annotation annotation) {
 		return annotation == null ? null : annotation.toString();
 	}
-	
+
 	public <A extends Annotation> A getClassAnnotation(Class<A> annotationClass) {
 		return TestBean.class.getAnnotation(annotationClass);
 	}
 	public <A extends Annotation> A getClassAnnotation(Class<?> clazz, Class<A> annotationClass) {
 		return (A) clazz.getAnnotation(annotationClass);
 	}
+
+	@JSONField(serialize = false, deserialize = false)
 	public Annotation[] getClassAnnotations() {
 		return TestBean.class.getAnnotations();
 	}
@@ -95,6 +97,8 @@ public class TestBean {
 	public <A extends Annotation> A getTimeAnnotation(Class<A> annotationClass) throws NoSuchFieldException, SecurityException {
 		return getFiledAnnotation("time", annotationClass);
 	}
+
+	@JSONField(serialize = false, deserialize = false)
 	public Annotation[] getTimeAnnotations() throws NoSuchFieldException, SecurityException {
 		return getFiledAnnotations("time");
 	}

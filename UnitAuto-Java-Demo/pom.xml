@@ -5,7 +5,7 @@
 
 	<groupId>unitauto.boot</groupId>
 	<artifactId>unitauto-java-demo</artifactId>
-	<version>2.9.0</version>
+	<version>3.0.5</version>
 	<packaging>jar</packaging>
 
 	<name>UnitAuto-Java-Demo</name>
@@ -55,26 +55,20 @@
 			<artifactId>classgraph</artifactId>
 			<version>4.8.146</version>
 		</dependency>
-<!-- 		<dependency>-->
-<!--			<groupId>com.github.TommyLemon</groupId>-->
-<!--			<artifactId>unitauto-java</artifactId>-->
-<!--			<version>2.9.0</version>-->
-<!--		</dependency>-->
+ 		<dependency>
+			<groupId>com.github.TommyLemon</groupId>
+			<artifactId>unitauto-java</artifactId>
+			<version>3.0.5</version>
+		</dependency>
 		<dependency>
 			<groupId>com.github.TommyLemon</groupId>
 			<artifactId>unitauto-jar</artifactId>
-			<version>2.9.0</version>
-			<exclusions>
-				<exclusion>
-					<groupId>com.github.TommyLemon</groupId>
-					<artifactId>unitauto-java</artifactId>
-				</exclusion>
-			</exclusions>
+			<version>3.0.5</version>
 		</dependency>
 		<dependency>
 			<groupId>com.github.TommyLemon</groupId>
 			<artifactId>unitauto-springboot</artifactId>
-			<version>2.9.0</version>
+			<version>3.0.5</version>
 		</dependency>
 
 		<dependency>

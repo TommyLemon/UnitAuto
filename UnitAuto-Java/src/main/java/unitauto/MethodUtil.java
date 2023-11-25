@@ -17,37 +17,18 @@ package unitauto;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.*;
+import java.sql.Time;
 import java.sql.Timestamp;
-import java.util.AbstractCollection;
-import java.util.AbstractList;
-import java.util.AbstractMap;
-import java.util.AbstractSequentialList;
-import java.util.AbstractSet;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.chrono.ChronoLocalDate;
+import java.time.chrono.ChronoLocalDateTime;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.NavigableMap;
-import java.util.NavigableSet;
-import java.util.Objects;
-import java.util.Queue;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
-import java.util.Stack;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.Vector;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.DelayQueue;
 import java.util.concurrent.TimeoutException;
 
 import com.alibaba.fastjson.JSON;
@@ -59,22 +40,65 @@ import com.alibaba.fastjson.parser.ParserConfig;
 import com.alibaba.fastjson.util.TypeUtils;
 
 
-/**方法/函数的工具类
+/**方法/函数的工具类，扫描方法列表、反射执行方法等
  * @author Lemon
  */
 public class MethodUtil {
 	public static final String TAG = "MethodUtil";
 
+	/**监听器
+	 * @param <T>
+	 */
 	public interface Listener<T> {
+		/**结束回调
+		 * @param data
+		 * @param method
+		 * @param proxy
+		 * @param extras
+		 * @throws Exception
+		 */
 		void complete(T data, Method method, InterfaceProxy proxy, Object... extras) throws Exception;
 
+		/**结束回调
+		 */
 		default void complete(T data) throws Exception {
 			complete(data, null, null);
 		}
+
+		/**前置事件，准备数据等
+		 * @param instance
+		 * @param method
+		 * @param types
+		 * @param args
+		 * @param proxy
+		 * @param extras
+		 * @return
+		 * @throws Exception
+		 */
+		default Boolean beforeCall(Object instance, Method method, Class<?>[] types, Object[] args, InterfaceProxy proxy, Object... extras) throws Exception {
+			return null;
+		}
+
+		/**后置事件，清理数据，恢复现场等
+		 * @param returnValue
+		 * @param instance
+		 * @param method
+		 * @param types
+		 * @param args
+		 * @param proxy
+		 * @param extras
+		 * @return
+		 * @throws Exception
+		 */
+		default Object afterCall(Object returnValue, Object instance, Method method, Class<?>[] types, Object[] args, InterfaceProxy proxy, Object... extras) throws Exception {
+			return returnValue;
+		}
 	}
 
+	/**实例获取器
+	 */
 	public interface InstanceGetter {
-		/**
+		/**获取实例
 		 * @param clazz
 		 * @param classArgs
 		 * @param reuse  true - 复用现有的实例；false - new 出实例；null - 环境相关类都默认 true，其它类都默认 false
@@ -83,23 +107,95 @@ public class MethodUtil {
 		 */
 		Object getInstance(@NotNull Class<?> clazz, List<Argument> classArgs, Boolean reuse) throws Exception;
 
+		/**获取实例
+		 * @param clazz
+		 * @param classArgs
+		 * @return
+		 * @throws Exception
+		 */
 		default Object getInstance(@NotNull Class<?> clazz, List<Argument> classArgs) throws Exception {
 			return getInstance(clazz, classArgs, null);
 		}
+
+		/**前置事件，准备依赖等
+		 * @param clazz
+		 * @param classArgs
+		 * @param reuse
+		 * @return
+		 * @throws Exception
+		 */
+		default Boolean beforeGet(@NotNull Class<?> clazz, List<Argument> classArgs, Boolean reuse) throws Exception {
+			return null;
+		}
+
+		/**后置事件，调整实例值等
+		 * @param instance
+		 * @param clazz
+		 * @param classArgs
+		 * @param reuse
+		 * @return
+		 * @throws Exception
+		 */
+		default Object afterGet(Object instance, @NotNull Class<?> clazz, List<Argument> classArgs, Boolean reuse) throws Exception {
+			return instance;
+		}
 	}
 
+	/**JSON 回调
+	 */
 	public interface JSONCallback {
+		/**新建成功结果
+		 * @return
+		 */
 		JSONObject newSuccessResult();
+
+		/**新建失败结果
+		 * @param e
+		 * @return
+		 */
 		JSONObject newErrorResult(Throwable e);
+
+		/**将其它类型 value 转为 JSONObject 实例
+		 * @param type
+		 * @param value
+		 * @return
+		 */
 		JSONObject parseJSON(String type, Object value);
 	}
 
-
+	/**类加载回调
+	 */
 	public interface ClassLoaderCallback {
+		/**加载类
+		 * @param packageOrFileName
+		 * @param className
+		 * @param ignoreError
+		 * @return
+		 * @throws ClassNotFoundException
+		 * @throws IOException
+		 */
 		Class<?> loadClass(String packageOrFileName, String className, boolean ignoreError) throws ClassNotFoundException, IOException;
 
+		/**加载类列表
+		 * @param packageOrFileName
+		 * @param className
+		 * @param ignoreError
+		 * @param limit
+		 * @param offset
+		 * @return
+		 * @throws ClassNotFoundException
+		 * @throws IOException
+		 */
 		List<Class<?>> loadClassList(String packageOrFileName, String className, boolean ignoreError, int limit, int offset) throws ClassNotFoundException, IOException;
 
+		/**加载类列表
+		 * @param packageOrFileName
+		 * @param className
+		 * @param ignoreError
+		 * @return
+		 * @throws ClassNotFoundException
+		 * @throws IOException
+		 */
 		default List<Class<?>> loadClassList(String packageOrFileName, String className, boolean ignoreError) throws ClassNotFoundException, IOException {
 			return loadClassList(packageOrFileName, className, ignoreError, 0, 0);
 		}
@@ -134,6 +230,7 @@ public class MethodUtil {
 	public static String KEY_TIME_DETAIL = "time:start|duration|end";
 	public static String KEY_CLASS_ARGS = "classArgs";
 	public static String KEY_METHOD_ARGS = "methodArgs";
+	public static String KEY_ARGS = "args";
 	public static String KEY_CALLBACK = "callback";
 	public static String KEY_GLOBAL = "global";
 
@@ -203,6 +300,7 @@ public class MethodUtil {
 	public static final Map<String, Class<?>> BASE_CLASS_MAP;
 	public static final Map<String, Class<?>> CLASS_MAP;
 	public static final Map<Class<?>, Object> DEFAULT_TYPE_VALUE_MAP;
+
 	static {
 		GLOBAL_CALLBACK_MAP = new HashMap<>();
 		INSTANCE_MAP = new HashMap<>();
@@ -253,6 +351,9 @@ public class MethodUtil {
 		CLASS_MAP.put(LinkedList.class.getSimpleName(), LinkedList.class);//不允许指定<T>
 		CLASS_MAP.put(Vector.class.getSimpleName(), Vector.class);//不允许指定<T>
 		CLASS_MAP.put(Stack.class.getSimpleName(), Stack.class);//不允许指定<T>
+		CLASS_MAP.put(Queue.class.getSimpleName(), Queue.class);//不允许指定<T>
+		CLASS_MAP.put(AbstractQueue.class.getSimpleName(), AbstractQueue.class);//不允许指定<T>
+		CLASS_MAP.put(Deque.class.getSimpleName(), Deque.class);//不允许指定<T>
 		CLASS_MAP.put(Map.class.getSimpleName(), Map.class);//不允许指定<T>
 		CLASS_MAP.put(AbstractMap.class.getSimpleName(), AbstractMap.class);//不允许指定<T>
 		CLASS_MAP.put(HashMap.class.getSimpleName(), HashMap.class);//不允许指定<T>
@@ -428,11 +529,20 @@ public class MethodUtil {
 		long startTime = System.currentTimeMillis();
 		try {
 			// 客户端才用	 boolean ui = req.getBooleanValue(KEY_UI);
-			final boolean static_ = req.getBooleanValue(KEY_STATIC);
+			final boolean static_ = req.getBooleanValue(KEY_STATIC); // TODO Boolean static_ = null 时自动根据 Modifier.isStatic 判断？
 			final long timeout = req.getLongValue(KEY_TIMEOUT);
 			Object this_ = req.get(KEY_THIS);
 			List<Argument> clsArgs = getArgList(req, KEY_CLASS_ARGS);
 			List<Argument> methodArgs = getArgList(req, KEY_METHOD_ARGS);
+			List<Argument> args_ = getArgList(req, KEY_ARGS);
+
+			if (methodArgs != null && args_ != null) {
+				throw new UnsupportedOperationException(KEY_METHOD_ARGS + " 和 " + KEY_ARGS + " 不能都传，最多传一个！");
+			}
+
+			if (methodArgs == null) {
+				methodArgs = args_;
+			}
 
 			Class<?> clazz = getInvokeClass(pkgName, clsName);
 			if (clazz == null) {
@@ -456,12 +566,18 @@ public class MethodUtil {
 			}
 
 			if (instance == null && static_ == false) {
-				if (StringUtil.isEmpty(cttName, true)) {
-					instance = INSTANCE_GETTER.getInstance(clazz, clsArgs, req.getBoolean(KEY_REUSE));
+				Boolean reuse = req.getBoolean(KEY_REUSE);
+				Boolean b = INSTANCE_GETTER.beforeGet(clazz, clsArgs, reuse);
+
+				if (b == null || b == false) {
+					if (StringUtil.isEmpty(cttName, true)) {
+						instance = INSTANCE_GETTER.getInstance(clazz, clsArgs, reuse);
+					} else {
+						instance = getInvokeResult(clazz, null, cttName, clsArgs, null, null);
+					}
 				}
-				else {
-					instance = getInvokeResult(clazz, null, cttName, clsArgs, null, null);
-				}
+
+				instance = INSTANCE_GETTER.afterGet(instance, clazz, clsArgs, reuse);
 			}
 
 			if (timeout < 0 || timeout > 60000) {
@@ -646,10 +762,13 @@ public class MethodUtil {
 		JSONArray arr = req == null ? null : JSON.parseArray(req.getString(arrKey));
 
 		List<Argument> list = null;
-		if (arr != null && arr.isEmpty() == false) {
+		if (arr != null) {
 			list = new ArrayList<>();
 			for (Object item : arr) {
-				if (item instanceof Boolean || item instanceof Number || item instanceof Collection) {
+				if (item instanceof Boolean || item instanceof Number || item instanceof Collection
+					|| (item instanceof Map && ((Map<?, ?>) item).containsKey(KEY_VALUE) == false
+						&& ((Map<?, ?>) item).get(KEY_TYPE) instanceof String == false)
+				) {
 					list.add(new Argument(null, item));
 				}
 				else if (item instanceof String) {
@@ -867,7 +986,16 @@ public class MethodUtil {
 			initTypesAndValues(methodArgs, types, args, true, false);
 		}
 
-		Method method = clazz.getMethod(methodName, types);
+		Method method = null;
+		try {
+			method = clazz.getMethod(methodName, types);
+		} catch (Throwable e) {
+			method = clazz.getDeclaredMethod(methodName, types);
+			if (method != null) { // JDK 9+  && method.trySetAccessible() == false) {
+				method.setAccessible(true);
+			}
+		}
+		final Method finalMethod = method;
 
 		final long[] startTime = new long[]{ System.currentTimeMillis() }; // 必须在 itemListener 前初始化，但又得在后面重新赋值以获得最准确的时间
 
@@ -877,14 +1005,16 @@ public class MethodUtil {
 			public void complete(Object data, Method m, InterfaceProxy proxy, Object... extra) throws Exception {
 				long endTime = System.currentTimeMillis();
 				long duration = endTime - startTime[0];
-				Log.d(TAG, "getInvokeResult  " + method.toGenericString() + "; endTime = " + endTime + ";  duration = " + duration + ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n\n\n");
+				if (Log.DEBUG) {
+					Log.d(TAG, "getInvokeResult  " + finalMethod.toGenericString() + "; endTime = " + endTime + ";  duration = " + duration + ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n\n\n");
+				}
 
 				if (listener == null) {
 					return;
 				}
 
 				JSONObject result = new JSONObject(true);
-				result.put(KEY_TYPE, trimType(method.getReturnType()));  //给 UnitAuto 共享用的 trimType(val.getClass()));
+				result.put(KEY_TYPE, trimType(finalMethod.getReturnType()));  //给 UnitAuto 共享用的 trimType(val.getClass()));
 				result.put(KEY_RETURN, data);
 
 				List<JSONObject> finalMethodArgs = null;
@@ -976,10 +1106,16 @@ public class MethodUtil {
 			}
 		}
 
-		startTime[0] = System.currentTimeMillis();  // 排除前面初始化参数的最准确时间
-		Log.d(TAG, "getInvokeResult  " + method.toGenericString() + "; startTime = " + startTime[0] + "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n\n ");
+		Boolean b = listener == null ? null : listener.beforeCall(instance, method, types, args, globalInterfaceProxy);
 
-		Object val = method.invoke(instance, args);
+		startTime[0] = System.currentTimeMillis();  // 排除前面初始化参数的最准确时间
+		if (Log.DEBUG) {
+			Log.d(TAG, "getInvokeResult  " + method.toGenericString() + "; startTime = " + startTime[0] + "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n\n ");
+		}
+
+		Object val = b != null && b ? null : method.invoke(instance, args);
+
+		val = listener == null ? val : listener.afterCall(val, instance, method, types, args, globalInterfaceProxy);
 
 		if (isSync) {
 			if (listener != null) {
@@ -1382,11 +1518,31 @@ public class MethodUtil {
 				return String.valueOf(cs);
 			}
 
-			if (Date.class.isAssignableFrom(type) || java.sql.Date.class.isAssignableFrom(type)) {
-				return new Date((long) (System.currentTimeMillis() * r));
+			if (Date.class.isAssignableFrom(type)) {
+				return new java.sql.Date((long) (System.currentTimeMillis() * r));
 			}
-			if (Timestamp.class.isAssignableFrom(type) || java.security.Timestamp.class.isAssignableFrom(type)) {
+			if (Time.class.isAssignableFrom(type)) {
+				return new Time((long) (System.currentTimeMillis() * r));
+			}
+			if (Timestamp.class.isAssignableFrom(type)) {
 				return new Timestamp((long) (System.currentTimeMillis() * r));
+			}
+//			if (java.security.Timestamp.class.isAssignableFrom(type)) {
+//				return new java.security.Timestamp(new Date((long) (System.currentTimeMillis() * r)), new X509CertPath(CertificateFactory.getInstance("SHA-256")));
+//			}
+
+			// JDK 1.8+
+			if (ChronoLocalDateTime.class.isAssignableFrom(type)) {
+				Date d = new Date((long) (System.currentTimeMillis() * r));
+				return LocalDateTime.of(d.getYear(), d.getMonth(), d.getDay(), d.getHours(), d.getMinutes(), d.getSeconds());
+			}
+			if (ChronoLocalDate.class.isAssignableFrom(type)) {
+				Date d = new Date((long) (System.currentTimeMillis() * r));
+				return LocalDate.of(d.getYear(), d.getMonth(), d.getDay());
+			}
+			if (LocalTime.class.isAssignableFrom(type)) {
+				Date d = new Date((long) (System.currentTimeMillis() * r));
+				return LocalTime.of(d.getHours(), d.getMinutes(), d.getSeconds());
 			}
 
 			if (Map.class.isAssignableFrom(type)) {
@@ -1404,11 +1560,20 @@ public class MethodUtil {
 					}
 				}
 
+				if (TreeMap.class.isAssignableFrom(type)) {
+					return new TreeMap<>(obj);
+				}
+				if (HashMap.class.isAssignableFrom(type)) {
+					return new LinkedHashMap<>(obj);
+				}
+
 				return obj;
 			}
 
-			if (Collection.class.isAssignableFrom(type) || Array.class.isAssignableFrom(type) || type.isArray()) {
-				JSONArray arr = new JSONArray();
+			boolean isArr = Array.class.isAssignableFrom(type) || type.isArray();
+			if (isArr || Collection.class.isAssignableFrom(type)) {
+				int size = (int) Math.round(r*5);
+				JSONArray arr = new JSONArray(size);
 
 				Type[] ts = getTypeArguments(type, genericType);
 				Class mt;
@@ -1419,11 +1584,51 @@ public class MethodUtil {
 					mt = (Class) ts[0];
 				}
 
-				for (int i = 0; i < r*5; i++) {
+				for (int i = 0; i < size; i++) {
 					Object v = mockValue(mt, ts[0]);
 					if (v != null) {
 						arr.add(v);
 					}
+				}
+
+				if (isArr) {
+					int len = arr.size();
+					Object arr2 = Array.newInstance(mt, len);
+					for (int i = 0; i < len; i++) {
+						Array.set(arr2, i, arr.get(i));
+					}
+					return arr2;
+				}
+
+
+				if (DelayQueue.class.isAssignableFrom(type)) {
+					DelayQueue q = new DelayQueue<>();
+					q.addAll(arr);
+					return q;
+				}
+				if (ArrayBlockingQueue.class.isAssignableFrom(type)) {
+					ArrayBlockingQueue<Object> q = new ArrayBlockingQueue<>(arr.size());
+					q.addAll(arr);
+					return q;
+				}
+				if (AbstractQueue.class.isAssignableFrom(type)) {
+					return new ConcurrentLinkedQueue<>(arr);
+				}
+				if (Queue.class.isAssignableFrom(type) || AbstractSequentialList.class.isAssignableFrom(type)) {
+					return new LinkedList<>(arr);
+				}
+
+				if (Vector.class.isAssignableFrom(type)) {
+					Stack<Object> s = new Stack<>();
+					s.addAll(arr);
+					return s;
+				}
+
+				if (SortedSet.class.isAssignableFrom(type)) {
+					return new TreeSet<>(arr);
+				}
+				if (Set.class.isAssignableFrom(type)) {
+					return new LinkedHashSet<>(arr);
 				}
 
 				return arr;
@@ -1766,8 +1971,43 @@ public class MethodUtil {
 			else {
 				type = value.getClass();
 			}
-		}
-		else {
+		} else if (name.endsWith("[]")) {
+			if (value != null && value instanceof Collection == false) {
+				throw new IllegalArgumentException("type: " + name + ", value: value 中 value 值与 type 不匹配！");
+			}
+
+			Collection c = (Collection) value;
+			int len = c == null ? 0 : c.size();
+			Object val = null;
+			if (len > 0) {
+				for (Object item : c) {
+					if (item != null) {
+						val = item;
+						break;
+					}
+				}
+			}
+
+			Class<?> ct = getType(name.substring(0, name.length() - 2), val, defaultType);
+			Object arr = c == null ? null : Array.newInstance(ct, len);
+			if (arr != null && len > 0) {
+				int i = -1;
+				Collection nc = new JSONArray(len);
+				for (Object o : c) {
+					i ++;
+					// type mismatch, 另外也不需要 Array.set(arr, i, item);
+					if (o != null) {
+						o = cast(o, ct, ParserConfig.getGlobalInstance());
+					}
+					nc.add(o);
+				}
+
+				c.clear();
+				c.addAll(nc);
+			}
+
+			type = arr == null ? null : arr.getClass();
+		} else {
 			int index = name.indexOf("<");
 			String child = null;
 			if (index >= 0) {
@@ -1794,20 +2034,17 @@ public class MethodUtil {
 
 						if (Queue.class.isAssignableFrom(type) || AbstractSequentialList.class.isAssignableFrom(type)) {  // LinkedList
 							nc = new LinkedList<>();
-						} 
-						else if (Vector.class.isAssignableFrom(type)) {  // Stack
+						} else if (Vector.class.isAssignableFrom(type)) {  // Stack
 							nc = new Stack<>();
-						} 
-						else if (List.class.isAssignableFrom(type)) {  // 写在最前，和 else 重合，但大部分情况下性能更好  // ArrayList
+						} else if (List.class.isAssignableFrom(type)) {  // 写在最前，和 else 重合，但大部分情况下性能更好  // ArrayList
 							nc = new ArrayList<>(c.size());
-						}
-						else if (SortedSet.class.isAssignableFrom(type)) {  // TreeSet
+						} else if (SortedSet.class.isAssignableFrom(type)) {  // TreeSet
 							nc = new TreeSet<>();
-						} 
-						else if (Set.class.isAssignableFrom(type)) {  // HashSet, LinkedHashSet
+						} else if (Set.class.isAssignableFrom(type)) {  // HashSet, LinkedHashSet
 							nc = new LinkedHashSet<>(c.size());
-						} 
-						else {  // List, ArrayList
+						} else if (JSONArray.class.isAssignableFrom(type)) {
+							nc = new JSONArray(c.size());
+						} else {  // List, ArrayList
 							nc = new ArrayList<>(c.size());
 						}
 
@@ -1852,20 +2089,17 @@ public class MethodUtil {
 
 			if (Queue.class.isAssignableFrom(type) || AbstractSequentialList.class.isAssignableFrom(type)) {  // LinkedList
 				nc = new LinkedList<>();
-			} 
-			else if (Vector.class.isAssignableFrom(type)) {  // Stack
+			} else if (Vector.class.isAssignableFrom(type)) {  // Stack
 				nc = new Stack<>();
-			} 
-			else if (List.class.isAssignableFrom(type)) {  // 写在最前，和 else 重合，但大部分情况下性能更好  // ArrayList
+			} else if (List.class.isAssignableFrom(type)) {  // 写在最前，和 else 重合，但大部分情况下性能更好  // ArrayList
 				nc = new ArrayList<>(c.size());
-			}
-			else if (SortedSet.class.isAssignableFrom(type)) {  // TreeSet
+			} else if (SortedSet.class.isAssignableFrom(type)) {  // TreeSet
 				nc = new TreeSet<>();
-			} 
-			else if (Set.class.isAssignableFrom(type)) {  // HashSet, LinkedHashSet
+			} else if (Set.class.isAssignableFrom(type)) {  // HashSet, LinkedHashSet
 				nc = new LinkedHashSet<>(c.size());
-			} 
-			else {  // List, ArrayList
+			} else if (JSONArray.class.isAssignableFrom(type)) {
+				nc = new JSONArray(c.size());
+			} else {  // List, ArrayList
 				nc = new ArrayList<>(c.size());
 			}
 
@@ -1895,7 +2129,10 @@ public class MethodUtil {
 		int index = className.indexOf("<");
 		if (index >= 0) {
 			className = className.substring(0, index);
+		} else if ("?".equals(className) || (className.length() == 1 && StringUtil.isBigName(className))) {
+			return Object.class;
 		}
+
 		//这个方法保证在 jar 包里能正常执行
 		Class<?> clazz = Class.forName(isEmpty(packageOrFileName, true) ? className : packageOrFileName.replaceAll("/", ".") + "." + className);
 		if (clazz != null) {
@@ -2115,10 +2352,12 @@ public class MethodUtil {
 
 		//奇葩命名加忽略注解可以避免被 fastjson 序列化或反序列化，奇葩命名避免和代理的 interface 中的方法冲突
 		private Class<?> type;
+
 		@JSONField(serialize = false, deserialize = false)
 		public Class<?> $_getType() {
 			return type;
 		}
+
 		@JSONField(serialize = false, deserialize = false)
 		public InterfaceProxy $_setType(Class<?> type) {
 			this.type = type;
@@ -2127,11 +2366,13 @@ public class MethodUtil {
 
 
 		private Map<String, Listener<?>> callbackMap = new HashMap<>();
+
 		@NotNull
 		@JSONField(serialize = false, deserialize = false)
 		public Map<String, Listener<?>> $_getCallbackMap() {
 			return callbackMap;
 		}
+
 		@JSONField(serialize = false, deserialize = false)
 		public InterfaceProxy $_setCallbackMap(Map<String, Listener<?>> callbackMap) {
 			this.callbackMap = callbackMap != null ? callbackMap : new HashMap<>();
@@ -2142,6 +2383,7 @@ public class MethodUtil {
 		public Listener<?> $_getCallback(String method) {
 			return callbackMap.get(method);
 		}
+
 		@JSONField(serialize = false, deserialize = false)
 		public InterfaceProxy $_putCallback(String method, Listener<?> callback) {
 			callbackMap.put(method, callback);
@@ -2231,6 +2473,7 @@ public class MethodUtil {
 		private Object onInvoke(Object proxy, Method method, Object[] args) throws Throwable {
 			return onInvoke(proxy, method, args, false);
 		}
+
 		private Object onInvoke(Object proxy, Method method, Object[] args, boolean callSuper) throws Throwable {
 			String name = method == null ? null : method.getName();
 			if (name == null) {
@@ -2244,13 +2487,11 @@ public class MethodUtil {
 			if (callSuper == false) {  //TODO default 方法如何执行里面的代码块？可能需要参考热更新，把方法动态加进去
 				if (Modifier.isStatic(method.getModifiers())) {  //正常情况不会进这个分支，因为 interface 中 static 方法不允许用实例来调用
 					value = method.invoke(null, args);
-				}
-				else if (handlerValue instanceof JSONObject) {
+				} else if (handlerValue instanceof JSONObject) {
 					JSONObject handler = (JSONObject) handlerValue;
 					value = handler.get(KEY_RETURN);  //TODO 可能根据传参而返回不同值
 					type = handler.getString(KEY_TYPE);
-				}
-				else {
+				} else {
 					value = handlerValue;
 				}
 			}
@@ -2271,7 +2512,6 @@ public class MethodUtil {
 				}
 			}
 			methodObj.put(KEY_METHOD_ARGS, finalMethodArgs);
-
 
 
 			//方法调用记录列表分组对象，按方法分组，且每组是按调用顺序排列的数组，同一个方法可能被调用多次
@@ -2309,8 +2549,7 @@ public class MethodUtil {
 
 			try {
 				value = cast(value, getType(type, value, true), ParserConfig.getGlobalInstance());
-			}
-			catch (Throwable e) {
+			} catch (Throwable e) {
 				e.printStackTrace();
 				if (type == null) {
 					type = value == null ? "Object" : value.getClass().getName();
