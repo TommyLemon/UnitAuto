@@ -17,6 +17,7 @@ if (typeof window == 'undefined') {
     eval(`
       var StringUtil = require("./StringUtil");
       var JSONObject = require("./JSONObject");
+      var JSON5 = require('json5');
     `)
   } catch (e) {
     console.log(e)
@@ -5881,7 +5882,7 @@ var CodeUtil = {
     OWNER: '拥有者',
     ADMIN: '管理员'
   },
-  DATABASE_KEYS: ['MYSQL', 'POSTGRESQL', 'SQLSERVER', 'ORACLE', 'DB2', 'DAMENG', 'CLICKHOUSE', 'SQLITE', 'TDENGINE'],
+  DATABASE_KEYS: ['MYSQL', 'POSTGRESQL', 'SQLSERVER', 'ORACLE', 'DB2', 'DAMENG', 'KINGBASE', 'MARIADB', 'SQLITE', 'INFLUXDB', 'TDENGINE', 'PRESTO', 'TRINO', 'HIVE', 'TIDB', 'CLICKHOUSE', 'ELASTICSEARCH', 'REDIS'], // , 'KAFKA'],
 
   getComment4Function: function (funCallStr, method, language) {
     if (typeof funCallStr != 'string') {
@@ -6035,6 +6036,7 @@ var CodeUtil = {
         return valuesIsNotString ? ' ! value必须是String类型！且必须符合 countArray 这种方法名格式！' : (isWarning ? '' : CodeUtil.getComment('被调用方法名', false, ' '));
       case 'constructor':
         return valuesIsNotString ? ' ! value必须是String类型！且必须符合 getInstance 这种方法名格式！' : (isWarning ? '' : CodeUtil.getComment('获取类实例的方法名，一般用于单例模式类', false, ' '));
+      case 'args':
       case 'methodArgs':
       case 'classArgs':
         if (value == null || value instanceof Array) {
@@ -6497,7 +6499,7 @@ var CodeUtil = {
         case 'warn':
           return isWarning ? '' : '警告';
         case 'time':
-          if (CodeUtil.getType4Request(value) == 'number') {
+          if (CodeUtil.getType4Request(value) == 'integer') {
             return isWarning ? '' : '调用时间';
           }
         case 'static':
@@ -6534,6 +6536,7 @@ var CodeUtil = {
           if (CodeUtil.getType4Request(value) == 'string') {
             return isWarning ? '' : '获取类实例的方法名，一般用于单例模式类';
           }
+        case 'args':
         case 'methodArgs':
         case 'classArgs':
           if (value == null || value instanceof Array) {

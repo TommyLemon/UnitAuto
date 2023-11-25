@@ -343,6 +343,7 @@ var JSONResponse = {
   COMPARE_ERROR: -2,
   COMPARE_NO_STANDARD: -1,
   COMPARE_EQUAL: 0,
+  COMPARE_VALUE_REPEAT: 0, // 通过后置脚本改为 1/2 来开启。场景太少了，除了分布式 id 外，即便是订单状态，那也是有一段时间内停留在同一个状态，而且最多存 20 个值，也很难命中各种结果  1 // 2
   COMPARE_KEY_MORE: 1,
   COMPARE_VALUE_MORE: 1,
   COMPARE_EQUAL_EXCEPTION: 1,
@@ -502,19 +503,6 @@ var JSONResponse = {
       };
     }
 
-    var type = typeof target;
-    if (type != typeof real) { //类型改变
-      return {
-        code: JSONResponse.COMPARE_TYPE_CHANGE,
-        msg: '值类型改变',
-        path: folder,
-        value: real
-      };
-    }
-
-    // var max = JSONResponse.COMPARE_EQUAL;
-    // var each = JSONResponse.COMPARE_EQUAL;
-
     var max = {
       code: JSONResponse.COMPARE_EQUAL,
       msg: '结果正确',
@@ -522,27 +510,56 @@ var JSONResponse = {
       value: null //导致正确时也显示  real
     };
 
-    var each;
+    var type = JSONResponse.getType(target); // typeof target;
+    var realType = JSONResponse.getType(real);
+    if (type != realType) { //类型改变
+      if (type != "integer" || realType != "number") {
+        return {
+          code: JSONResponse.COMPARE_TYPE_CHANGE,
+          msg: '值类型改变',
+          path: folder,
+          value: real
+        };
+      }
+
+      max.code = JSONResponse.COMPARE_NUMBER_TYPE_CHANGE;
+      max.msg = '整数变小数';
+      max.path = folder;
+      max.value = real;
+    }
+
+    // var max = JSONResponse.COMPARE_EQUAL;
+    // var each = JSONResponse.COMPARE_EQUAL;
 
     if (target instanceof Array) { // JSONArray
-      var all = target[0];
-      for (var i = 1; i < length; i++) { //合并所有子项, Java类型是稳定的，不会出现两个子项间同名字段对应值类型不一样
-        all = JSONResponse.deepMerge(all, target[i]);
+      if (max.code < JSONResponse.COMPARE_KEY_LESS && real.length < target.length) {
+        max = {
+          code: JSONResponse.COMPARE_KEY_LESS,
+          msg: '是缺少的',
+          path: JSONResponse.getAbstractPath(folder, real.length),
+          value: target[real.length]
+        }
       }
-      //下载需要看源JSON  real = [all];
-
-      each = JSONResponse.compareWithBefore(target[0], all, JSONResponse.getAbstractPath(folder, i), exceptKeys);
-
-      if (max.code < each.code) {
-        max = each;
+      else if (max.code < JSONResponse.COMPARE_KEY_MORE && real.length > target.length) {
+        max = {
+          code: JSONResponse.COMPARE_KEY_MORE,
+          msg: '是新增的',
+          path: JSONResponse.getAbstractPath(folder, target.length),
+          value: real[target.length]
+        }
       }
 
-      if (max.code < JSONResponse.COMPARE_VALUE_CHANGE) {
-        if (target.length != real.length || (JSON.stringify(target) != JSON.stringify(real))) {
-          max.code = JSONResponse.COMPARE_VALUE_CHANGE;
-          max.msg = '值改变';
-          max.path = folder;
-          max.value = real;
+      var minLen = Math.min(target.length, real.length)
+      for (var i = 0; i < minLen; i++) { //合并所有子项, Java类型是稳定的，不会出现两个子项间同名字段对应值类型不一样
+        var each = JSONResponse.compareWithBefore(target[i], real[i], JSONResponse.getAbstractPath(folder, i), exceptKeys);
+
+        var code = each == null ? 0 : each.code;
+        if (max.code < code) {
+          max = each;
+        }
+
+        if (max.code >= JSONResponse.COMPARE_TYPE_CHANGE) {
+          break;
         }
       }
     }
@@ -555,22 +572,24 @@ var JSONResponse = {
           continue;
         }
 
-        each = JSONResponse.compareWithBefore(target[key], real[key], JSONResponse.getAbstractPath(folder, key), exceptKeys);
-        if (max.code < each.code) {
+        var each = JSONResponse.compareWithBefore(target[key], real[key], JSONResponse.getAbstractPath(folder, key), exceptKeys);
+        var code = each == null ? 0 : each.code;
+
+        if (max.code < code) {
           max = each;
         }
+
         if (max.code >= JSONResponse.COMPARE_TYPE_CHANGE) {
           break;
         }
       }
-
 
       if (max.code < JSONResponse.COMPARE_KEY_MORE) { //多出key
         for (var k in real) {
           if (k != null && real[k] != null && target[k] == null) { //解决 null 值总是提示是新增的，且无法纠错 tks.indexOf(k) < 0) {
             max.code = JSONResponse.COMPARE_KEY_MORE;
             max.msg = '是新增的';
-            max.path = JSONResponse.getAbstractPath(folder,  k);
+            max.path = JSONResponse.getAbstractPath(folder, k);
             max.value = real[k];
             break;
           }
@@ -578,7 +597,7 @@ var JSONResponse = {
       }
     }
     else { // Boolean, Number, String
-      if (type == 'number') { //数字类型由整数变为小数
+      if (max.code < JSONResponse.COMPARE_NUMBER_TYPE_CHANGE && type == 'number') { //数字类型由整数变为小数
         if (String(target).indexOf('.') < 0 && String(real).indexOf('.') >= 0) {
           max.code = JSONResponse.COMPARE_NUMBER_TYPE_CHANGE;
           max.msg = '整数变小数';
@@ -797,13 +816,21 @@ var JSONResponse = {
     else { // Boolean, Number, String
       log('compareWithStandard  type == boolean | number | string >> ');
 
-      var valueCompare = max.code >= JSONResponse.COMPARE_VALUE_CHANGE ? 0 : JSONResponse.compareValue(valueLevel, values, real, target.trend);
+      var valueCompare = max.code >= JSONResponse.COMPARE_VALUE_CHANGE
+          ? 0 : JSONResponse.compareValue(valueLevel, values, real, target.trend, target.repeat);
+
       if (valueCompare > 0) {
         max.code = valueCompare;
         max.path = folder;
         max.value = real;
 
-        if (target.valueLevel != 1 || CodeUtil.isTypeMatch('number', target.type) != true) {
+        var isNum = CodeUtil.isTypeMatch('number', type)
+
+        if (isNum && valueCompare == JSONResponse.COMPARE_VALUE_REPEAT && (target.repeat == null || target.repeat <= 0)
+            && values != null && values.indexOf(real) >= 0) {
+          max.msg = '值与历史值重复：' + real;
+        }
+        else if (target.valueLevel != 1 || isNum != true) {
           max.msg = '值超出范围';
         }
         else if (valueCompare == JSONResponse.COMPARE_VALUE_MORE) {
@@ -856,10 +883,10 @@ var JSONResponse = {
   },
 
 
-  isValueCorrect: function(level, target, real, trend) {
-    return JSONResponse.compareValue(level, target, real, trend) <= 0;
+  isValueCorrect: function(level, target, real, trend, repeat) {
+    return JSONResponse.compareValue(level, target, real, trend, repeat) <= 0;
   },
-  compareValue: function(level, target, real, trend) {
+  compareValue: function(level, target, real, trend, repeat) {
     log('isValueCorrect  \nlevel = ' + level + '; \ntarget = ' + JSON.stringify(target)
       + '\nreal = ' + JSON.stringify(real, null, '    '));
     if (target == null || real == null) {
@@ -869,12 +896,17 @@ var JSONResponse = {
     if (level == null) {
       level = 0;
     }
+    if (repeat == null) {
+      repeat = 0;
+    }
 
     if (level == 0) {
       if (target.indexOf(real) < 0) { // 'key{}': [0, 1]
         log('isValueCorrect  target.indexOf(real) < 0 >>  return false;');
         return JSONResponse.COMPARE_VALUE_CHANGE;
       }
+
+      return repeat <= 0 && typeof real == 'number' ? JSONResponse.COMPARE_VALUE_REPEAT : 0;
     }
     else if (level == 1) { //real <= max; real >= min
       if (target.length <= 0) {
@@ -926,7 +958,8 @@ var JSONResponse = {
         return 0;
       }
 
-      return target.indexOf(real) >= 0 ? 0 : JSONResponse.COMPARE_VALUE_MORE; // 为了提示上传新值，方便以后校验
+      return target.indexOf(real) < 0 ? JSONResponse.COMPARE_VALUE_MORE
+          : (repeat <= 0 && typeof real == 'number' ? JSONResponse.COMPARE_VALUE_REPEAT : 0); // 为了提示上传新值，方便以后校验
     }
     else if (level == 2) {
       for (var i = 0; i < target.length; i ++) {
@@ -1004,6 +1037,8 @@ var JSONResponse = {
 
     var rsp = JSON.parse(JSON.stringify(currentResponse || {}))
     rsp = JSONResponse.array2object(rsp, 'methodArgs', ['methodArgs'], true)
+    rsp = JSONResponse.array2object(rsp, 'return', ['return'], true)
+    rsp = JSONResponse.array2object(rsp, 'type', ['type'], true)
 
     var find = false;
     if (isCodeChange && hasCode) {  // 走异常分支
@@ -1142,22 +1177,23 @@ var JSONResponse = {
       if (values == null) {
         values = [];
       }
-      if (values[0] == null) {
-        values[0] = {};
+      var firstVal = values[0];
+      if (firstVal == null) {
+        firstVal = values[0] = {};
       }
 
       var realKeys = Object.keys(real) || [];
-      for(var k2 in values[0]) { //解决real不含k2时导致notnull不能变成false
-        // log('updateStandard for k2 in values[0] = ' + k2 + ' >>');
+      for(var k2 in firstVal) { //解决real不含k2时导致notnull不能变成false
+        // log('updateStandard for k2 in firstVal = ' + k2 + ' >>');
         if (realKeys.indexOf(k2) < 0) {
           // log('updateStandard Object.keys(real).indexOf(k2) < 0 >> real[k2] = null;');
           // 解决总是报错缺少字段  delete real[k2];  // 解决总是多出来 key: null    real[k2] = null;
 
-          if (values[0][k2] == null) {
-            values[0][k2] = { notnull: false };
+          if (firstVal[k2] == null) {
+            firstVal[k2] = { notnull: false };
           }
           else {
-            values[0][k2].notnull = false;
+            firstVal[k2].notnull = false;
           }
         }
       }
@@ -1167,9 +1203,9 @@ var JSONResponse = {
           continue
         }
 
-        log('updateStandard for k in real = ' + k + '; values[0][k] = '
-          + JSON.stringify(values[0][k], null, '    ') + ';\n real[k] = '  + JSON.stringify(real[k], null, '    ') + ' >>');
-        values[0][k] = JSONResponse.updateStandard(values[0][k], real[k], exceptKeys, ignoreTrend);
+        log('updateStandard for k in real = ' + k + '; firstVal[k] = '
+          + JSON.stringify(firstVal[k], null, '    ') + ';\n real[k] = '  + JSON.stringify(real[k], null, '    ') + ' >>');
+        firstVal[k] = JSONResponse.updateStandard(firstVal[k], real[k], exceptKeys, ignoreTrend);
       }
 
       target.values = values;
@@ -1500,6 +1536,10 @@ var JSONResponse = {
           if (origin.indexOf(real) < 0) {
             origin.push(real);
           }
+          else {
+            var repeat = target.repeat == null ? 0 : target.repeat
+            target.repeat = repeat + 1
+          }
         }
 
         vals = origin;
@@ -1625,7 +1665,7 @@ var JSONResponse = {
         if (k != null) {
           var v = value[k]
 
-          if (containChild != true && (v instanceof Array == false || (onlyKeys != null && onlyKeys.indexOf(name) < 0))) {
+          if (containChild != true && (v instanceof Object == false || (onlyKeys != null && onlyKeys.indexOf(name) < 0))) {
             continue
           }
 

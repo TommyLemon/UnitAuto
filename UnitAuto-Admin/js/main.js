@@ -2220,7 +2220,7 @@ https://github.com/Tencent/APIJSON/issues
             var code_ = inputObj.code
             inputObj.code = null // delete inputObj.code
 
-            commentObj = JSONResponse.updateStandard(commentStddObj, inputObj);
+            commentObj = JSONResponse.updateStandard(commentStddObj, inputObj, ['@time']);
             CodeUtil.parseComment(after, docObj == null ? null : docObj['[]'], m, this.database, this.language, isEditResponse != true, commentObj, true);
 
             inputObj.code = code_
@@ -2239,7 +2239,7 @@ https://github.com/Tencent/APIJSON/issues
           rsp = JSONResponse.array2object(rsp, 'return', ['return'], true)
           rsp = JSONResponse.array2object(rsp, 'type', ['type'], true)
 
-          const stddObj = isML ? JSONResponse.updateStandard({}, rsp) : {};
+          const stddObj = isML ? JSONResponse.updateStandard({}, rsp, ['@time']) : {};
           stddObj.code = code;
           stddObj.throw = thrw;
           currentResponse.code = code;
@@ -2303,7 +2303,7 @@ https://github.com/Tencent/APIJSON/issues
               config = newCfg;
             }
 
-            commentObj = JSONResponse.updateStandard({}, mapReq2);
+            commentObj = JSONResponse.updateStandard({}, mapReq2, ['@time']);
           }
 
 
@@ -2336,7 +2336,7 @@ https://github.com/Tencent/APIJSON/issues
             //     }
             //   }
             //
-            //   commentObj = JSONResponse.updateStandard({}, mapReq2);
+            //   commentObj = JSONResponse.updateStandard({}, mapReq2, ['@time']);
             // }
 
             var returnType = currentResponse == null ? null : currentResponse.type
@@ -7939,7 +7939,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             rsp = JSONResponse.array2object(rsp, 'return', ['return'], true)
             rsp = JSONResponse.array2object(rsp, 'type', ['type'], true)
           }
-          tr.compare = JSONResponse.compareResponse(standard, rsp, '', isML, null, ['call()[]'], ignoreTrend) || {}
+          tr.compare = JSONResponse.compareResponse(standard, rsp, '', isML, null, ['call()[]', '@time'], ignoreTrend) || {}
           tr.compare.duration = it.durationHint
         }
 
@@ -9110,6 +9110,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               if (standardObj == null) {
                 standardObj = JSONResponse.updateStandard({},
                   isReq ? App.getRequest(vInput.value) : App.jsoncon == null ? null : JSON.parse(App.jsoncon)
+                  , ['@time']
                 )
               }
 

@@ -21,6 +21,7 @@
         var vComment = {value: ''};
         var vHeader = {value: ''};
         var vRandom = {value: ''};
+        var vScript = {value: ''};
         var vOutput = {value: ''};
 
         var vAccount = {value: ''};
@@ -43,7 +44,7 @@
         var vRandomSubCount = {value: '100'};
         var vRandomSubSearch = {value: ''};
 
-        var Vue = require('vue');
+        var Vue = require('./vue.min'); // 某些版本不兼容 require('vue');
         var StringUtil = require('../apijson/StringUtil');
         var CodeUtil = require('../apijson/CodeUtil');
         var JSONObject = require('../apijson/JSONObject');
@@ -209,10 +210,10 @@
               for (var i = 0; i < val.length; i++) {
                 var cPath = (StringUtil.isEmpty(path, false) ? '' : path + '/') + key;
 
+                var vi = val[i]
+
                 if (JSONObject.isTableKey(firstKey, val, isRestful)) {
                   // var newVal = JSON.parse(JSON.stringify(val[i]))
-
-                  var vi = val[i]
                   if (vi == null) {
                     continue
                   }
@@ -527,6 +528,7 @@ https://github.com/Tencent/APIJSON/issues
           v = JSON.parse(v)
         }
         catch (e) {
+          console.log(e)
         }
       }
 
@@ -538,7 +540,7 @@ https://github.com/Tencent/APIJSON/issues
 
 
   function markdownToHTML(md, isRequest) {
-    if (editormd == null) {
+    if (typeof editormd == 'undefined' || editormd == null) {
       return;
     }
 
@@ -894,9 +896,7 @@ https://github.com/Tencent/APIJSON/issues
           "standard":"{\"notnull\":true,\"type\":\"object\",\"valueLevel\":0,\"values\":[{\"msg\":{\"notnull\":true,\"type\":\"string\",\"valueLevel\":3,\"values\":[],\"lengthLevel\":1,\"lengths\":[7]},\"type\":{\"notnull\":true,\"type\":\"string\",\"valueLevel\":3,\"values\":[],\"lengthLevel\":1,\"lengths\":[6]},\"return\":{\"notnull\":true,\"type\":\"number\",\"valueLevel\":1,\"values\":[0.5],\"lengthLevel\":1,\"lengths\":[1]},\"methodArgs\":{\"notnull\":true,\"type\":\"object\",\"valueLevel\":0,\"values\":[{\"0\":{\"notnull\":true,\"type\":\"object\",\"valueLevel\":0,\"values\":[{\"type\":{\"notnull\":true,\"type\":\"string\",\"valueLevel\":3,\"values\":[],\"lengthLevel\":1,\"lengths\":[4]},\"value\":{\"notnull\":true,\"type\":\"integer\",\"valueLevel\":0,\"values\":[1],\"lengthLevel\":1,\"lengths\":[]}}]},\"1\":{\"notnull\":true,\"type\":\"object\",\"valueLevel\":0,\"values\":[{\"type\":{\"notnull\":true,\"type\":\"string\",\"valueLevel\":3,\"values\":[],\"lengthLevel\":1,\"lengths\":[4]},\"value\":{\"notnull\":true,\"type\":\"integer\",\"valueLevel\":0,\"values\":[2],\"lengthLevel\":1,\"lengths\":[]}}]}}]}}],\"code\":200}"
         }
       },
-      currentRandomItem: {
-
-      },
+      currentRandomItem: {},
       isAdminOperation: false,
       loginType: 'login',
       isExportRemote: false,
@@ -943,7 +943,7 @@ https://github.com/Tencent/APIJSON/issues
       language: 'Java,Kotlin,Go', // CodeUtil.LANGUAGE_JAVA,
       header: {},
       page: 0,
-      count: 20,
+      count: 15,
       search: '',
       testCasePage: 0,
       testCaseCount: 50,
@@ -959,7 +959,11 @@ https://github.com/Tencent/APIJSON/issues
       deepDoneCount: 0,
       deepAllCount: 0,
       randomDoneCount: 0,
-      randomAllCount: 0
+      randomAllCount: 0,
+      coverage: {
+        json: {},
+        html: ''
+      }
     },
 
     methods: {
@@ -1093,7 +1097,7 @@ https://github.com/Tencent/APIJSON/issues
         }
 
         vUrlComment.value = isSingle || StringUtil.isEmpty(this.urlComment, true)
-          ? '' : vUrl.value + CodeUtil.getComment(this.urlComment, false, '  ')
+          ? '' : vUrl.value + CodeUtil.getComment(this.urlComment, false, ' ')
           + ' - ' + (this.requestVersion > 0 ? 'V' + this.requestVersion : 'V*');
       },
 
@@ -1120,7 +1124,7 @@ https://github.com/Tencent/APIJSON/issues
       },
       getUrl: function () {
         var url = StringUtil.get(this.host) + new String(vUrl.value)
-        return url.replace(/ /g, '')
+        return url.replaceAll(' ', '')
       },
       //获取基地址
       getBaseUrl: function (url_) {
@@ -1152,13 +1156,19 @@ https://github.com/Tencent/APIJSON/issues
         url = url || this.getUrl()
         var index = url.lastIndexOf('.')
         if (index <= 0) {
-          throw new Error('必须要有类名！完整的 URL 必须符合格式 package.Class.method ！')
+          throw new Error('完整的 URI 必须符合格式 Java/Kotlin: package.Class.method, Go: package.func / package.Struct.method, ' +
+              '\n Python: package.function / package.file.function / package.Class.method / package.file.Class.method ！')
         }
         url = url.substring(0, index)
         index = url.lastIndexOf('.')
         var clazz = StringUtil.trim(index < 0 ? url : url.substring(index + 1))
-        if (this.language == 'Java' || this.language == 'JavaScript' || this.language == 'TypeScript') {
-          if (/[A-Z]{0}[A-Za-z0-9_]/.test(clazz) != true) {
+        var lang = this.language
+        if (StringUtil.isBigName(clazz) != true) {
+          if (lang == CodeUtil.LANGUAGE_GO) {
+            return ''
+          }
+
+          if ([CodeUtil.LANGUAGE_JAVA, CodeUtil.LANGUAGE_KOTLIN].indexOf(lang) >= 0) {
             alert('类名 ' + clazz + ' 不符合规范！')
           }
         }
@@ -1169,11 +1179,18 @@ https://github.com/Tencent/APIJSON/issues
         url = url || this.getUrl()
         var index = url.lastIndexOf('.')
         if (index <= 0) {
-          throw new Error('必须要有类名！完整的 URL 必须符合格式 package.Class.method ！')
+          throw new Error('完整的 URI 必须符合格式 Java/Kotlin: package.Class.method, Go: package.func / package.Struct.method, ' +
+              '\n Python: package.function / package.file.function / package.Class.method / package.file.Class.method ！')
         }
         url = url.substring(0, index)
         index = url.lastIndexOf('.')
-        return StringUtil.trim(index < 0 ? '' : url.substring(0, index))
+        var cls = url.substring(index + 1)
+        var pkg = index < 0 ? '' : url.substring(0, index)
+
+        if (this.language == CodeUtil.LANGUAGE_GO && StringUtil.isBigName(cls) != true) {
+          pkg = StringUtil.isEmpty(pkg) ? cls : pkg + '.' + cls
+        }
+        return StringUtil.trim(pkg)
       },
       //获取请求的tag
       getTag: function () {
@@ -1195,8 +1212,8 @@ https://github.com/Tencent/APIJSON/issues
           return jsonlint.parse(s);
         }
         catch (e) {
-          log('main.getRequest', 'try { return jsonlint.parse(s); \n } catch (e2) {\n' + e.message)
-          log('main.getRequest', 'return jsonlint.parse(this.removeComment(s));')
+          log('main.getRequest', 'try { return jsonlint.parse(s); \n } catch (e) {\n' + e.message)
+          log('main.getRequest', 'return JSON5.parse(s);')
           return JSON5.parse(s);  // jsonlint.parse(this.removeComment(s));
         }
       },
@@ -1534,11 +1551,12 @@ https://github.com/Tencent/APIJSON/issues
               }
               else if (index == 16) {
                 this.showTestCase(false, this.isLocalShow)
+                var pkg = this.getPackage()
 
                 vInput.value = this.getCache(this.project, 'request4MethodList') || '{'
                   + '\n    "query": 2, // 查询类型：0-数据，1-总数，2-全部'
                   + '\n    "mock": true, // 是否生成模拟参数值'
-                  + '\n    "package": "' + this.getPackage() + '", // 包名，不填默认全部'
+                  + '\n    "package": "' + (pkg.startsWith("*") ? pkg.substring(1) : pkg) + '", // 包名，不填默认全部'
                   + '\n    "class": "' + this.getClass() + '", // 类名，不填默认全部'
                   + '\n    "types": null // 类型，不填默认全部，填 ["int", "String"] 这种则只查对应参数的方法 '
                   + '\n}'
@@ -2187,6 +2205,8 @@ https://github.com/Tencent/APIJSON/issues
           const after = isSingle ? this.switchQuote(inputted) : inputted;  // this.toDoubleJSON(inputted);
           const inputObj = this.getRequest(after, {});
 
+          const rawInputStr = JSON.stringify(inputObj)
+
           var commentObj = null;
           if (isExportRandom != true) {
             var m = this.getMethod();
@@ -2198,24 +2218,28 @@ https://github.com/Tencent/APIJSON/issues
               log(e)
             }
             var code_ = inputObj.code
-            inputObj.code = null  // delete inputObj.code
+            inputObj.code = null // delete inputObj.code
 
-            commentObj = JSONResponse.updateStandard(commentStddObj, inputObj);
+            commentObj = JSONResponse.updateStandard(commentStddObj, inputObj, ['@time']);
             CodeUtil.parseComment(after, docObj == null ? null : docObj['[]'], m, this.database, this.language, isEditResponse != true, commentObj, true);
 
             inputObj.code = code_
           }
 
+          const isML = this.isMLEnabled;
+
+          var rawRspStr = JSON.stringify(currentResponse || {})
           const code = currentResponse.code;
           const thrw = currentResponse.throw;
-          delete currentResponse.code; //code必须一致
-          delete currentResponse.throw; //throw必须一致
+          delete currentResponse.code; // currentResponse.code = null; //code必须一致
+          delete currentResponse.throw; // currentResponse.throw = null; // throw必须一致
 
           var rsp = JSON.parse(JSON.stringify(currentResponse || {}))
           rsp = JSONResponse.array2object(rsp, 'methodArgs', ['methodArgs'], true)
+          rsp = JSONResponse.array2object(rsp, 'return', ['return'], true)
+          rsp = JSONResponse.array2object(rsp, 'type', ['type'], true)
 
-          const isML = this.isMLEnabled;
-          const stddObj = isML ? JSONResponse.updateStandard({}, rsp) : {};
+          const stddObj = isML ? JSONResponse.updateStandard({}, rsp, ['@time']) : {};
           stddObj.code = code;
           stddObj.throw = thrw;
           currentResponse.code = code;
@@ -2279,7 +2303,7 @@ https://github.com/Tencent/APIJSON/issues
               config = newCfg;
             }
 
-            commentObj = JSONResponse.updateStandard({}, mapReq2);
+            commentObj = JSONResponse.updateStandard({}, mapReq2, ['@time']);
           }
 
 
@@ -2312,8 +2336,19 @@ https://github.com/Tencent/APIJSON/issues
             //     }
             //   }
             //
-            //   commentObj = JSONResponse.updateStandard({}, mapReq2);
+            //   commentObj = JSONResponse.updateStandard({}, mapReq2, ['@time']);
             // }
+
+            var returnType = currentResponse == null ? null : currentResponse.type
+            if (returnType instanceof Array) {
+              if (returnType.length <= 0) {
+                returnType = null
+              } else if (returnType.length == 1) {
+                returnType = returnType[0]
+              } else {
+                returnType = returnType.join() // "(" + returnType.join() + ")"
+              }
+            }
 
             const extName = App.exTxt.name;
             const baseUrl = App.getBaseUrl();
@@ -2328,7 +2363,7 @@ https://github.com/Tencent/APIJSON/issues
                 config: config
               },
               'TestRecord': {
-                'response': JSON.stringify(currentResponse),
+                'response': rawRspStr,
                 'standard': isML ? JSON.stringify(stddObj) : null
               },
               'tag': 'Random'
@@ -2337,10 +2372,11 @@ https://github.com/Tencent/APIJSON/issues
               'Method': isEditResponse ? null : {
                 'id': did == null ? undefined : did,
 //                'testAccountId': currentAccountId,
+                'language': StringUtil.isEmpty(currentResponse.language, true) ? this.language : currentResponse.language,
                 'method': App.getMethod(),
                 'detail': App.exTxt.name,
-                'type': (currentResponse.type || App.type) || null,
-                'genericType': (currentResponse.type || App.type) || null,
+                'type': returnType,
+                'genericType': returnType,
                 'class': App.getClass(),
                 'package': App.getPackage(),
                 'methodArgs': JSON.stringify(currentResponse.methodArgs),
@@ -2352,7 +2388,7 @@ https://github.com/Tencent/APIJSON/issues
                 'randomId': 0,
                 'host': App.getBaseUrl(),
 //                'testAccountId': currentAccountId,
-                'response': JSON.stringify(isEditResponse ? inputObj : currentResponse),
+                'response': isEditResponse ? rawInputStr : rawRspStr,
                 'standard': isML || isEditResponse ? JSON.stringify(isEditResponse ? commentObj : stddObj) : undefined
                 // 没必要，直接都在请求中说明，查看也方便 'detail': (isEditResponse ? App.getExtraComment() : null) || ((App.currentRemoteItem || {}).TestRecord || {}).detail,
               },
@@ -2701,7 +2737,7 @@ https://github.com/Tencent/APIJSON/issues
                       if (StringUtil.isEmpty(classItem['package'], true)) {
                     	  classItem['package'] = packageItem['package']
                       }
-                      App.sync2DB(classItem)
+                      App.sync2DB(classItem, data.language)
                     } catch (e) {
                       App.uploadFailCount++
                       App.exTxt.button = 'All:' + App.uploadTotal + '\nDone:' + App.uploadDoneCount + '\nFail:' + App.uploadFailCount
@@ -2718,7 +2754,7 @@ https://github.com/Tencent/APIJSON/issues
        * @param classItem
        * @param callback
        */
-      sync2DB: function(classItem) {
+      sync2DB: function(classItem, language) {
         if (classItem == null) {
           this.log('postApi', 'classItem == null  >> return')
           return
@@ -2731,9 +2767,8 @@ https://github.com/Tencent/APIJSON/issues
         var currentAccount = this.accounts[this.currentAccountIndex]
         var classArgs = this.getArgs4Sync(classItem.parameterTypeList)
 
-        var methodItem
         for (var k = 0; k < methodList.length; k++) {
-          methodItem = methodList[k]
+          var methodItem = methodList[k]
           if (methodItem == null || methodItem.name == null) {
             this.uploadFailCount ++
             this.exTxt.button = 'All:' + this.uploadTotal + '\nDone:' + this.uploadDoneCount + '\nFail:' + this.uploadFailCount
@@ -2748,7 +2783,7 @@ https://github.com/Tencent/APIJSON/issues
             } else if (returnType.length == 1) {
               returnType = returnType[0]
             } else {
-              returnType = "(" + returnType.join() + ")"
+              returnType = returnType.join() // "(" + returnType.join() + ")"
             }
           }
 
@@ -2757,6 +2792,7 @@ https://github.com/Tencent/APIJSON/issues
             'Method': {
               'userId': this.User.id,
               // 'testAccountId': currentAccountId,
+              'language': StringUtil.isEmpty(language, true) ? this.language : language,
               'package': classItem.package == null ? null : classItem.package,  // .replace(/[.]/g, '/'),
               'class': classItem.class,
               'method': methodItem.name,
@@ -2811,16 +2847,16 @@ https://github.com/Tencent/APIJSON/issues
       },
 
       getArgs4Sync: function (typeList, valueList) {
-        if (typeList == null) {
+        var size = Math.max(typeList == null ? 0 : typeList.length, valueList == null ? 0 : valueList.length)
+        if (size <= 0) {
           return null
         }
 
-
         var args = []
-        for (var l = 0; l < typeList.length; l++) {
+        for (var l = 0; l < size; l++) {
 
-          var type = typeList[l] == null ? null : typeList[l]  //保持用 . 分割  .replace(/[.]/g, '/')
-          var value = valueList[l] == null ? this.mockValue4Type(type) : valueList[l];
+          var type = typeList == null ? null : typeList[l]  //保持用 . 分割  .replace(/[.]/g, '/')
+          var value = valueList == null ? this.mockValue4Type(type) : valueList[l];
 
           args.push({
             type: type,
@@ -2839,19 +2875,35 @@ https://github.com/Tencent/APIJSON/issues
         switch (type) {
           case 'Boolean':
           case 'boolean':
+          case 'bool':
             return randomInt(0, 1) == 1
+          case 'number':
           case 'Number':
           case 'Double':
           case 'Float':
           case 'double':
           case 'float':
+          case 'float32':
+          case 'float64':
             return randomNum(-100, 200, randomInt(0, 2))
           case 'Long':
           case 'long':
+          case 'int64':
+          case 'uint64':
             return randomInt(-100, 200)
           case 'Integer':
+          case 'integer':
           case 'int':
+          case 'int8':
+          case 'int16':
+          case 'int32':
+          case 'uint':
+          case 'uint8':
+          case 'uint16':
+          case 'uint32':
             return randomInt(-10, 20)
+          case 'str':
+          case 'string':
           case 'String':
           case 'CharSequence':
             return randomStr(0, 5)
@@ -2869,7 +2921,7 @@ https://github.com/Tencent/APIJSON/issues
           }
         }
 
-        if (type.endsWith('[]') || type.endsWith('List') || type.endsWith('Array') || type.endsWith('Set') || type.endsWith('Collection')) {
+        if (type.startsWith('list') || type.startsWith('[]') || type.endsWith('[]') ||type.endsWith('List') || type.endsWith('Array') || type.endsWith('Set') || type.endsWith('Collection')) {
           var size = randomInt(0, 10)
           var arr = []
           for (var i = 0; i < size; i ++) {
@@ -2881,7 +2933,7 @@ https://github.com/Tencent/APIJSON/issues
           return arr
         }
 
-        if (type.endsWith('Map') || type.endsWith('Table') || type.endsWith('JSONObject')) {
+        if (type.startsWith('map') || type.startsWith('dict') || type.endsWith('Map') || type.endsWith('Table') || type.endsWith('JSONObject')) {
           var size = randomInt(0, 10)
 
           var index = ct.indexOf(',')
@@ -2899,7 +2951,7 @@ https://github.com/Tencent/APIJSON/issues
           return this.mockValue4Type('Number')
         }
 
-        return type == 'Object' || type == 'java.lang.Object' ? null : {}
+        return null // type == 'Object' || type == 'java.lang.Object' ? null : {}
       },
 
       // 切换主题
@@ -3165,24 +3217,39 @@ https://github.com/Tencent/APIJSON/issues
           packagePrefix = packagePrefix.trim()
 
           var langauges = StringUtil.split(this.language, ',', true)
+          var langCond = {}
           if (langauges == null || langauges.length <= 0) {
             langauges = undefined
+          } else {
+            var combineStr = StringUtil.isEmpty(search) ? 'language{}' : '(package*~ | class*~ | method*~ | type*~ | detail*~) & (language{}'
+            for (var i = 0; i < langauges.length; i++) {
+              langCond['lang' + i + '{}'] = "find_in_set('" + langauges[i] + "',language)"
+              combineStr += ' | lang' + i + '{}'
+            }
+            langCond['@combine'] = combineStr + (StringUtil.isEmpty(search) ? '' : ')')
+
+            langauges.push('')
+            langauges.push(null)
           }
+
+          this.coverage = {}
+          this.view = 'markdown'
 
           var req = {
             format: false,
             '[]': {
               'count': this.testCaseCount || 100, //200 条测试直接卡死 0,
               'page': this.testCasePage || 0,
-              'Method': {  // 不管是 item.Method.constructor 还是 item.Method['constructor'] 都取到了 js 语言构造器而不是 JSON 中的 value
-                '@column': 'id,userId,static,ui,type,genericType,package,class,constructor:cttr,classArgs,genericClassArgs,method,methodArgs,genericMethodArgs,exceptions,genericExceptions,request,demo,detail,date',
+              'Method': Object.assign({  // 不管是 item.Method.constructor 还是 item.Method['constructor'] 都取到了 js 语言构造器而不是 JSON 中的 value
+                '@column': 'id,userId,language,static,ui,type,genericType,package,class,constructor:cttr,classArgs,genericClassArgs,method,methodArgs,genericMethodArgs,exceptions,genericExceptions,request,demo,detail,date',
                 '@order': 'date-',
                 'userId{}': [0, this.User.id],
-                'arguments()': 'getMethodArguments(genericMethodArgs)',
-                'defination()': 'getMethodDefination(method,arguments,type,exceptions,null)',
-                'constructorArguments()': 'getMethodArguments(genericClassArgs)',
+                // 'arguments()': 'getMethodArguments(genericMethodArgs)',
+                // 'defination()': 'getMethodDefination(method,arguments,type,exceptions,null)',
+                // 'constructorArguments()': 'getMethodArguments(genericClassArgs)',
                 'request()': 'getMethodRequest()',
                 'language{}': langauges,
+                // 'language|{}': "find_in_set('" + langauges[0] + "',language)",
                 'package$': StringUtil.isEmpty(packagePrefix) ? null : packagePrefix + '%',
                 'class$': StringUtil.isEmpty(classPrefix) ? null : classPrefix + '%',
                 'package*~': search,
@@ -3191,7 +3258,7 @@ https://github.com/Tencent/APIJSON/issues
                 'type*~': search,
                 'detail*~': search,
                 '@combine': StringUtil.isEmpty(search) ? null : 'package*~,class*~,method*~,type*~,detail*~'
-              },
+              }, langCond),
               'TestRecord': {
                 'documentId@': '/Method/id',
                 'userId': this.User.id,
@@ -3289,8 +3356,8 @@ https://github.com/Tencent/APIJSON/issues
               continue
             }
 
-            var count = isRandom && obj != null && obj.Random != null ? obj.Random.count : null
-            if (count != null && count > 1) {
+            var count = isRandom && obj.Random != null ? obj.Random.count : (isRandom ? null : obj.totalCount)
+            if (count != null && count > (isRandom ? 1 : 0)) {
               var sum = obj[color + 'Count']
               if (sum != null && sum > 0) {
                 list.push(obj)
@@ -3333,9 +3400,9 @@ https://github.com/Tencent/APIJSON/issues
 
           var tests = (this.tests[String(accountIndex)] || {})[docId]
           if (tests != null && JSONObject.isEmpty(tests) != true) {
-            if (! isSub) {
-              this.resetCount(this.currentRemoteItem, true, accountIndex)
-            }
+            // if (! isSub) {
+            //   this.resetCount(this.currentRemoteItem, true, isSub, accountIndex)
+            // }
 
             for (var i = 0; i < randomCount; i++) {
               var item = randoms[i]
@@ -3344,7 +3411,7 @@ https://github.com/Tencent/APIJSON/issues
                 continue
               }
 
-              this.resetCount(item, true, accountIndex)
+              this.resetCount(item, true, isSub, accountIndex)
 
               var subCount = r.count || 0
               if (subCount == 1) {
@@ -3382,13 +3449,27 @@ https://github.com/Tencent/APIJSON/issues
           this.showDoc()
         }
 
-        this.randoms = (this.currentRemoteItem || {}).randoms || []
+        var randoms = []
+        if (this.randomPage == 0 && ! isSub) {
+          randoms = (this.currentRemoteItem || {}).randoms || []
+        }
+        else if (this.randomSubPage == 0 && isSub) {
+          randoms = (this.currentRandomItem || {}).subs || []
+        }
+
+        if (isSub) {
+          this.randomSubs = randoms
+        }
+        else {
+          this.randoms = randoms
+        }
+
         this.getCurrentRandomSummary().summaryType = 'total' // this.onClickSummary('total', true)
         if (! this.isRandomSummaryShow()) {
           this.showCompare4RandomList(show, isSub)
         }
 
-        if (show && this.isRandomShow && this.randoms.length <= 0 && item != null && item.id != null) {
+        if (show && this.isRandomShow && randoms.length <= 0 && item != null && item.id != null) {
           this.isRandomListShow = false
 
           var subSearch = StringUtil.isEmpty(this.randomSubSearch, true)
@@ -4395,58 +4476,56 @@ https://github.com/Tencent/APIJSON/issues
           return
         }
 
-        var header
         try {
-          header = this.getHeader(vHeader.value)
-        } catch (e) {
-          // alert(e.message)
-          return
-        }
+          var header = this.getHeader(vHeader.value)
 
-        var req = this.getRequest(vInput.value, {})
+          var req = this.getRequest(vInput.value, {})
 
-        var url = this.getUrl()
+          var url = this.getUrl()
 
-        var httpReq = Object.assign({
-          "package": this.getPackage(url),
-          "class": this.getClass(url),
-          "method": this.getMethod(url)
-        }, req)
+          var httpReq = Object.assign({
+            "package": this.getPackage(url),
+            "class": this.getClass(url),
+            "method": this.getMethod(url)
+          }, req)
 
-        vOutput.value = "requesting... \nURL = " + url
+          vOutput.value = "requesting... \nURL = " + url
 
-        errHandler = function () {
-          vOutput.value = "requesting... \nURL = " + url + "\n\n可能" + ERR_MSG
-        }
-        setTimeout(errHandler, 5000)
-
-        this.view = 'output';
-
-        var caseScript = (caseScript_ != null ? caseScript_ : ((this.scripts || {}).case || {})[this.getCurrentDocumentId() || 0]) || {}
-
-        this.setBaseUrl()
-        this.request(isAdminOperation, REQUEST_TYPE_JSON, this.project + '/method/invoke', httpReq, isAdminOperation ? {} : header, callback, caseScript, accountScript_, globalScript_, ignorePreScript)
-
-        this.locals = this.locals || []
-        if (this.locals.length >= 1000) { //最多1000条，太多会很卡
-          this.locals.splice(999, this.locals.length - 999)
-        }
-        var method = this.getMethod()
-        this.locals.unshift({
-          'Method': {
-            'userId': this.User.id,
-            'name': this.formatDateTime() + (StringUtil.isEmpty(req.tag, true) ? '' : ' ' + req.tag),
-            'method': this.getMethod(url),
-            'class': this.getClass(url),
-            'package': this.getPackage(url),
-            'type': this.type,
-            'url': method,
-            'request': JSON.stringify(req, null, '    '),
-            'header': vHeader.value,
-            'scripts': this.scripts
+          errHandler = function () {
+            vOutput.value = "requesting... \nURL = " + url + "\n\n可能" + ERR_MSG
           }
-        })
-        this.saveCache('', 'locals', this.locals)
+          setTimeout(errHandler, 5000)
+
+          this.view = 'output';
+
+          var caseScript = (caseScript_ != null ? caseScript_ : ((this.scripts || {}).case || {})[this.getCurrentDocumentId() || 0]) || {}
+
+          this.setBaseUrl()
+          this.request(isAdminOperation, REQUEST_TYPE_JSON, this.project + '/method/invoke', httpReq, isAdminOperation ? {} : header, callback, caseScript, accountScript_, globalScript_, ignorePreScript)
+
+          this.locals = this.locals || []
+          if (this.locals.length >= 1000) { //最多1000条，太多会很卡
+            this.locals.splice(999, this.locals.length - 999)
+          }
+          var method = this.getMethod()
+          this.locals.unshift({
+            'Method': {
+              'userId': this.User.id,
+              'name': this.formatDateTime() + (StringUtil.isEmpty(req.tag, true) ? '' : ' ' + req.tag),
+              'method': this.getMethod(url),
+              'class': this.getClass(url),
+              'package': this.getPackage(url),
+              'type': this.type,
+              'url': method,
+              'request': JSON.stringify(req, null, '    '),
+              'header': vHeader.value,
+              'scripts': this.scripts
+            }
+          })
+          this.saveCache('', 'locals', this.locals)
+        } catch (e) {
+          this.onResponse(url, {}, e)
+        }
       },
 
       //请求
@@ -4463,13 +4542,25 @@ https://github.com/Tencent/APIJSON/issues
         var evalPostScript = function () {}
 
         var sendRequest = function (isAdminOperation, type, url, req, header, callback) {
+          var hs = ""
+          if (isDelegate && header != null) {
+            for (var k in header) {
+                var v = k == null ? null : header[k]
+                if (k == null || k.toLowerCase() == 'apijson-delegate-id') {
+                    continue
+                }
+                hs += '\n' + k + ': ' + (v instanceof Object ? JSON.stringify(v) : v)
+            }
+          }
+
           // axios.defaults.withcredentials = true
           axios({
             method: (type == REQUEST_TYPE_PARAM ? 'get' : 'post'),
-            url: (isDelegate
-                ? (
+            url: (isDelegate ? (
                   App.server + '/delegate?' + (type == REQUEST_TYPE_GRPC ? '$_type=GRPC&' : '')
-                  + (StringUtil.isEmpty(App.delegateId, true) ? '' : '$_delegate_id=' + App.delegateId + '&') + '$_delegate_url=' + encodeURIComponent(url)
+                  + (StringUtil.isEmpty(App.delegateId, true) ? '' : '$_delegate_id=' + App.delegateId + '&')
+                  + '$_delegate_url=' + encodeURIComponent(url)
+                  + (StringUtil.isEmpty(hs, true) ? '' : '&$_headers=' + encodeURIComponent(hs.trim()))
                 ) : (
                   App.isEncodeEnabled ? encodeURI(url) : url
                 )
@@ -4513,7 +4604,9 @@ https://github.com/Tencent/APIJSON/issues
               // if ((res.config || {}).method == 'options') {
               //   return
               // }
-              log('send >> success:\n' + JSON.stringify(res.data, null, '    '))
+              if (DEBUG) {
+                log('send >> success:\n' + JSON.stringify(res.data, null, '    '))
+              }
 
               //未登录，清空缓存
               if (res.data != null && res.data.code == 407) {
@@ -4712,7 +4805,7 @@ https://github.com/Tencent/APIJSON/issues
             header['Set-Cookie'] = header.Cookie
             delete header.Cookie
           }
-          else {
+          else if (IS_BROWSER) {
             document.cookie = header.Cookie
           }
         } else if (IS_NODE) {
@@ -4724,7 +4817,6 @@ https://github.com/Tencent/APIJSON/issues
 
             // Node 环境内通过 headers 设置 Cookie 无效
             header.Cookie = isEnvCompare ? this.otherEnvCookieMap[curUser.phone] : curUser.cookie
-            document.cookie = header.Cookie
           }
         }
 
@@ -5212,6 +5304,8 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             this.saveCache(this.server, 'testCasePage', this.testCasePage)
             this.saveCache(this.server, 'testCaseCount', this.testCaseCount)
 
+            this.resetTestCount(this.currentAccountIndex)
+
             this.remotes = null
             this.showTestCase(true, false)
             break
@@ -5219,15 +5313,22 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             this.saveCache(this.server, 'randomPage', this.randomPage)
             this.saveCache(this.server, 'randomCount', this.randomCount)
 
+            this.resetTestCount(this.currentAccountIndex, true)
+
+            var cri = this.currentRemoteItem || {}
+            cri.randoms = null
             this.randoms = null
-            this.showRandomList(true, (this.currentRemoteItem || {}).Method, false)
+            this.showRandomList(true, cri.Method, false)
             break
           case 'randomSub':
             this.saveCache(this.server, 'randomSubPage', this.randomSubPage)
             this.saveCache(this.server, 'randomSubCount', this.randomSubCount)
 
+            this.resetTestCount(this.currentAccountIndex, true, true)
+
+            var cri = this.currentRandomItem || {}
             this.randomSubs = null
-            this.showRandomList(true, (this.currentRemoteItem || {}).Random, true)
+            this.showRandomList(true, cri.Random, true)
             break
           default:
             docObj = null
@@ -5360,7 +5461,22 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           return false;
         }
         doc = d;
-        vOutput.value = (this.isTestCaseShow ? '' : output) + (
+        var url = StringUtil.trim((this.coverage || {}).url)
+        if (url != null && url.startsWith('/')) {
+          url = this.project + url
+          this.view = 'html'
+          vHtml.innerHTML = '<iframe width="100%" height="100%" src="' + url + '"></iframe><br>'
+          return true
+        }
+        var html = null // (this.coverage || {}).html
+        if (StringUtil.isEmpty(html) != true) {
+          this.view = 'html'
+          vHtml.innerHTML = html
+          return true
+        }
+
+        vOutput.value = (StringUtil.isEmpty(url, true) ? (StringUtil.isEmpty(html, true) ? '' : StringUtil.trim(html) + '<br>') : '<iframe src="' + url + '"></iframe><br>')
+          + (this.isTestCaseShow ? '' : output) + (
           '\n\n\n## 包和类文档\n自动查数据库表和字段属性来生成 \n\n' + d
           + '<h3 align="center">关于</h3>'
           + '<p align="center">UnitAuto-零代码单元测试'
@@ -5385,7 +5501,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
       	var isTSQL = ['ORACLE', 'DAMENG'].indexOf(this.database) >= 0
       	var isNotTSQL = ! isTSQL
-        var count = 15 // this.count || 20  //超过就太卡了
+        var count = this.count || 15  //超过就太卡了
         var page = this.page || 0
 
         var search = StringUtil.isEmpty(this.search, true) ? null : StringUtil.trim(this.search)
@@ -5447,7 +5563,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             		'@raw': '@column',
             		'@column': "DISTINCT package,class,constructor;(CASE genericClassArgs WHEN '[]' THEN NULL ELSE genericClassArgs END):genericClassArgs",
             		'@order': 'class+,constructor+,genericClassArgs+',
-            		'arguments()': 'getMethodArguments(genericClassArgs)'
+            		// 'arguments()': 'getMethodArguments(genericClassArgs)'
             	}, condition),
             	'Method:count': Object.assign({
             		'package@': '[]/Method/package',
@@ -5539,12 +5655,11 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         				  log('getDoc [] for ' + i + ': columnList = \n' + format(JSON.stringify(columnList)));
         			  }
 
-        			  var name;
         			  for (var j = 0; j < columnList.length; j++) {
         				  column = columnList[j];
         				  //class
-        				  clazz = column == null ? null : column.Method;
-        				  cls = clazz == null ? null : clazz['class'];
+        				  var clazz = column == null ? null : column.Method;
+        				  var cls = clazz == null ? null : clazz['class'];
         				  if (StringUtil.isEmpty(cls, true)) {
         					  continue;
         				  }
@@ -5554,7 +5669,12 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         				  }
 
         				  doc += '\n' + (j + 1) + ') ' + cls;
-        				  if (StringUtil.isEmpty(clazz.arguments, true) == false) {
+                          var args = clazz.arguments
+                          if (StringUtil.isEmpty(args, true) == false) {
+                            args = App.getArgumentTypes(clazz, true);
+                          }
+
+        				  if (StringUtil.isEmpty(args, true) == false) {
         					  doc += '(' + StringUtil.get(clazz.arguments) + ')';
         				  }
 
@@ -6474,10 +6594,78 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           if (item == null || item.method == null) {
             continue
           }
-          doc += '\n\n#### ' + item.method  + '    ' + item.defination
+          doc += '\n\n#### ' + item.method  + '    ' + this.getMethodDefinition(item) // item.defination
           doc += '\n```json\n' + item.request + '\n```\n'
         }
         return doc
+      },
+
+      getArgumentTypes: function (method, isClass) {
+        var curObj = method || {}
+        var types = curObj.arguments || '';
+        if (StringUtil.isEmpty(types, true)) {
+          var args = isClass ? (curObj.genericClassArgs || curObj.classArgs) : (curObj.genericMethodArgs || curObj.methodArgs)
+          if (args instanceof Array == false || args.length <= 0) {
+            var req = this.getRequest(method.request, {});
+            args = isClass ? req.classArgs : req.methodArgs;
+          }
+
+          if (args instanceof Array) {
+            var l = method.language || this.language
+
+            for (var i = 0; i < args.length; i++) {
+              var arg = args[i];
+              var type = JSONResponse.getType(arg);
+              var t = null;
+              if (type == 'string' && arg != null) {
+                var ind = arg.indexOf(':');
+                t = ind < 0 ? null : arg.substring(0, ind).trim().toLowerCase();
+                if (t == null || t == '') {
+                  t = CodeUtil.getType4String(l);
+                }
+              }
+              else if (type == 'object' && arg != null) {
+                t = arg.type;
+                if (t == null) {
+                  t = CodeUtil.getType4Language(l, JSONResponse.getType(arg.value), false);
+                }
+              }
+              else {
+                t = CodeUtil.getType4Language(l, JSONResponse.getType(arg), false);
+              }
+
+              types += (i <= 0 ? '' : ',') + (t == null ? CodeUtil.getType4Any(l) : t);
+            }
+          }
+        }
+        return types;
+      },
+
+      getMethodDefinition: function (method, isClass) {
+        var curObj = method || {}
+        var n = curObj.method || curObj.name;
+        if (StringUtil.isEmpty(n, true)) {
+          throw new Error("getMethodDefinition  StringUtil.isEmpty(n, true) !");
+        }
+        var a = this.getArgumentTypes(method, isClass);
+
+        var t = curObj.type;
+        var e = curObj.exceptions;
+        // var l = curObj.language || '';
+
+        // 同一格式更好
+        // switch (l) {
+        //   case CodeUtil.LANGUAGE_TYPE_SCRIPT:
+        //     return n + "(" + (StringUtil.isEmpty(a, true) ? "" : a) + ")" + (StringUtil.isEmpty(t, true) ? "" : ": " + t) + (StringUtil.isEmpty(e, true) ? "" : " throws " + e);
+        //   case CodeUtil.LANGUAGE_GO:
+        //     var isMulti = t != null && t.indexOf(',') > 0;
+        //     return n + "(" + (StringUtil.isEmpty(a, true) ? "" : a ) + ")" + (StringUtil.isEmpty(t, true) ? "" : " " + (isMulti ? '(' + t + ')' : t));
+        //   default:
+            //类型可能很长，Eclipse, Idea 代码提示都是类型放后面			return (StringUtil.isEmpty(t, true) ? "" : t + " ") + n + "(" + (StringUtil.isEmpty(a, true) ? "" : a) + ")";
+            // return n + "(" + (StringUtil.isEmpty(a, true) ? "" : a) + ")" + (StringUtil.isEmpty(t, true) ? "" : ": " + t) + (StringUtil.isEmpty(e, true) ? "" : " throws " + e);
+        // }
+
+        return n + "(" + (StringUtil.isEmpty(a, true) ? "" : a) + ")" + (StringUtil.isEmpty(t, true) ? "" : ": " + t) + (StringUtil.isEmpty(e, true) ? "" : " # " + e);
       },
 
       enableCross: function (enable) {
@@ -6494,11 +6682,29 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         //   this.isEnvCompareEnabled = false
         //   this.saveCache(this.server, 'isEnvCompareEnabled', this.isEnvCompareEnabled)
         // }
+
+        this.resetTestCount(this.currentAccountIndex)
+
         this.remotes = null
         this.showTestCase(true, false)
       },
 
-      onClickTestScript() {
+      resetTestCount: function (accountIndex, isRandom, isSub) {
+        if (isRandom) {
+          this.resetCount(isSub ? this.currentRandomItem : this.currentRemoteItem, isRandom, isSub, accountIndex)
+          return
+        }
+
+        if (accountIndex == -1) {
+          this.logoutSummary = this.resetCount(this.logoutSummary, false, false, accountIndex)
+        }
+        else if (accountIndex >= 0 && accountIndex < (this.accounts || []).length) {
+          var accountItem = this.resetCount(this.getSummary(accountIndex), false, false, accountIndex)
+          this.accounts[accountIndex] = accountItem
+        }
+      },
+
+      onClickTestScript: function () {
         var logger = console.log
         console.log = function(msg) {
           logger(msg)
@@ -6549,9 +6755,9 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
        */
       onClickTestRandom: function (isCross, callback) {
         this.isRandomTest = true
-        this.testRandom(! this.isRandomListShow && ! this.isRandomSubListShow, this.isRandomListShow, this.isRandomSubListShow, null, isCross, callback)
+        this.testRandom(! this.isRandomListShow && ! this.isRandomSubListShow, this.isRandomListShow, this.isRandomSubListShow, null, isCross, true, callback)
       },
-      testRandom: function (show, testList, testSubList, limit, isCross, callback) {
+      testRandom: function (show, testList, testSubList, limit, isCross, isManual, callback) {
         this.isRandomEditable = false
         if (testList != true && testSubList != true) {
           this.testRandomProcess = ''
@@ -6598,8 +6804,16 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           }
 
           this.testRandomProcess = '正在测试: ' + 0 + '/' + allCount
-          var summaryItem = this.getCurrentRandomSummary()
-          this.resetCount(summaryItem, true, App.currentAccountIndex)
+          var summaryItem = (testSubList ? this.currentRandomItem : this.currentRemoteItem) || {}
+          if (isManual) {
+            this.resetCount(summaryItem, true, testSubList, this.currentAccountIndex)
+          } else {
+            summaryItem.whiteCount = 0
+            summaryItem.greenCount = 0
+            summaryItem.blueCount = 0
+            summaryItem.orangeCount = 0
+            summaryItem.redCount = 0
+          }
           summaryItem.totalCount = allCount
 
           var json = this.getRequest(vInput.value, {})
@@ -6615,7 +6829,9 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               App.randomDoneCount ++
               continue
             }
-            this.log('test  random = ' + JSON.stringify(random, null, '  '))
+            if (DEBUG) {
+              this.log('test  random = ' + JSON.stringify(random, null, '  '))
+            }
 
             const index = i
 
@@ -6630,21 +6846,28 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             // }
 
             App[testSubList ? 'currentRandomSubIndex' : 'currentRandomIndex'] = index
-            this.testRandomSingle(show, false, itemAllCount > 1 && ! testSubList, item, this.type, url, json, header, isCross, function (url, res, err) {
-              var data = null
-              if (res instanceof Object) {  // 可能通过 onTestResponse 返回的是 callback(true, 18, null)
-                data = res.data
-                try {
-                  App.onResponse(url, res, err)
-                  App.log('test  App.request >> res.data = ' + (data == null ? 'null' : JSON.stringify(data, null, '  ')))
-                } catch (e) {
-                  App.log('test  App.request >> } catch (e) {\n' + e.message)
+            try {
+              this.testRandomSingle(show, false, itemAllCount > 1 && ! testSubList, item, this.type, url, json, header, isCross, isManual, function (url, res, err) {
+                var data = null
+                if (res instanceof Object) {  // 可能通过 onTestResponse 返回的是 callback(true, 18, null)
+                  data = res.data
+                  try {
+                    App.onResponse(url, res, err)
+                    if (DEBUG) {
+                      App.log('test  App.request >> res.data = ' + (data == null ? 'null' : JSON.stringify(data, null, '  ')))
+                    }
+                  } catch (e) {
+                    App.log('test  App.request >> } catch (e) {\n' + e.message)
+                  }
                 }
-              }
 
-              App.compareResponse(allCount, list, index, item, data, true, App.currentAccountIndex, false, err, null, isCross, callback)
-              return true
-            })
+                App.compareResponse(allCount, list, index, item, data, true, App.currentAccountIndex, false, err, null, isCross, callback)
+                return true
+              })
+            }
+            catch (e) {
+              this.compareResponse(allCount, list, index, item, data, true, this.currentAccountIndex, false, e, null, isCross, callback)
+            }
           }
         }
       },
@@ -6652,7 +6875,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
        * @param show
        * @param callback
        */
-      testRandomSingle: function (show, testList, testSubList, item, type, url, json, header, isCross, callback) {
+      testRandomSingle: function (show, testList, testSubList, item, type, url, json, header, isCross, isManual, callback) {
         item = item || {}
 
         // 保证能调用自定义函数等 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -6694,159 +6917,260 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
           const which = i;
           var rawConfig = testSubList && i < existCount ? ((subs[i] || {}).Random || {}).config : random.config
-          this.parseRandom(
-            JSON.parse(JSON.stringify(json)), rawConfig, random.id
-            , ! testSubList, testSubList && i >= existCount, testSubList && i >= existCount
-            , function (randomName, constConfig, constJson) {
+          
+          
+          var cb = function (url, res, err) {
+            if (callback != null) {
+              callback(url, res, err, random)
+            }
+            else {
+              App.onResponse(url, res, err)
+            }
+          };
+                  
+          try {
+            this.parseRandom(
+              JSON.parse(JSON.stringify(json)), rawConfig, random.id
+              , ! testSubList, testSubList && i >= existCount, testSubList && i >= existCount
+              , function (randomName, constConfig, constJson) {
 
-              respCount ++;
+                respCount ++;
 
-              if (testSubList) {  //在原来已上传的基础上，生成新的
-                if (which >= existCount) {
-                  //异步导致顺序错乱 subs.push({
-                  subs[which] = {
-                    Random: {
-                      id: -i - 1, //表示未上传
-                      toId: random.id == null ? 1 : random.id,  // 1 为了没选择测试用例时避免用 toId 判断子项错误
-                      userId: random.userId,
-                      documentId: random.documentId,
-                      count: 1,
-                      name: randomName || 'Temp ' + i,
-                      config: constConfig
-                    },
-                    //不再需要，因为子项里前面一部分就是已上传的，而且这样更准确，交互更直观
-                    // TestRecord: {  //解决子项始终没有对比标准
-                    //   id: 0, //不允许子项撤回 tr.id, //表示未上传
-                    //   userId: random.userId,
-                    //   documentId: random.documentId,
-                    //   testAccountId: tr.testAccountId,
-                    //   randomId: -i - 1,
-                    //   response: tr.response,
-                    //   standard: tr.standard,
-                    //   date: tr.date,
-                    //   compare: tr.compare
-                    // }
-                  // })
-                  };
-                }
-              }
-              else {
-                var cb = function (url, res, err) {
-                  if (callback != null) {
-                    callback(url, res, err, random)
+                if (testSubList) {  //在原来已上传的基础上，生成新的
+                  if (which >= existCount) {
+                    //异步导致顺序错乱 subs.push({
+                    subs[which] = {
+                      Random: {
+                        id: -i - 1, //表示未上传
+                        toId: random.id == null ? 1 : random.id,  // 1 为了没选择测试用例时避免用 toId 判断子项错误
+                        userId: random.userId,
+                        documentId: random.documentId,
+                        count: 1,
+                        name: randomName || 'Temp ' + i,
+                        config: constConfig
+                      },
+                      //不再需要，因为子项里前面一部分就是已上传的，而且这样更准确，交互更直观
+                      // TestRecord: {  //解决子项始终没有对比标准
+                      //   id: 0, //不允许子项撤回 tr.id, //表示未上传
+                      //   userId: random.userId,
+                      //   documentId: random.documentId,
+                      //   testAccountId: tr.testAccountId,
+                      //   randomId: -i - 1,
+                      //   response: tr.response,
+                      //   standard: tr.standard,
+                      //   date: tr.date,
+                      //   compare: tr.compare
+                      // }
+                    // })
+                    };
                   }
-                  else {
-                    App.onResponse(url, res, err)
-                  }
-                };
-
-                if (show == true) {
-                  vInput.value = JSON.stringify(constJson, null, '    ');
-                  App.send(false, cb, caseScript, null, null, true);
                 }
                 else {
-                  var httpReq = {
-                    "package": constJson.package || App.getPackage(url),
-                    "class": constJson.class || App.getClass(url),
-                    "this": constJson.this,
-                    "constructor": constJson.constructor,
-                    "classArgs": constJson.classArgs,
-                    "method": constJson.method || App.getMethod(url),
-                    "methodArgs": constJson.methodArgs,
-                    "static": constJson.static,
-                    "timeout": constJson.timeout,
-                    "ui": constJson.ui
+                  if (show == true) {
+                    vInput.value = JSON.stringify(constJson, null, '    ');
+                    App.send(false, cb, caseScript, null, null, true);
                   }
-                  App.request(false, REQUEST_TYPE_JSON, App.project + '/method/invoke', httpReq, header, cb, caseScript, null, null, true);
+                  else {
+                    var httpReq = {
+                      "package": constJson.package || App.getPackage(url),
+                      "class": constJson.class || App.getClass(url),
+                      "this": constJson.this,
+                      "constructor": constJson.constructor,
+                      "classArgs": constJson.classArgs,
+                      "method": constJson.method || App.getMethod(url),
+                      "methodArgs": constJson.methodArgs,
+                      "static": constJson.static,
+                      "timeout": constJson.timeout,
+                      "ui": constJson.ui
+                    }
+                    App.request(false, REQUEST_TYPE_JSON, App.project + '/method/invoke', httpReq, header, cb, caseScript, null, null, true);
+                  }
                 }
-              }
 
-              if (testSubList && respCount >= count) { // && which >= count - 1) {
-                if (App.currentRandomItem == null) {
-                  App.currentRandomItem = {}
+                if (testSubList && respCount >= count) { // && which >= count - 1) {
+                  if (App.currentRandomItem == null) {
+                    App.currentRandomItem = {}
+                  }
+                  App.randomSubs = App.currentRandomItem.subs = subs
+                  App.getCurrentRandomSummary().summaryType = 'total' // App.onClickSummary('total', true)
+                  if (App.isRandomListShow == true) {
+                    App.resetCount(item, true, false, App.currentAccountIndex)
+                    item.subs = subs
+                  }
+                  if (respCount == count) {
+                    App.testRandom(false, false, true, count, isCross, isManual, callback)
+                  }
                 }
-                App.randomSubs = App.currentRandomItem.subs = subs
-                App.getCurrentRandomSummary().summaryType = 'total' // App.onClickSummary('total', true)
-                if (App.isRandomListShow == true) {
-                  App.resetCount(item, true, App.currentAccountIndex)
-                  item.subs = subs
-                }
-                App.testRandom(false, false, true, count, isCross, callback)
-              }
 
-            },
-            preScript
-          );
+              },
+              preScript
+            );
+          }
+          catch (e) {
+            cb(App.project + '/method/invoke', {}, e)
+          }
 
         }  // for
 
       },
 
-      resetParentCount: function (item, cri) {
-        cri.totalCount -= item.totalCount
+      resetParentCount: function (item, cri, isRandom, accountIndex) {
+        if (cri == null || item == null) {
+          return
+        }
+
+        if (item.whiteCount == null || item.whiteCount < 0) {
+          item.whiteCount = 0
+        }
+        if (item.greenCount == null || item.greenCount < 0) {
+          item.greenCount = 0
+        }
+        if (item.blueCount == null || item.blueCount < 0) {
+          item.blueCount = 0
+        }
+        if (item.orangeCount == null || item.orangeCount < 0) {
+          item.orangeCount = 0
+        }
+        if (item.redCount == null || item.redCount < 0) {
+          item.redCount = 0
+        }
+
+        if (cri.whiteCount == null) {
+          cri.whiteCount = 0
+        }
+        if (cri.greenCount == null) {
+          cri.greenCount = 0
+        }
+        if (cri.blueCount == null) {
+          cri.blueCount = 0
+        }
+        if (cri.orangeCount == null) {
+          cri.orangeCount = 0
+        }
+        if (cri.redCount == null) {
+          cri.redCount = 0
+        }
+
         cri.whiteCount -= item.whiteCount
         cri.greenCount -= item.greenCount
         cri.blueCount -= item.blueCount
         cri.orangeCount -= item.orangeCount
         cri.redCount -= item.redCount
+        // cri.totalCount -= item.totalCount
 
+        // var isTestCase = isRandom != true && item.Document != null && accountIndex < (this.accounts || []).length
+
+        if (cri.whiteCount < 0) {
+          cri.whiteCount = 0 // isTestCase ? item.whiteCount : 0
+        }
+        if (cri.greenCount < 0) {
+          cri.greenCount = 0 // isTestCase ? item.greenCount : 0
+        }
+        if (cri.blueCount < 0) {
+          cri.blueCount = 0 // isTestCase ? item.blueCount : 0
+        }
+        if (cri.orangeCount < 0) {
+          cri.orangeCount = 0 // isTestCase ? item.orangeCount : 0
+        }
+        if (cri.redCount < 0) {
+          cri.redCount = 0 // isTestCase ? item.redCount : 0
+        }
         // if (cri.totalCount < 0) {
         //   cri.totalCount = 0
         // }
-        if (cri.whiteCount < 0) {
-          cri.whiteCount = 0
-        }
-        if (cri.greenCount < 0) {
-          cri.greenCount = 0
-        }
-        if (cri.blueCount < 0) {
-          cri.blueCount = 0
-        }
-        if (cri.orangeCount < 0) {
-          cri.orangeCount = 0
-        }
-        if (cri.redCount < 0) {
-          cri.redCount = 0
-        }
 
         cri.totalCount = cri.whiteCount + cri.greenCount + cri.blueCount + cri.orangeCount + cri.redCount
       },
-      resetCount: function (item, isRandom, accountIndex) {
+      resetCount: function (item, isRandom, isSub, accountIndex) {
         if (item == null) {
           this.log('resetCount  randomItem == null >> return')
           return item
         }
 
         if (isRandom) {
-          var cri = this.currentRemoteItem // isSub ? this.currentRemoteItem : null
-          // if (cri != null && item != null && item.toId != null && item.toId > 0) {
+          var cri = isSub ? this.currentRandomItem : this.currentRemoteItem
           if (cri != null && (cri != item || cri.id != item.id)) {
-            this.resetParentCount(item, cri)
+            this.resetParentCount(item, cri, isRandom, accountIndex)
+          }
+
+          cri = this.currentRandomItem
+          if (isSub && cri != null && (cri != item || cri.id != item.id)) {
+            this.resetParentCount(item, cri, isRandom, accountIndex)
           }
         }
 
         var accounts = this.accounts
         var num = accounts == null ? 0 : accounts.length
-        if (isRandom && accountIndex != this.currentAccountIndex && accountIndex != num) {
+        if (accountIndex < num) { //  && accountIndex != this.currentAccountIndex) {
           var cs = this.getSummary(accountIndex)
           if (cs != null && (cs != item || cs.id != item.id)) {
-            this.resetParentCount(item, cs)
+            this.resetParentCount(item, cs, false, accountIndex)
           }
         }
 
-        if (isRandom || accountIndex != num) {
+        if (accountIndex < num) {
           var als = this.getAllSummary()
-          if (als != null && (als != item || als.id != item.id)) {
-            this.resetParentCount(item, als)
+          // 不知道为啥总是不对
+          // if (als != null && (als != item || als.id != item.id)) {
+          //   this.resetParentCount(item, als, false, accountIndex)
+          // }
+
+          // 改用以下方式
+          var whiteCount = 0
+          var greenCount = 0
+          var blueCount = 0
+          var orangeCount = 0
+          var redCount = 0
+          // var totalCount = 0
+          for (var i = -1; i < num; i++) {
+            var cs = this.getSummary(i)
+            if (cs == null) {
+              continue
+            }
+
+            if (cs.whiteCount == null || cs.whiteCount < 0) {
+              cs.whiteCount = 0
+            }
+            if (cs.greenCount == null || cs.greenCount < 0) {
+              cs.greenCount = 0
+            }
+            if (cs.blueCount == null || cs.blueCount < 0) {
+              cs.blueCount = 0
+            }
+            if (cs.orangeCount == null || cs.orangeCount < 0) {
+              cs.orangeCount = 0
+            }
+            if (cs.redCount == null || cs.redCount < 0) {
+              cs.redCount = 0
+            }
+            if (cs.totalCount == null || cs.totalCount < 0) {
+              cs.totalCount = cs.whiteCount + cs.greenCount + cs.blueCount + cs.orangeCount + cs.redCount
+            }
+
+            whiteCount += cs.whiteCount
+            greenCount += cs.greenCount
+            blueCount += cs.blueCount
+            orangeCount += cs.orangeCount
+            redCount += cs.redCount
+            // totalCount += cs.totalCount
           }
+
+          als.whiteCount = whiteCount
+          als.greenCount = greenCount
+          als.blueCount = blueCount
+          als.orangeCount = orangeCount
+          als.redCount = redCount
+          als.totalCount = whiteCount + greenCount + blueCount + orangeCount + redCount // totalCount
         }
 
-        item.totalCount = 0
+        // var isTop = isRandom != true && item.Document == null && item.Random == null && accountIndex < (this.accounts || []).length
+
         item.whiteCount = 0
         item.greenCount = 0
         item.blueCount = 0
         item.orangeCount = 0
         item.redCount = 0
+        item.totalCount = 0
         return item
       },
 
@@ -6870,7 +7194,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           }
 
           this.testRandomSingle(show, false, this.isRandomSubListShow, this.currentRandomItem,
-            this.type, this.getUrl(), this.getRequest(vInput.value, {}), this.getHeader(vHeader.value), false, callback
+            this.type, this.getUrl(), this.getRequest(vInput.value, {}), this.getHeader(vHeader.value), false, false, callback
           )
         }
         catch (e) {
@@ -7262,22 +7586,35 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         var total = remotes == null ? 0 : remotes.length
 
         var als = this.getAllSummary()
-        als = this.resetCount(als, false, num)
+        als = this.resetCount(als, false, false, num)
         als.totalCount = isCross ? (num + 1)*total : total
 
         if (isCross) {
           for (var i = -1; i < num; i++) {
             var cs = this.getSummary(i)
-            cs = this.resetCount(cs, false, i)
+            cs = this.resetCount(cs, false, false, i)
             cs.totalCount = total
           }
         } else {
           var cs = this.getSummary(accountIndex)
-          cs = this.resetCount(cs, false, accountIndex)
+          cs = this.resetCount(cs, false, false, accountIndex)
           cs.totalCount = total
         }
 
-        this.test(false, accountIndex, isCross, callback)
+        this.coverage = {}
+        this.request(false, REQUEST_TYPE_JSON, this.project + '/coverage/start', {}, {}, function (url, res, err) {
+          try {
+            App.onResponse(url, res, err)
+            if (DEBUG) {
+              App.log('test  App.request >> res.data = ' + JSON.stringify(res.data, null, '  '))
+            }
+          } catch (e) {
+            App.log('test  App.request >> } catch (e) {\n' + e.message)
+          }
+
+          App.test(false, accountIndex, isCross, callback)
+        })
+
       },
       /**回归测试
        * 原理：
@@ -7308,6 +7645,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             this.testRandomProcess = ''
             if (accountIndex == accounts.length) {
               this.currentAccountIndex = accounts.length - 1  // -1 导致最后右侧显示空对象
+
               if (callback) {
                 callback('已完成账号交叉测试: 退出登录状态 和 每个账号登录状态')
               } else {
@@ -7413,112 +7751,91 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         const isEnvCompare = StringUtil.isNotEmpty(otherBaseUrl, true) // 对比自己也行，看看前后两次是否幂等  && otherBaseUrl != baseUrl
 
         for (var i = 0; i < allCount; i++) {
-          const item = list[i]
-          const document = item == null ? null : item.Method
-          if (document == null || document.method == null) {
-            if (isRandom) {
-              App.randomDoneCount ++
-            } else {
-              App.doneCount ++
-            }
-            continue
-          }
-          var method = (document.method || '').toLowerCase()
-          if (method.indexOf('login') >= 0 || method.indexOf('logout') >= 0) { //login会导致登录用户改变为默认的但UI上还显示原来的，单独测试OWNER权限时能通过很困惑
-            this.log("startTest  method.indexOf('login') >= 0 || method.indexOf('logout') >= 0 >> continue")
-            if (isRandom) {
-              App.randomDoneCount ++
-            } else {
-              App.doneCount ++
-            }
-            continue
-          }
-          this.log('test  document = ' + JSON.stringify(document, null, '  '))
-
-          const index = i
-
-          var hdr = null
           try {
-            hdr = this.getHeader(document.header)
-          } catch (e) {
-            this.log('test  for ' + i + ' >> try { header = this.getHeader(document.header) } catch (e) { \n' + e.message)
-          }
-          const header = hdr
-
-          const caseScript = {
-            pre: item['Script:pre'],
-            post: item['Script:post']
-          }
-
-          const otherEnvUrl = isEnvCompare ? (otherBaseUrl + '/method/invoke') : null
-          const curEnvUrl = this.project + '/method/invoke'
-
-          var httpReq = null
-          if (StringUtil.isEmpty(document.request, true)) {
-            httpReq = {
-              "package": document.package,
-              "class": document.class,
-              "this": document.this,
-              "constructor": document.constructor,
-              "classArgs": this.getRequest(document.classArgs, []),
-              "method": document.method,
-              "methodArgs": this.getRequest(document.methodArgs, []),
-              "static": document.static,
-              "timeout": document.timeout,
-              "ui": document.ui
-            }
-          }
-          else {
-            httpReq = this.getRequest(document.request)
-            if (httpReq.package == null) {
-              httpReq.package = document.package
-            }
-            if (httpReq.class == null) {
-              httpReq.class = document.class
-            }
-            if (httpReq.method == null) {
-              httpReq.method = document.method
-            }
-            if (httpReq.constructor == null) {
-              httpReq.constructor = document.constructor
-            }
-            if (httpReq.classArgs == null) {
-              httpReq.classArgs = this.getRequest(document.classArgs, [])
-            }
-            if (httpReq.methodArgs == null) {
-              httpReq.methodArgs = this.getRequest(document.methodArgs, [])
-            }
-            if (httpReq.this == null) {
-              httpReq.this = document.this
-            }
-          }
-
-          this.request(false, REQUEST_TYPE_JSON, isEnvCompare ? otherEnvUrl : curEnvUrl, httpReq, header, function (url, res, err) {
-            try {
-              App.onResponse(url, res, err)
-              if (DEBUG) {
-                App.log('test  App.request >> res.data = ' + JSON.stringify(res.data, null, '  '))
+            const item = list[i]
+            const document = item == null ? null : item.Method
+            if (document == null || document.method == null) {
+              if (isRandom) {
+                App.randomDoneCount ++
+              } else {
+                App.doneCount ++
               }
+              continue
+            }
+            var method = (document.method || '').toLowerCase()
+            if (method.indexOf('login') >= 0 || method.indexOf('logout') >= 0) { //login会导致登录用户改变为默认的但UI上还显示原来的，单独测试OWNER权限时能通过很困惑
+              this.log("startTest  method.indexOf('login') >= 0 || method.indexOf('logout') >= 0 >> continue")
+              if (isRandom) {
+                App.randomDoneCount ++
+              } else {
+                App.doneCount ++
+              }
+              continue
+            }
+
+            if (DEBUG) {
+              this.log('test  document = ' + JSON.stringify(document, null, '  '))
+            }
+
+            const index = i
+
+            var hdr = null
+            try {
+              hdr = this.getHeader(document.header)
             } catch (e) {
-              App.log('test  App.request >> } catch (e) {\n' + e.message)
+              this.log('test  for ' + i + ' >> try { header = this.getHeader(document.header) } catch (e) { \n' + e.message)
+            }
+            const header = hdr
+
+            const caseScript = {
+              pre: item['Script:pre'],
+              post: item['Script:post']
             }
 
-            if (isEnvCompare != true) {
-              App.compareResponse(allCount, list, index, item, res.data, isRandom, accountIndex, false, err, null, isCross, callback)
-              return
+            const otherEnvUrl = isEnvCompare ? (otherBaseUrl + '/method/invoke') : null
+            const curEnvUrl = this.project + '/method/invoke'
+
+            var httpReq = null
+            if (StringUtil.isEmpty(document.request, true)) {
+              httpReq = {
+                "package": document.package,
+                "class": document.class,
+                "this": document.this,
+                "constructor": document.constructor,
+                "classArgs": this.getRequest(document.classArgs),
+                "method": document.method,
+                "methodArgs": this.getRequest(document.methodArgs),
+                "static": document.static,
+                "timeout": document.timeout,
+                "ui": document.ui
+              }
+            }
+            else {
+              httpReq = this.getRequest(document.request)
+              if (httpReq.package == null) {
+                httpReq.package = document.package
+              }
+              if (httpReq.class == null) {
+                httpReq.class = document.class
+              }
+              if (httpReq.method == null) {
+                httpReq.method = document.method
+              }
+              if (httpReq.constructor == null) {
+                httpReq.constructor = document.constructor
+              }
+              if (httpReq.classArgs == null) {
+                httpReq.classArgs = this.getRequest(document.classArgs)
+              }
+              if (httpReq.methodArgs == null) {
+                httpReq.methodArgs = this.getRequest(document.methodArgs)
+              }
+              if (httpReq.this == null) {
+                httpReq.this = document.this
+              }
             }
 
-            const otherErr = err
-            const rsp = App.removeDebugInfo(res.data)
-            const rspStr = JSON.stringify(rsp)
-            const tr = item.TestRecord || {}
-            if (isMLEnabled) {
-              tr.response = rspStr
-            }
-            tr[standardKey] = isMLEnabled ? JSON.stringify(JSONResponse.updateFullStandard({}, rsp, isMLEnabled)) : rspStr // res.data
-            item.TestRecord = tr
-
-            App.request(false, REQUEST_TYPE_JSON, curEnvUrl, httpReq, header, function (url, res, err) {
+            this.request(false, REQUEST_TYPE_JSON, isEnvCompare ? otherEnvUrl : curEnvUrl, httpReq, header, function (url, res, err) {
               try {
                 App.onResponse(url, res, err)
                 if (DEBUG) {
@@ -7528,17 +7845,47 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 App.log('test  App.request >> } catch (e) {\n' + e.message)
               }
 
-              App.compareResponse(allCount, list, index, item, res.data, isRandom, accountIndex, false, err || otherErr, null, isCross, callback)
-            }, caseScript)
+              if (isEnvCompare != true) {
+                App.compareResponse(allCount, list, index, item, res.data, isRandom, accountIndex, false, err, null, isCross, callback)
+                return
+              }
 
-          }, caseScript)
+              const otherErr = err
+              const rsp = App.removeDebugInfo(res.data)
+              const rspStr = JSON.stringify(rsp)
+              const tr = item.TestRecord || {}
+              if (isMLEnabled) {
+                tr.response = rspStr
+              }
+              tr[standardKey] = isMLEnabled ? JSON.stringify(JSONResponse.updateFullStandard({}, rsp, isMLEnabled)) : rspStr // res.data
+              item.TestRecord = tr
+
+              App.request(false, REQUEST_TYPE_JSON, curEnvUrl, httpReq, header, function (url, res, err) {
+                try {
+                  App.onResponse(url, res, err)
+                  if (DEBUG) {
+                    App.log('test  App.request >> res.data = ' + JSON.stringify(res.data, null, '  '))
+                  }
+                } catch (e) {
+                  App.log('test  App.request >> } catch (e) {\n' + e.message)
+                }
+
+                App.compareResponse(allCount, list, index, item, res.data, isRandom, accountIndex, false, err || otherErr, null, isCross, callback)
+              }, caseScript)
+
+            }, caseScript)
+          }
+          catch(e) {
+            this.compareResponse(allCount, list, index, item, null, isRandom, accountIndex, false, e, null, isCross, callback)
+          }
         }
 
       },
 
       compareResponse: function (allCount, list, index, item, response, isRandom, accountIndex, justRecoverTest, err, ignoreTrend, isCross, callback) {
         var it = item || {} //请求异步
-        var d = (isRandom ? this.currentRemoteItem.Method : it.Method) || {} //请求异步
+        var cri = this.currentRemoteItem || {} //请求异步
+        var d = (isRandom ? cri.Method : it.Method) || {} //请求异步
         var r = isRandom ? it.Random : null //请求异步
         var tr = it.TestRecord || {} //请求异步
 
@@ -7577,14 +7924,22 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           }
         }
         else {
-          var standardKey = this.isMLEnabled != true ? 'response' : 'standard'
-          var rsp = tr[standardKey]
-          var standard = typeof rsp != 'string' ? rsp : (StringUtil.isEmpty(rsp, true) ? null : JSON.parse(rsp))
+          var isML = this.isMLEnabled
+          var standardKey = isML ? 'standard' : 'response'
+          var stdd = tr[standardKey]
+          if (isRandom) {
+            stdd = stdd || ((this.currentRemoteItem || {}).TestRecord || {})[standardKey]
+          }
+          
+          var standard = typeof stdd != 'string' ? stdd : (StringUtil.isEmpty(stdd, true) ? null : JSON.parse(stdd))
 
           var rsp = JSON.parse(JSON.stringify(this.removeDebugInfo(response) || {}))
-          rsp = JSONResponse.array2object(rsp, 'methodArgs', ['methodArgs'], true)
-
-          tr.compare = JSONResponse.compareResponse(standard, rsp, '', this.isMLEnabled, null, ['call()[]'], ignoreTrend) || {}
+          if (isML) {
+            rsp = JSONResponse.array2object(rsp, 'methodArgs', ['methodArgs'], true)
+            rsp = JSONResponse.array2object(rsp, 'return', ['return'], true)
+            rsp = JSONResponse.array2object(rsp, 'type', ['type'], true)
+          }
+          tr.compare = JSONResponse.compareResponse(standard, rsp, '', isML, null, ['call()[]', '@time'], ignoreTrend) || {}
           tr.compare.duration = it.durationHint
         }
 
@@ -7719,13 +8074,13 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
       startRandomTest4Doc: function (list, indexes, position, deepAllCount, accountIndex, isCross) {
         const accInd = accountIndex
-        var callback = function (isRandom, allCount) {
+        var callback = function (isRandom, allCount, msg) {
+          log("startRandomTest4Doc  callback isRandom = " + isRandom + "; allCount = " + allCount + "; msg = " + msg)
           if (App.randomDoneCount < App.randomAllCount) {
             return true
           }
 
-          App.randomDoneCount = 0
-          // App.randomAllCount = 0
+          App.randomDoneCount = App.randomAllCount
 
           App.deepDoneCount ++
           const deepDoneCount = App.deepDoneCount
@@ -7757,6 +8112,31 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                   if (typeof autoTestCallback == 'function') {
                     autoTestCallback('已完成回归测试')
                   }
+
+                  App.request(false, REQUEST_TYPE_JSON, App.project + '/coverage/report', {}, {}, function (url, res, err) {
+                    try {
+                      App.onResponse(url, res, err)
+                      if (DEBUG) {
+                        App.log('test  App.request >> res.data = ' + JSON.stringify(res.data, null, '  '))
+                      }
+                    } catch (e) {
+                      App.log('test  App.request >> } catch (e) {\n' + e.message)
+                    }
+
+                    App.coverage = res.data
+                    if (IS_BROWSER) {
+                      setTimeout(function () {
+                        var url = StringUtil.trim((App.coverage || {}).url)
+                        if (StringUtil.isEmpty(url, false)) {
+                          url = App.project + "/htmlcov/index.html"
+                        }
+                        if (url.startsWith('/')) {
+                          url = App.project + url
+                        }
+                        window.open(url)
+                      }, 2000)
+                    }
+                  })
                 }
               }
             }
@@ -7791,7 +8171,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               log(e)
             }
 
-            App.onClickTestRandom(isCross, callback)
+            App.testRandom(false, true, false, null, isCross, false, callback)
           })
         } catch (e2) {
           log(e2)
@@ -7866,17 +8246,21 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
       },
 
       updateSummary: function (item, change, key) {
+        if (change == null || key == null) {
+          return item
+        }
+
         if (item == null) {
           item = {}
         }
 
         var count = item[key]
-        if (count == null) {
+        if (count == null || count < 0) {
           count = 0
         }
         count += change
 
-        item[key] = count < 0 ? 0 : count
+        item[key] = count
 
         // 对于 Random 进入子项再退出后有时显示居然不准
         // if (cri.totalCount == null) {
@@ -7903,9 +8287,6 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         if (accountIndex == -1) {
           this.logoutSummary = this.updateSummary(this.logoutSummary, change, key)
         }
-          // else if (accountIndex== this.accounts.length) {
-          //   this.allSummary = this.updateSummary(this.allSummary, change, key)
-        // }
         else if (accountIndex >= 0 && accountIndex < this.accounts.length) {
           var accountItem = this.updateSummary(this.getSummary(accountIndex), change, key)
           this.accounts[accountIndex] = accountItem
@@ -7919,16 +8300,18 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
         if (random.count == 1 || (random.id != null && random.id < 0)) {
           var key = item.compareColor + 'Count'
-          // this.updateToSummary(item, change, accountIndex)
+          this.updateToSummary(item, change, accountIndex)
 
           var curRandom = this.isRandomListShow || this.currentRandomItem == null ? null : this.currentRandomItem.Random
           var isTemp = curRandom != null && (curRandom.id == null || curRandom.id < 0)
-          var cri = this.updateSummary(isTemp ? this.currentRandomItem : this.currentRemoteItem)  // this.getCurrentRandomSummary())
+          var cri = this.updateSummary(isTemp ? this.currentRandomItem : this.currentRemoteItem, change, key)  // this.getCurrentRandomSummary())
 
           if (isTemp) {
             this.currentRandomItem = cri
+            this.updateSummary(this.currentRemoteItem, change, key)
           } else {
             this.currentRemoteItem = cri
+            Vue.set(this.testCases, this.currentDocIndex, cri)
           }
 
           var toId = random.toId
@@ -8062,6 +8445,8 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           isRandom ? (random.id > 0 ? random.id : (random.toId + '' + random.id)) : 0
         ] || {}
 
+        var rawRspStr = JSON.stringify(currentResponse)
+
         const list = isRandom ? (random.toId == null || random.toId <= 0 ? this.randoms : this.randomSubs) : this.testCases
 
         var isBefore = item.showType == 'before'
@@ -8069,7 +8454,10 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           item.showType = isBefore ? 'after' : 'before'
           Vue.set(list, index, item);
 
-          var res = isBefore ? JSON.stringify(currentResponse) : testRecord.response
+          var res = isBefore ? rawRspStr : testRecord.response
+          if (isRandom && ! isBefore) {
+            res = res || ((this.currentRemoteItem || {}).TestRecord || {}).response
+          }
 
           this.view = 'code'
           this.jsoncon = res || ''
@@ -8118,7 +8506,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 item.TestRecord = null
               }
 
-              App.updateTestRecord(0, list, index, item, currentResponse, isRandom, true, App.currentAccountIndex, isCross)
+              App.updateTestRecord(0, list, index, item, JSON.parse(rawRspStr), isRandom, true, App.currentAccountIndex, isCross)
             })
           }
           else { //上传新的校验标准
@@ -8165,10 +8553,11 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             }
             else {
               standard = (StringUtil.isEmpty(testRecord.standard, true) ? null : JSON.parse(testRecord.standard)) || {}
-              stddObj = JSONResponse.updateFullStandard(standard, currentResponse, isML)
+              stddObj = JSONResponse.updateFullStandard(standard, JSON.parse(rawRspStr), isML)
             }
 
             const isNewRandom = isRandom && random.id <= 0
+            const userId = this.User.id
 
             //TODO 先检查是否有重复名称的！让用户确认！
             // if (isML != true) {
@@ -8176,6 +8565,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             const req = {
               Random: isNewRandom != true ? null : {
                 toId: random.toId,
+                userId: userId,
                 documentId: random.documentId,
                 name: random.name,
                 count: random.count,
@@ -8184,18 +8574,20 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               TestRecord: isDuration ? Object.assign(testRecord, {
                 id: undefined,
                 host: this.getBaseUrl(),
+                userId: userId,
                 testAccountId: this.getCurrentAccountId(),
                 duration: item.duration,
                 minDuration: minDuration,
                 maxDuration: maxDuration,
                 compare: JSON.stringify(testRecord.compare || {}),
               }) : {
+                userId: userId,
                 documentId: isNewRandom ? null : (isRandom ? random.documentId : document.id),
                 randomId: isRandom && ! isNewRandom ? random.id : null,
                 host: this.getBaseUrl(),
                 testAccountId: this.getCurrentAccountId(),
                 compare: JSON.stringify(testRecord.compare || {}),
-                response: JSON.stringify(currentResponse || {}),
+                response: rawRspStr,
                 standard: isML ? JSON.stringify(stddObj) : null
               },
               tag: isNewRandom ? 'Random' : 'TestRecord'
@@ -8239,7 +8631,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                     code: 0,
                     msg: '结果正确'
                   }
-                  testRecord.response = JSON.stringify(currentResponse)
+                  testRecord.response = rawRspStr
                   // testRecord.standard = stdd
                 }
 
@@ -8268,7 +8660,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                 //   }
                 // }
 
-                App.updateTestRecord(0, list, index, item, currentResponse, isRandom, true, App.currentAccountIndex, isCross)
+                App.updateTestRecord(0, list, index, item, JSON.parse(rawRspStr), isRandom, true, App.currentAccountIndex, isCross)
               }
 
             })
@@ -8321,17 +8713,40 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             return '';
           }
 
-          var req = this.getRequest(d.request, {});
-          var args = req[isClass ? 'classArgs' : 'methodArgs']
+          var args = isClass ? (d.genericClassArgs || d.classArgs) : (d.genericMethodArgs || d.methodArgs);
+          if (args instanceof Array == false || args.length <= 0) {
+            var req = this.getRequest(d.request, {});
+            args = isClass ? req.classArgs : req.methodArgs;
+          }
 
-          var s = '('
+          var s = '(';
           if (args != null) {
-            for (var i in args) {
-              var val = (args[i] || {}).value
-              s += (i <= 0 ? '' : ', ') + (val == null ? 'null' : JSON.stringify(val, null, ' '))
+            var l = d.language || this.language
+
+            for (var i = 0; i < args.length; i ++) {
+              var arg = args[i];
+              var type = JSONResponse.getType(arg);
+              var val = type == 'object' ? (arg || {}).value : arg;
+
+              if (type == 'string' && arg != null) {
+                var ind = arg.indexOf(':');
+                var t = ind < 0 ? null : arg.substring(0, ind).trim().toLowerCase();
+                val = ind < 0 ? arg : arg.substring(ind + 1);
+
+                if (t != '' && t != 'string' && t != 'str') {
+                  try {
+                    val = JSON.parse(val);
+                  } catch (e) {
+                    log(e)
+                  }
+                }
+              }
+
+              s += (i <= 0 ? '' : ', ') + (val == null ? CodeUtil.getCode4Value(l, null) : JSON.stringify(val, null, ' '));
             }
           }
-          s += ')'
+          s += ')';
+
           this.$refs[isClass ? 'testCaseClassTexts' : 'testCaseMethodTexts'][index].setAttribute('data-hint', s);
         }
       },
@@ -8358,11 +8773,11 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         if (hasTestArg && rawReq.send != "false" && rawReq.send != "null") {
           setTimeout(function () {
             if (rawReq.send == 'random') {
-              App.onClickTestRandom(callback)
+              App.onClickTestRandom(App.isCrossEnabled, callback)
             } else if (App.isTestCaseShow) {
               App.onClickTest(callback)
             } else {
-              App.send(false)
+              App.send(false, callback)
             }
 
             var url = vUrl.value || ''
@@ -8695,6 +9110,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               if (standardObj == null) {
                 standardObj = JSONResponse.updateStandard({},
                   isReq ? App.getRequest(vInput.value) : App.jsoncon == null ? null : JSON.parse(App.jsoncon)
+                  , ['@time']
                 )
               }
 
@@ -9110,6 +9526,9 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         if (StringUtil.isEmpty(language, true) == false) {
           this.language = CodeUtil.language = language
         }
+
+        // vUrl.value = this.language == CodeUtil.LANGUAGE_GO ? 'test.Divide.Divide' : 'unitauto.test.TestUtil.divide'
+
         var types = this.getCache('', 'types')
         if (types != null && types.length > 0) {
           this.types = types instanceof Array ? types : StringUtil.split(types)
@@ -9191,7 +9610,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         var accounts = this.accounts
         var num = accounts == null ? 0 : accounts.length
         for (var i = -1; i <= num; i++) {
-          this.resetCount(this.getSummary(i), false, i)
+          this.resetCount(this.getSummary(i), false, false, i)
         }
       } catch (e) {
         console.log('created  try { ' +
@@ -9317,7 +9736,9 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         if (keyCode === 27) {  // ESC
           if (document.activeElement == vOption || App.options.length > 0) {
             App.options = [];
-            target.focus();
+            if (target != null) {
+              target.focus();
+            }
             return;
           }
         }
@@ -9399,7 +9820,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
           if (target == vUrl) {
           }
-          else if (target != vOption) {
+          else if (target != null && target != vOption) {
             var selectionStart = target.selectionStart;
             var selectionEnd = target.selectionEnd;
 
@@ -9542,7 +9963,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             }
           }
         }
-        else if (keyCode === 9) {  // Tab 加空格
+        else if (target != null && keyCode === 9) {  // Tab 加空格
           try {
             var selectionStart = target.selectionStart;
             var selectionEnd = target.selectionEnd;
@@ -9598,7 +10019,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           App.showSave(true)
           event.preventDefault()
         }
-        else if ((event.ctrlKey || event.metaKey) && ([68, 73, 191].indexOf(keyCode) >= 0 || (isChar != true && event.shiftKey != true))) {
+        else if (target != null && (event.ctrlKey || event.metaKey) && ([68, 73, 191].indexOf(keyCode) >= 0 || (isChar != true && event.shiftKey != true))) {
           var selectionStart = target.selectionStart;
           var selectionEnd = target.selectionEnd;
 
@@ -9646,7 +10067,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               log(e)
             }
           }
-          else if (keyCode === 191) {  // Ctrl + '/' 注释与取消注释
+          else if (target != null && keyCode === 191) {  // Ctrl + '/' 注释与取消注释
             try {
               var text = StringUtil.get(target.value);
               var before = text.substring(0, selectionStart);
@@ -9711,7 +10132,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               log(e)
             }
           }
-          else if (keyCode == 68) {  // Ctrl + 'D' 删除行
+          else if (target != null && keyCode == 68) {  // Ctrl + 'D' 删除行
             try {
               var text = StringUtil.get(target.value);
               var before = text.substring(0, selectionStart);
@@ -9740,7 +10161,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           target.selectionStart = selectionStart;
           target.selectionEnd = selectionEnd;
         }
-        else if (event.shiftKey || isChar) {
+        else if (target != null && (event.shiftKey || isChar)) {
           if (isChar && App.options.length > 0) {
             var key = StringUtil.get(event.key);
 

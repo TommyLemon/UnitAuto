@@ -1177,22 +1177,23 @@ var JSONResponse = {
       if (values == null) {
         values = [];
       }
-      if (values[0] == null) {
-        values[0] = {};
+      var firstVal = values[0];
+      if (firstVal == null) {
+        firstVal = values[0] = {};
       }
 
       var realKeys = Object.keys(real) || [];
-      for(var k2 in values[0]) { //解决real不含k2时导致notnull不能变成false
-        // log('updateStandard for k2 in values[0] = ' + k2 + ' >>');
+      for(var k2 in firstVal) { //解决real不含k2时导致notnull不能变成false
+        // log('updateStandard for k2 in firstVal = ' + k2 + ' >>');
         if (realKeys.indexOf(k2) < 0) {
           // log('updateStandard Object.keys(real).indexOf(k2) < 0 >> real[k2] = null;');
           // 解决总是报错缺少字段  delete real[k2];  // 解决总是多出来 key: null    real[k2] = null;
 
-          if (values[0][k2] == null) {
-            values[0][k2] = { notnull: false };
+          if (firstVal[k2] == null) {
+            firstVal[k2] = { notnull: false };
           }
           else {
-            values[0][k2].notnull = false;
+            firstVal[k2].notnull = false;
           }
         }
       }
@@ -1202,9 +1203,9 @@ var JSONResponse = {
           continue
         }
 
-        log('updateStandard for k in real = ' + k + '; values[0][k] = '
-          + JSON.stringify(values[0][k], null, '    ') + ';\n real[k] = '  + JSON.stringify(real[k], null, '    ') + ' >>');
-        values[0][k] = JSONResponse.updateStandard(values[0][k], real[k], exceptKeys, ignoreTrend);
+        log('updateStandard for k in real = ' + k + '; firstVal[k] = '
+          + JSON.stringify(firstVal[k], null, '    ') + ';\n real[k] = '  + JSON.stringify(real[k], null, '    ') + ' >>');
+        firstVal[k] = JSONResponse.updateStandard(firstVal[k], real[k], exceptKeys, ignoreTrend);
       }
 
       target.values = values;

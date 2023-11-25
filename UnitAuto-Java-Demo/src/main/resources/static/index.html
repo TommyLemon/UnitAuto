@@ -178,19 +178,26 @@
       <div class="left-panel">
           <ul v-show="isTestCaseShow" class="historys" style="width: 100%;height: 100%;overflow: hidden;overflow-y: scroll;padding-bottom: 50px">
               <li v-for="(item, index) in testCases" :id="'docItem' + index" >
-                  <div style="display: inline-table; height: 24px">
-                      <div style="display: inline-flex; height: 100%">
-                          <a class="hint--rounded hint--no-animate" style="position: absolute; left: 10px; top: 6px; font-size: small; color: dimgray" ref="testCaseMethodTexts" @mouseover="setRequestHint(index, item)" href="javascript:void(0)" @click="restoreRemote(index, item)" :style="{ color: index == currentDocIndex ? 'black' : 'gray' }" >{{item.Method.defination + (StringUtil.isEmpty(item.Method.detail) || item.Method.detail == item.Method.method ? '' : '  // ' + StringUtil.trim(item.Method.detail))}}</a>
-                          <a class="hint--rounded hint--no-animate" style="position: absolute; left: 10px; bottom: 4px; font-size: small" ref="testCaseClassTexts" @mouseover="setRequestHint(index, item, false, true)" href="javascript:void(0)" @click="restoreRemote(index, item)" :style="{ color: index == currentDocIndex ? 'black' : 'gray' }" >{{item.Method.package + '.' + item.Method.class + (StringUtil.isEmpty(item.Method.cttr, true) ? '' : '.' + item.Method.cttr) + (item.Method.static && StringUtil.isEmpty(item.Method.cttr, true) ? '' : '(' + StringUtil.trim(item.Method.constructorArguments) + ')')}}</a>
+                  <div style="display: inline-flex; height: 24px">
+                      <button v-show="StringUtil.length(StringUtil.split(language, ',', true)) > 1" class="hint--right" :data-hint="item.Method.request || item.Method.methodArgs" v-show="isShowType()" style="width: 54px; min-height: 25px; margin-right: 6px;padding: 0px" id="vDocType" @click="restoreRemoteAndTest(index, item)">{{ item.Method.language || 'Java' }}</button>
+                      <div style="display: grid; height: 100%">
+                          <a class="hint--rounded hint--no-animate" style="font-size: small; color: dimgray; top: -6px" ref="testCaseMethodTexts" @mouseover="setRequestHint(index, item)" href="javascript:void(0)" @click="restoreRemote(index, item)" :style="{ color: index == currentDocIndex ? 'black' : 'gray' }" >{{getMethodDefinition(item.Method) + (StringUtil.isEmpty(item.Method.detail) || item.Method.detail == item.Method.method ? '' : ' // ' + StringUtil.trim(item.Method.detail))}}</a>
+                          <a class="hint--rounded hint--no-animate" style="font-size: small; top: -10px" ref="testCaseClassTexts" @mouseover="setRequestHint(index, item, false, true)" href="javascript:void(0)" @click="restoreRemote(index, item)" :style="{ color: index == currentDocIndex ? 'black' : 'gray' }" >{{item.Method.package + '.' + item.Method.class + (StringUtil.isEmpty(item.Method.cttr, true) ? '' : '.' + item.Method.cttr) + (item.Method.static && StringUtil.isEmpty(item.Method.cttr, true) ? '' : '(' + StringUtil.trim(getArgumentTypes(item.Method, true)) + ')')}}</a>
                       </div>
+					  <div style="position: absolute; top: 4px; bottom: 4px; right: 36px; display: inline-flex">
+                      	<div v-show="(item.totalCount || 0) > 0" style="background: lightgray; padding: 6px 4px 1px 1px; text-align: center; margin-right: 2px; display: inline-block; position: relative; height: 100%" @click="restoreRemote(index, item)" >
+                        	<!-- 只能写成一行来消除间隙，不能换行、空格 -->
+                        	<a style="background: transparent; color: black; position: relative; min-width: 6px; width: auto; margin: 0; padding: 2px">{{ (item.totalCount || 0) + ':' }}</a><a style="background: white; color: black; position: relative; min-width: 6px; width: auto; margin: 0; padding: 2px">{{ item.whiteCount || 0 }}</a><a style="background: green; color: white; position: relative; min-width: 6px; width: auto; margin: 0; padding: 2px">{{ item.greenCount || 0 }}</a><a style="background: blue; color: white; position: relative; min-width: 6px; width: auto; margin: 0; padding: 2px">{{ item.blueCount || 0 }}</a><a style="background: orange; color: white; position: relative; min-width: 6px; width: auto; margin: 0; padding: 2px">{{ item.orangeCount || 0 }}</a><a style="background: red; color: white; position: relative; min-width: 6px; width: auto; margin: 0; padding: 2px">{{ item.redCount || 0 }}</a>
+                      	</div>
 
-                      <div :style="{ background: item.compareColor }" v-show="item.compareType != null" style="position: absolute; top: 4px; bottom: 4px; right: 36px; display: inline-block;">
+                      	<div :style="{ background: item.compareColor }" v-show="item.compareType != null" style="display: inline-block">
                           <button class="hint--left" ref="testResultButtons" @mouseover="setTestHint(index, item)" v-show="item.compareType != null" @click="handleTest(false, index, item)" style="position: relative; height: 100%">{{ item.compareMessage + (item.showType == 'before' ? '-前' : '-后') }}</button>
                           <svg class="icon" style="position: relative;margin-left: 10px" @click="downloadTest(index, item)">
                               <use xlink:href="svg/icon.svg#export-txt"></use>
                             </svg>   <!-- 中间 button 仅用来占位，解决上面按钮隐藏后，下载图标纵向没对齐 -->
                             <button v-show="(item.showType != 'before' && item.compareType != 0) || (item.showType == 'before' && (item.TestRecord || {}).id != null)" @click="handleTest(true, index, item)" style="position: relative; height: 100%">{{ item.showType == 'before' ? '错的，撤回' : '对的，纠正' }}</button><button v-show="! ((item.showType != 'before' && item.compareType != 0) || (item.showType == 'before' && (item.TestRecord || {}).id != null))" style="color: white;background: white;border-color: white; position: relative; height: 100%" disabled>对的，纠正</button><button style="padding-left: 1px; padding-right: 1px; width: 50px; position: relative; height: 100%" :style="{ color: item.durationColor }" class="hint--left" ref="testResultDurationButtons" @mouseover="setTestHint(index, item, false, true)" @click="handleTest(true, index, item, false, true)" style="position: relative; height: 100%">{{ (item.showType == 'before' ? item.durationBeforeShowStr : item.durationShowStr) || '?' }}</button>
                         </div>
+					  </div>
                       <svg v-show="isLocalShow || (item.Method != null && item.Method.userId == User.id)" class="icon" style="margin-right: 5px; top: 13px" @click="remove(item, index, true)">
                           <use xlink:href="svg/icon.svg#trash"></use>
                       </svg>
@@ -308,11 +315,11 @@ Ctrl + S 或 Command + S 保存当前用例；
 {
     "static": true,
     "methodArgs": [
-        {  // 可省略来自动判断的 type : Boolean,Integer,BigDecimal,String,JSONObject,JSONArray
+        { // 可省略来自动判断的 type: Boolean,Integer,BigDecimal,String,JSONObject,JSONArray
             "type": "long",
             "value": 1
         },
-        {  // 这个对象还可以简化为 "long:2" 这种字符串形式，方便手动调试。在键值对后按 Enter 回车键自动智能生成补全提示
+        { // 这个对象还可以简化为 "int:2" 这种字符串形式，方便手动调试。在键值对后按 Enter 回车键自动智能生成补全提示
             "type": "long",
             "value": 2
         }
@@ -460,10 +467,10 @@ format: ORDER_IN(true, false, null, undefined) // 从选项中顺序取值
 User/id: RANDOM_DB() // 从数据库随机取值，等价于 User/id: RANDOM_DB(null, null, 'User', 'id')
 []/page: Math.round(100*Math.random()) // 通过 JavaScript 代码来自定义 [] 内的 page
 ">
-methodArgs/0/type: ORDER_IN('long', 'double', 'Number', 'int', 'Float') // 顺序取值
+methodArgs/0/type: ORDER_IN('int', 'long', 'double', 'int', 'Number') // 顺序取值
 methodArgs/0/value: RANDOM_IN(1, 0.1, -10, 9.99, null) // 随机取值
 
-methodArgs/1/type: ORDER_IN('long', 'double', 'Number', 'int', 'Float') // 顺序取值
+methodArgs/1/type: ORDER_IN('int', 'long', 'double', 'int', 'Number') // 顺序取值
 methodArgs/1/value: ORDER_INT(-10, 100) // 顺序整数
 
 // 从数据库随机取值  methodArgs/1/value: RANDOM_DB(0, 1000, 'Random', 'count')
@@ -674,6 +681,8 @@ fun(true, 1, 'a'..);
 
                 <textarea id="vOutput" v-show="view == 'output'"></textarea>
 
+                <div class="right-main" id="vHtml" v-show="view == 'html'"></div>
+
                 <div class="right-main" id="vMarkdown" v-show="view == 'markdown'"></div>
                 <div v-show="view == 'markdown'" style="bottom: -6px; text-align: right; position: absolute; width: 100%; padding: 4px 20px 0px 4px; background-color: white;">
                     <a >搜索</a>
@@ -687,7 +696,9 @@ fun(true, 1, 'a'..);
                 </div>
 
                 <ul class="dropdown-menu" id="vOption" style="display: block; left: 0px; top: 0px; max-height: 100%; max-width: 100%; overflow: scroll; overflow-x: scroll; overflow-y:scroll;" v-show="options != null && options.length > 0">
-                  <li class="dropdown-item" style="width: 100%" :style="{'color': (index == selectIndex ? 'orangered' : 'black')}" v-for="(item, index) in options" :id="'option' + index" @click="onClickSelectInput(item, index)" >{{StringUtil.get(item.name) + ': ' + StringUtil.get(item.type) + ', ' + StringUtil.trim(item.comment)}}</li>
+                  <li class="dropdown-item" style="width: 100%" :style="{'color': (index == selectIndex ? 'orangered' : 'black')}" v-for="(item, index) in options" :id="'option' + index" @click="onClickSelectInput(item, index)" >{{
+                          StringUtil.get(item.name) + ': ' + (item.type instanceof Array ? StringUtil.join(item.type) : StringUtil.get(item.type)) + ', ' + StringUtil.trim(item.comment)
+                      }}</li>
                 </ul>
             </div>
 
@@ -968,7 +979,59 @@ fun(true, 1, 'a'..);
   var vVerify = document.getElementById("vVerify");
   var vRemember = document.getElementById("vRemember");
 
-  vUrl.value = new String('unitauto.test.TestUtil.divide'); // 'countArray'); //main.js里访问不到，可能是script引用顺序问题
+  var lang = App == null ? null : App.language;
+  vUrl.value = lang == CodeUtil.LANGUAGE_GO ? 'test.Divide' : (lang == CodeUtil.LANGUAGE_PYTHON ? 'unitauto.test.testutil.divide' : 'unitauto.test.TestUtil.divide')  //main.js里访问不到，可能是script引用顺序问题
+  vInput.value = (lang == CodeUtil.LANGUAGE_GO ? `{
+    "methodArgs": [
+        { // 可省略来自动判断的 type: bool,float64,string,map[string]any,[]any
+            "type": "int",
+            "value": 1
+        },
+        { // 这个对象还可以简化为 "int:2" 这种字符串形式，方便手动调试。在键值对后按 Enter 回车键自动智能生成补全提示
+            "type": "int",
+            "value": 2
+        }
+    ]
+}` : (lang == CodeUtil.LANGUAGE_PYTHON ? `{
+    "args": [
+        { // 可省略来自动判断的 type: bool,int,float,str,dict,list
+            "type": "int",
+            "value": 1
+        },
+        { // 这个对象还可以简化为 "int:2" 这种字符串形式，方便手动调试。在键值对后按 Enter 回车键自动智能生成补全提示
+            "type": "int",
+            "value": 2
+        }
+    ]
+}` : `{
+    "static": true,
+    "methodArgs": [
+        { // 可省略来自动判断的 type: Boolean,Integer,BigDecimal,String,JSONObject,JSONArray
+            "type": "long",
+            "value": 1
+        },
+        { // 这个对象还可以简化为 "int:2" 这种字符串形式，方便手动调试。在键值对后按 Enter 回车键自动智能生成补全提示
+            "type": "long",
+            "value": 2
+        }
+    ]
+}`)) + `
+
+/*
+以上 JSON 文本支持 JSON5 格式。清空文本内容可查看规则。
+注释可省略。行注释前必须有 1 个空格；段注释必须在 JSON 下方。
+
+## 快捷键
+Ctrl + I 或 Command + I 格式化输入框，清除所有注释和无效空格、换行等；
+Ctrl + / 或 Command + / 对选中行 新增行注释 或 取消行注释；
+Ctrl + D 或 Command + D 删除 选中行；
+Ctrl + S 或 Command + S 保存当前用例；
+
+#### 右上角设置项 > 预览请求输入框，显示对应的预览效果
+*/
+
+
+`
 
   var vRequestMarkdown = document.getElementById('vRequestMarkdown');
   var vMarkdown = document.getElementById('vMarkdown');
@@ -1016,24 +1079,6 @@ fun(true, 1, 'a'..);
 <script src="md/lib/jquery.flowchart.min.js"></script>
 
 <script src="md/editormd.js"></script>
-
-
-<!-- 百度统计 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<  -->
-<script>
-  var _hmt = _hmt || [];
-  (function() {
-    try {
-      var hm = document.createElement("script");
-//      hm.src = "https://hm.baidu.com/hm.js?b8fc421d7c0dc354c6c8fb5a2c4f7729"; //cn
-      hm.src = "https://hm.baidu.com/hm.js?965ec968d2d53b729b90efc7ffb3ead2"; //org
-      var s = document.getElementsByTagName("script")[0];
-      s.parentNode.insertBefore(hm, s);
-    } catch (e) {
-      console.log('BaiduStatistics: catch\n' + e.message)
-    }
-  })();
-</script>
-<!-- 百度统计 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>  -->
 
 </body>
 </html>
