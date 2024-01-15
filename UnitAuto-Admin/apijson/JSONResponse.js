@@ -22,6 +22,7 @@ if (typeof window == 'undefined') {
     eval(`
       var StringUtil = require("./StringUtil");
       var JSONObject = require("./JSONObject");
+      var JSONRequest = require("./JSONRequest");
       var CodeUtil = require("./CodeUtil");
     `)
   } catch (e) {
@@ -58,7 +59,117 @@ const KEY_ID_IN = KEY_ID + "{}";
 const KEY_COUNT = "count";
 const KEY_TOTAL = "total";
 
+var FORMAT_ANY = '';
+var FORMAT_MONTH = 'YYYY-MM';
+var FORMAT_DATE = 'YYYY-MM-DD';
+var FORMAT_MINUTE = 'hh:mm';
+var FORMAT_TIME = 'hh:mm:ss';
+var FORMAT_DATETIME = 'YYYY-MM-DD hh:mm:ss';
+var FORMAT_URL = 'URL';
+var FORMAT_URI = 'URI';
+var FORMAT_FILE_URI = 'file://a/b';
+var FORMAT_HTTP = 'http://a.b';
+var FORMAT_RPC = 'rpc://a.b';
+var FORMAT_PATH = 'root/folder';
+var FORMAT_PACKAGE = 'com.package';
+var FORMAT_NAME = 'NAME';
+var FORMAT_CONST_NAME = 'NAME:CONST';
+var FORMAT_BIG_NAME = 'NAME:Big';
+var FORMAT_SMALL_NAME = 'NAME:small';
+var FORMAT_FILE = '.file';
+var FORMAT_IMAGE = '.image';
+var FORMAT_AUDIO = '.audio';
+var FORMAT_VIDEO = '.video';
+var FORMAT_IMAGE_HTTP = 'http://?.image';
+var FORMAT_AUDIO_HTTP = 'http://?.audio';
+var FORMAT_VIDEO_HTTP = 'http://?.video';
+var FORMAT_IMAGE_FILE = 'file://?.image';
+var FORMAT_AUDIO_FILE = 'file://?.audio';
+var FORMAT_VIDEO_FILE = 'file://?.video';
+var FORMAT_PRIORITY_ANY = 0;
+var FORMAT_PRIORITY_MONTH = 3;
+var FORMAT_PRIORITY_DATE = 2;
+var FORMAT_PRIORITY_MINUTE = 3;
+var FORMAT_PRIORITY_TIME = 2;
+var FORMAT_PRIORITY_DATETIME = 1;
+var FORMAT_PRIORITY_URL = 2;
+var FORMAT_PRIORITY_URI = 1;
+var FORMAT_PRIORITY_FILE_URI = 2;
+var FORMAT_PRIORITY_HTTP = 2;
+var FORMAT_PRIORITY_RPC = 2;
+var FORMAT_PRIORITY_PATH = 1;
+var FORMAT_PRIORITY_PACKAGE = 1;
+var FORMAT_PRIORITY_NAME = 1;
+var FORMAT_PRIORITY_CONST_NAME = 2;
+var FORMAT_PRIORITY_BIG_NAME = 2;
+var FORMAT_PRIORITY_SMALL_NAME = 2;
+var FORMAT_PRIORITY_FILE = 1;
+var FORMAT_PRIORITY_IMAGE = 2;
+var FORMAT_PRIORITY_AUDIO = 2;
+var FORMAT_PRIORITY_VIDEO = 2;
+var FORMAT_PRIORITY_IMAGE_HTTP = 3;
+var FORMAT_PRIORITY_AUDIO_HTTP = 3;
+var FORMAT_PRIORITY_VIDEO_HTTP = 3;
+var FORMAT_PRIORITY_IMAGE_FILE = 3;
+var FORMAT_PRIORITY_AUDIO_FILE = 3;
+var FORMAT_PRIORITY_VIDEO_FILE = 3;
 
+var FORMAT_PRIORITIES = { // 在 JSONResponse 中定义，会导致存不进值，因为 FORMAT_ANY 等 key 还没初始化
+  [FORMAT_ANY]: FORMAT_PRIORITY_ANY,
+  [FORMAT_MONTH]: FORMAT_PRIORITY_MONTH,
+  [FORMAT_DATE]: FORMAT_PRIORITY_DATE,
+  [FORMAT_MINUTE]: FORMAT_PRIORITY_MINUTE,
+  [FORMAT_TIME]: FORMAT_PRIORITY_TIME,
+  [FORMAT_DATETIME]: FORMAT_PRIORITY_DATETIME,
+  [FORMAT_URL]: FORMAT_PRIORITY_URL,
+  [FORMAT_URI]: FORMAT_PRIORITY_URI,
+  [FORMAT_FILE_URI]: FORMAT_PRIORITY_FILE_URI,
+  [FORMAT_RPC]: FORMAT_PRIORITY_RPC,
+  [FORMAT_HTTP]: FORMAT_PRIORITY_HTTP,
+  [FORMAT_PATH]: FORMAT_PRIORITY_PATH,
+  [FORMAT_PACKAGE]: FORMAT_PRIORITY_PACKAGE,
+  [FORMAT_NAME]: FORMAT_PRIORITY_NAME,
+  [FORMAT_BIG_NAME]: FORMAT_PRIORITY_BIG_NAME,
+  [FORMAT_SMALL_NAME]: FORMAT_PRIORITY_SMALL_NAME,
+  [FORMAT_PRIORITY_CONST_NAME]:  FORMAT_PRIORITY_CONST_NAME,
+  [FORMAT_FILE]: FORMAT_PRIORITY_FILE,
+  [FORMAT_IMAGE]: FORMAT_PRIORITY_IMAGE,
+  [FORMAT_AUDIO]: FORMAT_PRIORITY_AUDIO,
+  [FORMAT_VIDEO]: FORMAT_PRIORITY_VIDEO,
+  [FORMAT_IMAGE_HTTP]: FORMAT_PRIORITY_IMAGE_HTTP,
+  [FORMAT_AUDIO_HTTP]: FORMAT_PRIORITY_AUDIO_HTTP,
+  [FORMAT_VIDEO_HTTP]: FORMAT_PRIORITY_VIDEO_HTTP,
+  [FORMAT_IMAGE_FILE]: FORMAT_PRIORITY_IMAGE_FILE,
+  [FORMAT_AUDIO_FILE]: FORMAT_PRIORITY_AUDIO_FILE,
+  [FORMAT_VIDEO_FILE]: FORMAT_PRIORITY_VIDEO_FILE,
+};
+var FORMAT_VERIFIERS = {
+  [FORMAT_IMAGE_HTTP]: StringUtil.isImageHttpUrl,
+  [FORMAT_AUDIO_HTTP]: StringUtil.isAudioHttpUrl,
+  [FORMAT_VIDEO_HTTP]: StringUtil.isVideoHttpUrl,
+  [FORMAT_IMAGE_FILE]: StringUtil.isImageFilePath,
+  [FORMAT_AUDIO_FILE]: StringUtil.isAudioFilePath,
+  [FORMAT_VIDEO_FILE]: StringUtil.isVideoFilePath,
+  [FORMAT_MONTH]: StringUtil.isMonth,
+  [FORMAT_DATE]: StringUtil.isDate,
+  [FORMAT_MINUTE]: StringUtil.isMinute,
+  [FORMAT_TIME]: StringUtil.isTime,
+  [FORMAT_DATETIME]: StringUtil.isDatetime,
+  [FORMAT_FILE_URI]: StringUtil.isFileUri,
+  [FORMAT_RPC]: StringUtil.isRpcUrl,
+  [FORMAT_HTTP]: StringUtil.isHttpUrl,
+  [FORMAT_URL]: StringUtil.isUrl,
+  [FORMAT_URI]: StringUtil.isUri,
+  [FORMAT_PATH]: StringUtil.isPath,
+  [FORMAT_PACKAGE]: StringUtil.isPackage,
+  [FORMAT_IMAGE]: StringUtil.isImage,
+  [FORMAT_AUDIO]: StringUtil.isAudio,
+  [FORMAT_VIDEO]: StringUtil.isVideo,
+  [FORMAT_FILE]: StringUtil.isFile,
+  [FORMAT_BIG_NAME]: StringUtil.isBigName,
+  [FORMAT_SMALL_NAME]: StringUtil.isSmallName,
+  [FORMAT_NAME]: StringUtil.isName,
+};
 function log(msg) {
   // console.log(msg);
 }
@@ -66,6 +177,10 @@ function log(msg) {
 var JSONResponse = {
   TAG: 'JSONResponse',
 
+  KEY_CODE: 'code',
+  KEY_MSG: 'msg',
+  KEY_THROW: 'throw',
+  CODE_SUCCESS: 200,
   /**是否成功
    * @param code
    * @return
@@ -75,14 +190,11 @@ var JSONResponse = {
       return false
     }
 
-    if (typeof obj == 'number') {
-      return obj == CODE_SUCCESS;
-    }
-    if (obj instanceof Object && obj instanceof Array == false) {
-      return obj.code == CODE_SUCCESS;
+    if (obj instanceof Array == false && obj instanceof Object) {
+      return obj[JSONResponse.KEY_CODE] == JSONResponse.CODE_SUCCESS;
     }
 
-    return false
+    return obj == JSONResponse.CODE_SUCCESS
   },
 
   /**校验服务端是否存在table
@@ -173,10 +285,14 @@ var JSONResponse = {
    * @return {@link #formatKey(String, boolean, boolean, boolean)} formatColon = true, formatAt = true, formatHyphen = true, firstCase = true
    */
   getVariableName: function(fullName, listSuffix) {
+    if (StringUtil.isEmpty(fullName, true)) {
+       return null;
+    }
     if (JSONObject.isArrayKey(fullName)) {
       fullName = StringUtil.addSuffix(fullName.substring(0, fullName.length - 2), listSuffix || "list");
     }
-    return JSONResponse.formatKey(fullName, true, true, true, true, true, true);
+    var n = JSONResponse.formatKey(fullName, true, true, true, true, true, true);
+    return /0-9/.test(n.substring(0, 1)) ? '_' + n : n;
   },
 
   /**格式化数组的名称 key[] => keyList; key:alias[] => aliasList; Table-column[] => tableColumnList
@@ -345,15 +461,17 @@ var JSONResponse = {
   COMPARE_EQUAL: 0,
   COMPARE_VALUE_REPEAT: 0, // 通过后置脚本改为 1/2 来开启。场景太少了，除了分布式 id 外，即便是订单状态，那也是有一段时间内停留在同一个状态，而且最多存 20 个值，也很难命中各种结果  1 // 2
   COMPARE_KEY_MORE: 1,
-  COMPARE_VALUE_MORE: 1,
-  COMPARE_EQUAL_EXCEPTION: 1,
-  COMPARE_LENGTH_CHANGE: 2,
-  COMPARE_VALUE_CHANGE: 2,
-  COMPARE_KEY_LESS: 3,
-  COMPARE_TYPE_CHANGE: 4,
-  COMPARE_NUMBER_TYPE_CHANGE: 3,
-  COMPARE_CODE_CHANGE: 4,
-  COMPARE_THROW_CHANGE: 4,
+  COMPARE_VALUE_MORE: 2,
+  COMPARE_EQUAL_EXCEPTION: 3,
+  COMPARE_LENGTH_CHANGE: 4,
+  COMPARE_VALUE_CHANGE: 5,
+  COMPARE_VALUE_EMPTY: 6,
+  COMPARE_KEY_LESS: 7,
+  COMPARE_FORMAT_CHANGE: 8,
+  COMPARE_NUMBER_TYPE_CHANGE: 9,
+  COMPARE_TYPE_CHANGE: 10,
+  COMPARE_CODE_CHANGE: 11,
+  COMPARE_THROW_CHANGE: 12,
 
   /**测试compare: 对比 新的请求与上次请求的结果
    0-相同，无颜色；
@@ -362,8 +480,17 @@ var JSONResponse = {
    3-对象缺少字段/整数变小数，黄色；
    4-code/值类型 改变，红色；
    */
-  compareResponse: function(target, real, folder, isMachineLearning, codeName, exceptKeys, ignoreTrend) {
-    codeName = StringUtil.isEmpty(codeName, true) ? 'code' : codeName;
+  compareResponse: function(res, target, real, folder, isMachineLearning, codeName, exceptKeys, ignoreTrend) {
+    var tStatus = (target || {}).status || 200;
+    var rStatus = (res || {}).status;
+    if (rStatus != null && rStatus != tStatus) {
+      return {
+        code: JSONResponse.COMPARE_CODE_CHANGE,
+        msg: 'HTTP Status Code 改变！' + tStatus + ' -> ' + rStatus,
+        path: ''
+      }
+    }
+    codeName = StringUtil.isEmpty(codeName, true) ? JSONResponse.KEY_CODE : codeName;
     var tCode = (target || {})[codeName];
     var rCode = (real || {})[codeName];
 
@@ -380,7 +507,7 @@ var JSONResponse = {
       if (typeof rCode == 'number' && (rCode%10 != 0 || (rCode >= 400 && rCode < 600))) {
         return {
           code: JSONResponse.COMPARE_CODE_CHANGE, //未上传对比标准
-          msg: '没有校验标准，且状态码在 [400, 599] 内或不是 0, 200 等以 0 结尾的数',
+          msg: '没有校验标准，且状态码 ' + rCode + ' 在 [400, 599] 内或不是 0, 200 等以 0 结尾的数',
           path: folder == null ? '' : folder
         };
       }
@@ -388,7 +515,7 @@ var JSONResponse = {
       if (real != null && real.throw != null) {
         return {
           code: JSONResponse.COMPARE_CODE_CHANGE, //未上传对比标准
-          msg: '没有校验标准，且 throw 不是 null',
+          msg: '没有校验标准，且 throw 是 ' + real.throw,
           path: folder == null ? '' : folder
         };
       }
@@ -396,7 +523,7 @@ var JSONResponse = {
       if (real == null || real['return'] == null) {
         return {
           code: JSONResponse.COMPARE_KEY_LESS, //未上传对比标准
-          msg: '没有校验标准，且缺少非 null 值的 return 字段',
+          msg: '没有校验标准，且缺少有效 return 值',
           path: folder == null ? '' : folder
         };
       }
@@ -426,18 +553,18 @@ var JSONResponse = {
       if (find != null) {
         return {
           code: JSONResponse.COMPARE_EQUAL_EXCEPTION,
-          msg: '符合异常分支 ' + codeName + ':' + rCode + (StringUtil.isEmpty(rThrw) ? '' : ', throw:' + rThrw) + ', msg:' + StringUtil.trim(find.msg),
+          msg: '符合异常分支 ' + rCode + (StringUtil.isEmpty(rThrw) ? '' : ' ' + rThrw + ':') + ' ' + StringUtil.trim(find.msg),
           path: folder == null ? '' : folder
         };
       }
 
       return rCode != tCode ? {
         code: JSONResponse.COMPARE_CODE_CHANGE,
-        msg: '状态码 ' + codeName + ' 改变！',
+        msg: '状态码 ' + codeName + ' 改变！' + tCode + ' -> ' + rCode,
         path: folder == null ? '' : folder
       } : {
         code: JSONResponse.COMPARE_THROW_CHANGE,
-        msg: '异常 throw 改变！',
+        msg: '异常 throw 改变！' + tThrw + ' -> ' + rThrw,
         path: folder == null ? '' : folder
       };
     }
@@ -516,7 +643,7 @@ var JSONResponse = {
       if (type != "integer" || realType != "number") {
         return {
           code: JSONResponse.COMPARE_TYPE_CHANGE,
-          msg: '值类型改变',
+          msg: '值类型改变！' + type + " -> " + realType,
           path: folder,
           value: real
         };
@@ -664,7 +791,7 @@ var JSONResponse = {
    3-缺少字段/整数变小数，黄色；
    4-类型/code 改变，红色；
    */
-  compareWithStandard: function(target, real, folder, exceptKeys, ignoreTrend) {
+  compareWithStandard: function(target, real, folder, exceptKeys, ignoreTrend, callback) {
     folder = folder == null ? '' : folder;
 
     if (target == null) {
@@ -682,9 +809,13 @@ var JSONResponse = {
     log('\n\n\n\n\ncompareWithStandard <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n' +
       ' \ntarget = ' + JSON.stringify(target, null, '    ') + '\n\n\nreal = ' + JSON.stringify(real, null, '    '));
 
+    var guess = target.guess;
+    log('compareWithStandard  guess = target.guess = ' + guess + ' >>');
     var notnull = target.notnull;
     log('compareWithStandard  notnull = target.notnull = ' + notnull + ' >>');
 
+    var notempty = target.notempty;
+    log('compareWithStandard  notempty = target.notempty = ' + notempty + ' >>');
     var type = target.type;
     log('compareWithStandard  type = target.type = ' + type + ' >>');
 
@@ -693,8 +824,9 @@ var JSONResponse = {
 
     var values = target.values;
     log('compareWithStandard  values = target.values = ' + JSON.stringify(values, null, '    ') + ' >>');
+    var firstVal = values == null || values.length <= 0 ? null : values[0];
 
-    if ((values == null || values[0] == null) && (type == 'object' || type == 'array')) {
+    if (firstVal == null && (type == 'object' || type == 'array')) {
       if (notnull == true) { // values{} values&{}
         throw new Error('Standard 在 ' + folder + ' 语法错误，Object 或 Array 在 notnull: true 时 values 必须为有值的数组 !');
       }
@@ -720,12 +852,11 @@ var JSONResponse = {
 
 
 
-    var realType = JSONResponse.getType(real);
-    if (type != realType && (type != 'number' || realType != 'integer')) { //类型改变
-      log('compareWithStandard  type != getType(real) >> return COMPARE_TYPE_CHANGE');
+    if (notempty == true && typeof real != 'boolean' && typeof real != 'number' && StringUtil.isEmpty(real, true)) { // 空
+      log('compareWithStandard  notempty == true && StringUtil.isEmpty(real, true) >> return COMPARE_VALUE_EMPTY');
       return {
-        code: JSONResponse.COMPARE_TYPE_CHANGE,
-        msg: '不是 ' + type + ' 类型',
+        code: JSONResponse.COMPARE_VALUE_EMPTY,
+        msg: '是空的',
         path: folder,
         value: real
       };
@@ -738,6 +869,20 @@ var JSONResponse = {
       value: null //导致正确时也显示  real
     };
 
+    var realType = JSONResponse.getType(real);
+    if (type != realType && (type != 'number' || realType != 'integer')) { //类型改变
+      log('compareWithStandard  type != getType(real) >> return COMPARE_TYPE_CHANGE');
+      max = {
+        code: JSONResponse.COMPARE_TYPE_CHANGE,
+        msg: '不是 ' + type + ' 类型',
+        path: folder,
+        value: real
+      };
+      if (guess != true) {
+        return max;
+      }
+      max.code -= 1;
+    }
     var each;
 
     if (type == 'array') { // JSONArray
@@ -746,7 +891,7 @@ var JSONResponse = {
       for (var i = 0; i < real.length; i ++) { //检查real的每一项
         log('compareWithStandard  for i = ' + i + ' >> ');
 
-        each = JSONResponse.compareWithStandard(values[0], real[i], JSONResponse.getAbstractPath(folder, i), exceptKeys);
+        each = JSONResponse.compareWithStandard(firstVal, real[i], JSONResponse.getAbstractPath(folder, i), exceptKeys, ignoreTrend);
 
         if (max.code < each.code) {
           max = each;
@@ -772,7 +917,7 @@ var JSONResponse = {
     else if (type == 'object') { // JSONObject
       log('compareWithStandard  type == object >> ');
 
-      var tks = values == null ? [] : Object.keys(values[0]);
+      var tks = values == null ? [] : Object.keys(firstVal);
       var tk;
       for (var i = 0; i < tks.length; i++) { //遍历并递归下一层
         tk = tks[i];
@@ -781,7 +926,7 @@ var JSONResponse = {
         }
         log('compareWithStandard  for tk = ' + tk + ' >> ');
 
-        each = JSONResponse.compareWithStandard(values[0][tk], real[tk], JSONResponse.getAbstractPath(folder,  tk), exceptKeys);
+        each = JSONResponse.compareWithStandard(firstVal[tk], real[tk], JSONResponse.getAbstractPath(folder,  tk), exceptKeys);
         if (max.code < each.code) {
           max = each;
         }
@@ -799,7 +944,7 @@ var JSONResponse = {
         for (var k in real) {
           log('compareWithStandard  for k = ' + k + ' >> ');
 
-          if (k != null && real[k] != null && (values == null || values[0] == null || values[0][k] == null)
+          if (k != null && real[k] != null && (firstVal == null || firstVal[k] == null)
             && (exceptKeys == null || exceptKeys.indexOf(tk) >= 0)) { //解决 null 值总是提示是新增的，且无法纠错 tks.indexOf(k) < 0) {
             log('compareWithStandard  k != null && tks.indexOf(k) < 0 >> max = COMPARE_KEY_MORE;');
 
@@ -815,6 +960,34 @@ var JSONResponse = {
     }
     else { // Boolean, Number, String
       log('compareWithStandard  type == boolean | number | string >> ');
+      if (max.code < JSONResponse.COMPARE_TYPE_CHANGE && type == 'string') {
+        var format = target.format;
+        if (typeof format == 'string' && FORMAT_PRIORITIES[format] != null) {
+          var verifier = max.code < JSONResponse.COMPARE_FORMAT_CHANGE && StringUtil.isNotEmpty(format, true)
+              ? FORMAT_VERIFIERS[format] : null;
+          if (typeof verifier == 'function' && verifier(real) != true) {
+              max.code = JSONResponse.COMPARE_FORMAT_CHANGE - (guess != true ? 0 : 1);
+              max.msg = '不是 ' + format + " 格式！";
+              max.path = folder;
+              max.value = real;
+          }
+        }
+        else if (format instanceof Array == false && format instanceof Object) {
+          try {
+            var realObj = JSON.parse(real);
+            var result = JSONResponse.compareWithStandard(format, realObj, folder, exceptKeys, ignoreTrend);
+            if (guess == true) {
+              result.code -= 1;
+            }
+
+            if (result.code > max.code) {
+              max = result;
+            }
+          } catch (e) {
+            log(e)
+          }
+        }
+      }
 
       var valueCompare = max.code >= JSONResponse.COMPARE_VALUE_CHANGE
           ? 0 : JSONResponse.compareValue(valueLevel, values, real, target.trend, target.repeat);
@@ -838,7 +1011,7 @@ var JSONResponse = {
         }
         else {  // 刚上传完是不是不应该对比？还是 ignoreTrend = ">,<,!" 忽略特定的对比？因为很可能是原来的
           var select = ignoreTrend ? null : (target.trend || {}).select;
-          var maxVal = values == null || values.length <= 0 ? null : values[0];
+          var maxVal = firstVal;
           var minVal = values == null || values.length <= 0 ? null : values[values.length - 1];
 
           if (select == '>') {
@@ -1090,17 +1263,12 @@ var JSONResponse = {
 
   /**更新测试标准，通过原来的标准与最新的数据合并来实现
    */
-  updateStandard: function(target, real, exceptKeys, ignoreTrend) {
+  updateStandard: function(target, real, exceptKeys, ignoreTrend, key) {
     if (target instanceof Array) { // JSONArray
       throw new Error("Standard 语法错误，不应该有 array！");
     }
-    if (real == null) { //少了key
-      log('updateStandard  real == null');
-      if (target != null) { //} && target.values != null && target.values[0] != null) {
-        log('updateStandard  target != null >> target.notnull = false;');
-        target.notnull = false;
-      }
-      log('updateStandard  return target;');
+    if (real == null && StringUtil.isEmpty(key, true)) { // 少了key
+      log('updateStandard real == null && StringUtil.isEmpty(key, true) >> return target;');
       return target;
     }
 
@@ -1114,11 +1282,116 @@ var JSONResponse = {
     var notnull = target.notnull;
     log('updateStandard  notnull = target.notnull = ' + notnull + ' >>');
     if (notnull == null) {
-      notnull = target.notnull = true;
+      notnull = target.notnull = real != null;
     }
 
+    var notempty = target.notempty;
+    log('updateStandard  notempty = target.notempty = ' + notempty + ' >>');
+    if (real != null && typeof real != 'boolean' && typeof real != 'number') {
+      notempty = target.notempty = StringUtil.isNotEmpty(real, true);
+    }
     var type = target.type;
+    if (type == null || type == 'undefined') {
+      target.type = type = null;
+    }
     var rtype = JSONResponse.getType(real);
+    if ((rtype == null || real == null) && StringUtil.isEmpty(type, true) && StringUtil.isNotEmpty(key, true)) {
+      target.guess = true;
+      if (StringUtil.isBoolKey(key)) {
+        target.type = 'boolean';
+      }
+      else if (StringUtil.isDateKey(key)) {
+        target.type = 'integer'; // 'string';
+        if (target.format == null) {
+          target.format = FORMAT_DATE;
+        }
+      }
+      else if (StringUtil.isTimeKey(key)) {
+        target.type = 'integer'; // 'string';
+        if (target.format == null) {
+          target.format = FORMAT_TIME;
+        }
+      }
+      else if (StringUtil.isUrlKey(key)) {
+        target.type = 'string';
+        if (target.format == null) {
+          target.format = FORMAT_HTTP;
+        }
+      }
+      else if (StringUtil.isUriKey(key)) {
+        target.type = 'string';
+        if (target.format == null) {
+          target.format = FORMAT_URI;
+        }
+      }
+      else if (StringUtil.isPathKey(key)) {
+        target.type = 'string';
+        if (target.format == null) {
+          target.format = FORMAT_PATH;
+        }
+      }
+      else if (StringUtil.isNameKey(key)) {
+        target.type = 'string';
+        if (target.format == null) {
+          target.format = FORMAT_BIG_NAME;
+        }
+      }
+      else if (StringUtil.isDictKey(key) || StringUtil.isMapKey(key) || StringUtil.isObjKey(key)) {
+        target.type = 'object';
+      }
+      else if (StringUtil.isCollectionKey(key)) {
+        target.type = 'array';
+      }
+      else if (StringUtil.isPriceKey(key) || StringUtil.isPercentKey(key) || StringUtil.isAmountKey(key)
+         || StringUtil.isMoneyKey(key) || StringUtil.isCashKey(key) || StringUtil.isDiscountKey(key)
+         || StringUtil.isDecimalKey(key) || StringUtil.isFloatKey(key) || StringUtil.isDoubleKey(key)
+      ) {
+        target.type = 'number';
+      }
+      else if (StringUtil.isNumKey(key) || StringUtil.isCountKey(key) || StringUtil.isPageKey(key)
+         || StringUtil.isSizeKey(key) || StringUtil.isCapKey(key) || StringUtil.isIntKey(key) || StringUtil.isLongKey(key)
+         || StringUtil.isLevelKey(key)|| StringUtil.isGradeKey(key) || StringUtil.isScoreKey(key) || StringUtil.isTotalKey(key)
+         || StringUtil.isIdKey(key) || StringUtil.isHashKey(key)
+      ) {
+        target.type = 'integer';
+      }
+      else if (StringUtil.isStrKey(key)) {
+        target.type = 'string';
+      }
+      else {
+        var cm = StringUtil.CATEGORY_MAP;
+        if (cm == null || Object.keys(cm).length <= 0) {
+            cm = {}
+            var tcks = StringUtil.TYPE_CATEGORY_KEYS || {};
+            for (var k in tcks) {
+              var arr = tcks[k] || [];
+              for (var i = 0; i < arr.length; i++) {
+                var k2 = arr[i];
+                cm[k2] = k;
+              }
+            }
+
+            StringUtil.CATEGORY_MAP = cm;
+        }
+
+        for (var k in cm) {
+          if (StringUtil.isKeyOfCategory(key, k)) {
+            target.type = cm[k];
+            break;
+          }
+        }
+      }
+
+    }
+    else {
+      target.guess = rtype == null || real == null ? (ignoreTrend ? target.guess : false) : undefined;
+    }
+
+    if (real == null) { // 少了key
+      log('updateStandard  real == null >> return target;');
+      return target;
+    }
+
     log('updateStandard  type = target.type = ' + type + ' >>');
     if (type == null || CodeUtil.isTypeMatch(target.type, rtype) != true) { //强制用real的类型替代
       type = target.type = rtype;
@@ -1158,7 +1431,7 @@ var JSONResponse = {
         log('updateStandard for i = ' + i + '; child = '
           + JSON.stringify(child, null, '    ') + ';\n real[i] = '  + JSON.stringify(real[i], null, '    ') + ' >>');
 
-        child = JSONResponse.updateStandard(child, real[i], exceptKeys, true);  //FIXME ignoreTrend 固定取 true 导致批量创建后多个 id [1,2,3] -> [3,4,5] 漏报趋势异常
+        child = JSONResponse.updateStandard(child, real[i], exceptKeys, true, key == null ? 'item' : key + 'Item');  //FIXME ignoreTrend 固定取 true 导致批量创建后多个 id [1,2,3] -> [3,4,5] 漏报趋势异常
       }
       if (child == null) {
         log('updateStandard  child == null >> child = {}');
@@ -1174,12 +1447,14 @@ var JSONResponse = {
 
       target.valueLevel = valueLevel;
 
+
       if (values == null) {
         values = [];
       }
+
       var firstVal = values[0];
       if (firstVal == null) {
-        firstVal = values[0] = {};
+        values[0] = firstVal = {};
       }
 
       var realKeys = Object.keys(real) || [];
@@ -1205,18 +1480,65 @@ var JSONResponse = {
 
         log('updateStandard for k in real = ' + k + '; firstVal[k] = '
           + JSON.stringify(firstVal[k], null, '    ') + ';\n real[k] = '  + JSON.stringify(real[k], null, '    ') + ' >>');
-        firstVal[k] = JSONResponse.updateStandard(firstVal[k], real[k], exceptKeys, ignoreTrend);
+        firstVal[k] = JSONResponse.updateStandard(firstVal[k], real[k], exceptKeys, ignoreTrend, k);
       }
 
       target.values = values;
     }
     else {
       log('updateStandard  type == other >> ');
+      if (type == 'string') {
+        var format = target.format;
+        try {
+          var priority = format == null ? null : FORMAT_PRIORITIES[format]
+          if (priority == null) {
+            priority = Number.MAX_SAFE_INTEGER;
+          }
 
+          var format2 = null;
+          var priorities = FORMAT_PRIORITIES;
+          var verifiers = FORMAT_VERIFIERS;
+          for (var fmt in verifiers) {
+            try {
+              var verifier = verifiers[fmt];
+              var pty = priorities[fmt];
+              if (pty == null) {
+                pty = Number.MAX_SAFE_INTEGER - 1;
+              }
+
+              if (pty < priority && typeof verifier == 'function' && (
+                  priorities[format2] == null || pty > priorities[format2])
+              ) {
+                if (verifier(real)) {
+                  target.format = format2 = fmt;
+                }
+              }
+            }
+            catch (e) {
+              log(e)
+            }
+          }
+          if (priority > 0 && format2 == null) {
+            throw new Error("try other format");
+          }
+        } catch (e) {
+          log(e)
+          try {
+            var realObj = JSON.parse(real);
+            var format2 = JSONResponse.updateStandard(target.format, realObj, exceptKeys, ignoreTrend, key);
+            if (format2 != null) {
+              target.format = format2;
+            }
+          } catch (e2) {
+            log(e2)
+            target.format = ''
+          }
+        }
+      }
       if (values == null) {
         values = [];
       }
-      if (valueLevel < 1 && type == 'number' && String(real).indexOf('.') >= 0) { //double 1.23
+      if (valueLevel < 1 && type == 'number' && ! Number.isSafeInteger(real)) { //double 1.23
         valueLevel = 1;
       }
       target.values = values;
@@ -1230,12 +1552,12 @@ var JSONResponse = {
     return target;
   },
 
-
   /**根据路径精准地更新测试标准中的键值对
    */
   getStandardByPath: function(target, pathKeys) {
     if (target instanceof Array) { // JSONArray
-      throw new Error('Standard 语法错误，' + key + ': value 中 value 类型不应该是 Array！');
+      var path = pathKeys == null ? null : path.join('/')
+      throw new Error('Standard 语法错误，' + path + ': value 中 value 类型不应该是 Array！');
     }
     if (target == null) {
       return null;

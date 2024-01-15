@@ -48,10 +48,33 @@ var CodeUtil = {
   LANGUAGE_PHP: 'PHP',
   LANGUAGE_PYTHON: 'Python',
 
+  DATABASE_MYSQL: 'MYSQL',
+  DATABASE_POSTGRESQL: 'POSTGRESQL',
+  DATABASE_SQLITE: 'SQLITE',
+  DATABASE_ORACLE: 'ORACLE',
+  DATABASE_SQLSERVER: 'SQLSERVER',
+  DATABASE_DB2: 'DB2',
+  DATABASE_DAMENG: 'DAMENG',
+  DATABASE_KINGBASE: 'KINGBASE',
+  DATABASE_TIDB: 'TIDB',
+  DATABASE_TDENGINE: 'TDENGINE',
+  DATABASE_NEBULA: 'NEBULA',
+  DATABASE_PRESTO: 'PRESTO',
+  DATABASE_TRINO: 'TRINO',
+  DATABASE_INFLUXDB: 'INFLUXDB',
+  DATABASE_CLICKHOUSE: 'CLICKHOUSE',
+  DATABASE_ELASTICSEARCH: 'ELASTICSEARCH',
+  DATABASE_REDIS: 'REDIS',
+  DATABASE_KAFKA: 'KAFKA',
+  DATABASE_MARIADB: 'MARIADB',
+  DATABASE_HIVE: 'HIVE',
+
   type: 'JSON',
   database: 'MYSQL',
   schema: 'sys',
   language: 'Kotlin',
+  functionList: [],
+  requestList: [],
   tableList: [],
   thirdParty: 'YAPI',
   thirdPartyApiMap: null,  // {}
@@ -109,7 +132,8 @@ var CodeUtil = {
 
       var comment = '';
       if (cIndex >= 0) {
-        if (isExtract && standardObj != null && (depth != 1 || (key != 'code' && key != 'throw'))) {
+        if (isExtract && standardObj != null && (depth != 1
+          || (isReq != true && [JSONResponse.KEY_CODE, JSONResponse.KEY_MSG, JSONResponse.KEY_THROW].indexOf(key) < 0))) {
           comment = line.substring(cIndex + ccLen).trim();
           // standardObj = CodeUtil.updateStandardPart(standardObj, names, key, value, comment)
         }
@@ -269,6 +293,36 @@ var CodeUtil = {
   },
 
 
+  getOperation: function (method, json) {
+        var ind = method == null ? -1 : method.indexOf('?');
+        var method = StringUtil.toLowerCase(ind < 0 ? method : method.substring(0, ind));
+        if (method.startsWith('insert') || method.startsWith('post') || method.startsWith('add')
+          || method.startsWith('pub') || method.startsWith('write')) {
+          return 'INSERT'
+        }
+        if (method.startsWith('update') || method.startsWith('edit') || method.startsWith('put')
+          || method.startsWith('patch') || method.startsWith('mutate') || method.startsWith('mod')) { // modify
+          return 'UPDATE'
+        }
+        if (method.startsWith('del') || method.startsWith('remove') || method.startsWith('rmv')
+          || method.startsWith('clear') || method.startsWith('clean') || method.startsWith('release')) {
+          return 'DELETE'
+        }
+        if (method.startsWith('get') || method.startsWith('find') || method.startsWith('query') || method.startsWith('list')
+          || method.startsWith('search') || method.startsWith('select') || method.startsWith('read')
+          || method.startsWith('retrieve') || method.startsWith('fetch')) {
+          return 'SELECT'
+        }
+        if (JSONResponse.getType(json) == 'object') {
+          for (var key in json) {
+              var k = key == null ? '' : key.replaceAll('_', '').toLowerCase()
+              if (k.startsWith('page') || json.size != null || json.orderby != null) {
+                 return 'SELECT'
+              }
+          }
+        }
+        return null // 'SELECT'
+  },
 
   /**生成封装 Unity3D-C# 请求 JSON 的代码
    * 只需要把所有 对象标识{} 改为数组标识 []
@@ -2274,6 +2328,11 @@ var CodeUtil = {
 
   },
 
+  PYTHON_KEY_WORDS: [
+    'bool', 'int', 'float', 'str', 'list', 'dict', 'is', 'as', 'type', 'import', 'from', 'def', 'assert', 'return',
+    'None', 'False', 'True', 'null', 'false', 'true', 'print', 'for', 'in', 'range', 'yield', 'async', 'await',
+    'if', 'elif', 'else', 'eval', 'exec', 'tuple', 'object', 'req', 'res', 'res_data', 'and', 'or', 'not'
+  ],
 
   /**生成 Web-Python 解析 Response JSON 的代码
    * @param name_
@@ -2282,22 +2341,32 @@ var CodeUtil = {
    * @param isSmart
    * @return parseCode
    */
-  parsePythonResponse: function(name_, resObj, depth, isSmart) {
+  parsePythonResponse: function(name_, resObj, depth, isSmart, isML, funDefs, funNames) {
     if (depth == null || depth < 0) {
       depth = 0;
+    }
+    if (depth <= 0) {
+      return CodeUtil.parsePythonResponseByStandard('', name_, resObj, null, 1, isSmart, false, funDefs, funNames);
+    }
+
+    if (funDefs == null) {
+      funDefs = []
+    }
+    if (funNames == null) {
+      funNames = []
     }
 
     var name = name_; //解决生成多余的解析最外层的初始化代码
     if (StringUtil.isEmpty(name, true)) {
-      name = 'response';
+      name = 'res_data';
     }
 
     var quote = "'";
 
-    return CodeUtil.parseCode(name, resObj, {
+    var str = CodeUtil.parseCode(name, resObj, {
 
       onParseParentStart: function () { //解决生成多余的解析最外层的初始化代码
-        return depth > 0 || StringUtil.isEmpty(name_, true) == false ? '' : CodeUtil.getBlank(depth) + name + (isSmart ? '' : ': dict') + ' = json.loads(resultJson) \n';
+        return depth > 0 || StringUtil.isEmpty(name_, true) == false ? '' : CodeUtil.getBlank(depth) + '# ' + name + (isSmart ? '' : ': dict') + ' = json.loads(resultJson) \n';
       },
 
       onParseParentEnd: function () {
@@ -2319,6 +2388,7 @@ var CodeUtil = {
 
           return this.onParseJSONArray(key, value, index);
         }
+
         if (value instanceof Object) {
           log(CodeUtil.TAG, 'parsePythonResponse  for typeof value === "array" >>  ' );
 
@@ -2328,10 +2398,25 @@ var CodeUtil = {
         var type = value == null ? 'any' : CodeUtil.getPythonTypeFromJS(key, value);
         var padding = '\n' + CodeUtil.getBlank(depth);
         var varName = JSONResponse.getVariableName(key);
+        if (varName.startsWith('_') != true && CodeUtil.PYTHON_KEY_WORDS.indexOf(varName) >= 0) {
+          varName = '_' + varName // { '1': 0, '2': true ... } '1' -> '_1'
+        }
 
-        return padding + varName + (isSmart ? '' : ': ' + type) + ' = ' + name + '[' + quote + key + quote + ']'
+        var funName = 'is_' + varName;
+        if (isSmart && funNames.indexOf(funName) < 0) {
+          var funDef = 'def ' + funName + '(' + varName + ': ' + type + ', strict: bool = False) -> bool:'
+              + '\n    if is_' + (type == 'str' ? 'blank' : 'empty') + '(' + varName + '):'
+              + '\n        return not strict'
+              + '\n    return ' + varName + (type == 'bool' ? ' is ' : ' = ')
+              + CodeUtil.getCode4Value(CodeUtil.LANGUAGE_PYTHON, value, key);
+          funDefs.push(funDef);
+          funNames.push(funName);
+        }
+
+        return padding + varName + (isSmart ? '' : ': ' + type) + ' = '
+          + (isSmart ? ('get_val(' + name + ', ') : (name + '[')) + quote + key + quote + (isSmart ? ')' : ']')
           + padding + 'print(\'' + name + '.' + varName + ' = \' + str(' + varName + '))'
-          + padding + 'self.assertEqual(' + varName + ', ' + CodeUtil.getCode4Value(CodeUtil.LANGUAGE_PYTHON, value, key) + ')\n';
+          + padding + 'assert is_' + varName + '(' + varName + ')\n';
       },
 
       onParseJSONArray: function (key, value, index) {
@@ -2341,6 +2426,10 @@ var CodeUtil = {
         var innerPadding = padding + CodeUtil.getBlank(1);
 
         var k = JSONResponse.getVariableName(key, 'array');
+        if (k.startsWith('_') != true && CodeUtil.PYTHON_KEY_WORDS.indexOf(k) >= 0) {
+          k = '_' + k;
+        }
+
         var itemName = StringUtil.addSuffix(k, 'Item') + (depth <= 0 ? '' : depth);
 
         //还有其它字段冲突以及for循环的i冲突，解决不完的，只能让开发者自己抽出函数  var item = StringUtil.addSuffix(k, 'Item');
@@ -2349,27 +2438,28 @@ var CodeUtil = {
         var s = '\n' + padding + '# ' + key + ' <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<';
 
         //不支持 varname: list[int] 这种语法   s += padding + k + (isSmart ? '' : ': list[' + type + ']') + ' = ' + name + '[' + quote + key + quote + ']'
-        s += padding + k + (isSmart ? '' : ': list') + ' = ' + name + '[' + quote + key + quote + ']'
-        s += padding + '# self.assertIsNotNone(' + k + ')';
-        s += padding + 'if ' + k + ' == None:';
-        s += padding + '    ' + k + ' = []\n';
+        s += padding + k + (isSmart ? '' : ': list') + ' = '
+          + (isSmart ? ('get_val(' + name + ', ') : (name + '[')) + quote + key + quote + (isSmart ? ')' : ']') + ' or []'
+        s += padding + '# assert not_none(' + k + ')';
+        // s += padding + 'if ' + k + ' == None:';
+        // s += padding + '    ' + k + ' = []\n';
 
         s += '\n' + padding + '#TODO 把这段代码抽取一个函数，以免for循环嵌套时 i 冲突 或 id等其它字段冲突';
 
-        s += padding + itemName + (isSmart ? '' : ': ' + type) + ' = None';
 
-        var indexName = 'i' + (depth <= 0 ? '' : depth);
+        var indexName = 'i' + (depth <= 0 ? '' : depth + 1);
         s += padding + 'for ' + indexName + ' in range(len(' + k + ')):'; // let i in arr; let item of arr
 
-        s += innerPadding + itemName + ' = ' + k + '[' + indexName + ']';
-        s += innerPadding + 'if ' + itemName + ' == None:';
-        s += innerPadding + '    continue';
+        s += innerPadding + itemName + (isSmart ? '' : ': ' + type) + ' = ' + k + '[' + indexName + ']';
+        s += innerPadding + 'assert not_none(' + itemName + ')';
+        s += innerPadding + '# if ' + itemName + ' is None:';
+        s += innerPadding + '#     continue\n';
         s += innerPadding + 'print(\'\\n' + itemName + ' = ' + k + '[\' + str(' + indexName + ') + \'] = \\n\' + str(' + itemName + ') + \'\\n\\n\'' + ')';
-        s += innerPadding + '#TODO 你的代码\n';
+        s += innerPadding + '# TODO 你的代码\n';
 
         //不能生成N个，以第0个为准，可能会不全，剩下的由开发者自己补充。 for (var i = 0; i < value.length; i ++) {
         if (value[0] instanceof Object) {
-          s += CodeUtil.parsePythonResponse(itemName, value[0], depth + 1, isSmart);
+          s += CodeUtil.parsePythonResponse(itemName, value[0], depth + 1, isSmart, isML, funDefs, funNames);
         }
         // }
 
@@ -2381,15 +2471,19 @@ var CodeUtil = {
       onParseJSONObject: function (key, value, index) {
         var padding = '\n' + CodeUtil.getBlank(depth);
         var k = JSONResponse.getVariableName(key);
+        if (k.startsWith('_') != true && CodeUtil.PYTHON_KEY_WORDS.indexOf(k) >= 0) {
+          k = '_' + k;
+        }
 
         var s = '\n' + padding + '# ' + key + ' <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<';
 
-        s += padding + k + (isSmart ? '' : ': dict') + ' = ' + name + '[' + quote + key + quote + ']'
-        s += padding + '# self.assertIsNotNone(' + k + ')';
-        s += padding + 'if ' + k + ' == None:';
-        s += padding + '    ' + k + ' = {}\n';
+        s += padding + k + (isSmart ? '' : ': dict') + ' = '
+          + (isSmart ? ('get_val(' + k + ', ') : (k + '[')) + quote + key + quote + (isSmart ? ')' : ']') + ' or {}'
+        s += padding + '# assert not_none(' + k + ')';
+        // s += padding + 'if ' + k + ' == None:';
+        // s += padding + '    ' + k + ' = {}\n';
 
-        s += CodeUtil.parsePythonResponse(k, value, depth, isSmart);
+        s += CodeUtil.parsePythonResponse(k, value, depth, isSmart, isML, funDefs, funNames);
 
         s += padding + '# ' + key + ' >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n';
 
@@ -2397,6 +2491,239 @@ var CodeUtil = {
       }
     })
 
+    if (depth <= 0) {
+      str = `def asserts(res):
+res_data = rep.json()
+` + str;
+      if (funDefs.length > 0) {
+        str += '\n\n\n# TODO 把这些通用函数放到专门的一个 asserter.py 文件中 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n'
+            + funDefs.join('\n\n\n')
+            + '\n\n# TODO 把这些通用函数放到专门的一个 asserter.py 文件中 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>';
+      }
+    }
+    return str;
+  },
+  parsePythonResponseByStandard: function(name, key, target, real, depth, isSmart, ignoreDef, funDefs, funNames) {
+    var isRoot = depth <= 1 && StringUtil.isEmpty(name, true);
+    name = name == null ? 'res_data' : name;
+    if (target == null) {
+      if (real == null) {
+        return '';
+      }
+      target = JSONResponse.updateStandardByPath(null, null, null, real);
+    }
+    if (target instanceof Array) { // JSONArray
+      throw new Error('Standard 在 ' + name + ' 语法错误，不应该有 array！');
+    }
+    log('\n\n\n\n\nparsePythonResponseByStandard <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n' +
+        ' \ntarget = ' + JSON.stringify(target, null, '    ') + '\n\n\nreal = ' + JSON.stringify(real, null, '    '));
+    depth = depth == null || depth < 0 ? 0 : depth;
+
+    funDefs = funDefs == null ? [] : funDefs;
+    funNames = funNames == null ? [] : funNames;
+
+    var quote = isSmart ? "'" : '"';
+
+    var type_ = target.type;
+    log('parsePythonResponseByStandard  type = target.type = ' + type_ + ' >>')
+    var type = type_ == null ? 'any' : CodeUtil.getPythonTypeFromJSType(key, null, type_);
+
+    var varName = JSONResponse.getVariableName(StringUtil.isEmpty(key, true) ? 'res_data' : key, 'array');
+    if (varName.startsWith('_') != true && CodeUtil.PYTHON_KEY_WORDS.indexOf(varName) >= 0) {
+      varName = '_' + varName;
+    }
+
+    var padding = '\n' + CodeUtil.getBlank(depth);
+    var innerPadding = padding + CodeUtil.getBlank(1);
+
+    var s = ignoreDef ? '' : (padding + varName + (isSmart ? '' : ': ' + type) + ' = ' + (
+        StringUtil.isEmpty(key, true)
+            ? 'res.json()'
+            : (isSmart ? ('get_val(' + name + ', ') : (name + '[')) + quote + key + quote + (isSmart ? ')' : ']')
+    ));
+
+    if (ignoreDef != true) {
+      if (type_ == 'object') {
+        s += ' or {}'
+      }
+      else if (type_ == 'array') {
+        s += ' or []'
+      }
+    }
+
+    var notnull = target.notnull;
+    log('parsePythonResponseByStandard  notnull = target.notnull = ' + notnull + ' >>');
+
+    var funName = 'is_' + (isRoot ? '' : name + '_') + varName;
+    var genFunDef = isSmart && funNames.indexOf(funName) < 0;
+
+    var prefix = padding + 'assert ';
+    var prefix2 = genFunDef ? '\n    if not (' : prefix;
+
+    var funDef = ''
+    if (isSmart) {
+      if (genFunDef) {
+        funDef = 'def ' + funName + '(' + varName + ': ' + type + ', strict: bool = False) -> bool:'
+            + '\n    if is_' + (type == 'str' ? 'blank' : 'empty') + '(' + varName + '):'
+            + '\n        return not strict'
+            + '\n    if not is_' + type + '(' + varName + ', strict):'
+            + '\n        return false\n'
+      }
+      s += prefix + funName + '(' + varName + ', ' + notnull + ')';
+    } else {
+      if (notnull) {
+        s += prefix + 'not_none(' + varName + ')';
+      }
+      s += prefix + 'is_' + type + '(' + varName + ')';
+    }
+
+    var lengths = target.lengths;
+    if (lengths != null && lengths.length > 0) {
+      var lengthLevel = target.lengthLevel;
+
+      var as = (genFunDef ? '\n    ' : padding) + varName + 'Len = 0 if ' + varName + ' is None else len(' + varName + ')'
+      if (lengthLevel == 0 || lengths.length <= 1) {
+        as += prefix2 + varName + 'Len in ' + JSON.stringify(lengths);
+      } else {
+        as += prefix2 + varName + 'Len >= ' + lengths[lengths.length - 1] + ' and ' + varName + 'Len <= ' + lengths[0];
+      }
+
+      if (isSmart) {
+        if (genFunDef && StringUtil.isNotEmpty(as, true)) {
+          funDef += as + '):\n        return false';
+        }
+      } else {
+        s += as;
+      }
+    }
+
+    var values = target.values;
+    log('parsePythonResponseByStandard  values = target.values = ' + JSON.stringify(values, null, '    ') + ' >>');
+    var firstVal = values == null || values.length <= 0 ? null : values[0];
+
+    if (values != null && values.length > 0) {
+      var valueLevel = target.valueLevel;
+      log('parsePythonResponseByStandard  valueLevel = target.valueLevel = ' + valueLevel + ' >>');
+
+      if (type_ == 'array') { // JSONArray
+        log('parsePythonResponseByStandard  type == array >> ');
+        var itemName = StringUtil.addSuffix(varName, 'Item') + (depth <= 1 ? '' : depth);
+
+        s += '\n' + padding + '# TODO 把这段代码抽取一个函数，以免 for 循环嵌套时 i 冲突 或 id 等其它字段冲突';
+        var indexName = 'i' + (depth <= 1 ? '' : depth);
+        s += padding + 'for ' + indexName + ' in range(len(' + varName + ')):'; // let i in arr; let item of arr
+        s += innerPadding + itemName + (isSmart ? '' : ': ' + type) + ' = ' + varName + '[' + indexName + ']';
+        s += innerPadding + 'assert not_none(' + itemName + ')';
+        s += innerPadding + '# if ' + itemName + ' is None:';
+        s += innerPadding + '#     continue';
+
+        var cs = CodeUtil.parsePythonResponseByStandard(varName, itemName, firstVal, null, depth + 1, isSmart, true, funDefs, funNames);
+        if (StringUtil.isNotEmpty(cs, true)) {
+          s += '\n' + innerPadding + cs.trim();
+        }
+      } else if (type_ == 'object') { // JSONObject
+        log('parsePythonResponseByStandard  type == object >> ');
+
+        var tks = firstVal == null ? [] : Object.keys(firstVal);
+        var tk;
+        for (var i = 0; i < tks.length; i++) { //遍历并递归下一层
+          tk = tks[i];
+          if (tk == null) {
+            continue;
+          }
+          log('parsePythonResponseByStandard  for tk = ' + tk + ' >> ');
+          var cs = CodeUtil.parsePythonResponseByStandard(varName, tk, firstVal[tk], null, depth, isSmart, false, funDefs, funNames);
+          if (StringUtil.isNotEmpty(cs, true)) {
+            s += '\n' + padding + cs.trim();
+          }
+        }
+      } else { // Boolean, Number, String
+        log('parsePythonResponseByStandard  type == boolean | number | string >> ');
+
+        var as = '';
+        if (type_ == 'number' || type_ == 'integer') {
+          var select = (target.trend || {}).select;
+          var maxVal = firstVal;
+          var minVal = values == null || values.length <= 0 ? null : values[values.length - 1];
+
+          if (select == '>') {
+            as = prefix2 + varName + ' > ' + maxVal;
+          } else if (select == '>=') {
+            as = prefix2 + varName + ' >= ' + maxVal;
+          } else if (select == '<') {
+            as = prefix2 + varName + ' < ' + minVal;
+          } else if (select == '<=') {
+            as = prefix2 + varName + ' <= ' + minVal;
+          } else if (select == '%' || (valueLevel == 1 || values.length >= 2)) {
+            as = prefix2 + varName + ' >= ' + minVal + ' and ' + varName + ' <= ' + maxVal;
+          } else {
+            as = prefix2 + varName + ' in ' + JSON.stringify(values);
+          }
+        } else {
+          as = prefix2 + varName + ' in ' + JSON.stringify(values);
+        }
+
+        if (isSmart) {
+          if (genFunDef && StringUtil.isNotEmpty(as, true)) {
+            funDef += as + '):\n        return false';
+          }
+        } else {
+          s += as;
+        }
+      }
+
+    }
+
+    var fas = '';
+    var format = target.format;
+    if (typeof format == 'string' && FORMAT_PRIORITIES[format] != null) {
+      var verifier = FORMAT_VERIFIERS[format];
+      if (typeof verifier == 'function') {
+        fas = prefix2 + verifier.name + '(' + varName + ', ' + notnull + ')';
+      }
+    }
+    else if (format instanceof Array == false && format instanceof Object) {
+      s += prefix2 + varName + '_json = json.loads(' + varName + ')'
+      try {
+        var realObj = JSON.parse(real);
+        var cs = CodeUtil.parsePythonResponseByStandard(varName + '_json', key, format, realObj, depth, isSmart, true, funDefs, funNames);
+        if (StringUtil.isNotEmpty(cs, true)) {
+          s += '\n' + padding + cs.trim();
+        }
+      } catch (e) {
+        log(e)
+      }
+
+    }
+
+    if (isSmart) {
+      if (genFunDef && StringUtil.isNotEmpty(fas, true)) {
+        funDef += fas + '):\n        return false';
+      }
+    } else {
+      s += fas;
+    }
+
+    if (isSmart && genFunDef) {
+      funDef += '\n    return true'
+      funDefs.push(funDef);
+      funNames.push(funName);
+    }
+
+    if (isRoot) {
+      s = 'def asserts(res):'
+          + '\n' + s
+          + '\n    return res'
+
+      if (funDefs.length > 0) {
+        s += '\n\n\n# TODO 把这些通用函数放到专门的一个 asserter.py 文件中 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n'
+            + funDefs.join('\n\n\n')
+            + '\n\n# TODO 把这些通用函数放到专门的一个 asserter.py 文件中 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>';
+      }
+    }
+
+    log('\nparsePythonResponseByStandard >> return s = ' + s + '\n >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> \n\n\n\n\n');
+    return s;
   },
 
   /**生成 Web-TypeScript 解析 Response JSON 的代码
@@ -5268,14 +5595,17 @@ var CodeUtil = {
   },
 
   getPythonTypeFromJS: function (key, value) {
-    var t = JSONResponse.getType(value);
+    return CodeUtil.getPythonTypeFromJSType(key, value, null);
+  },
+  getPythonTypeFromJSType: function (key, value, type) {
+    var t = value == null ? type : JSONResponse.getType(value);
     if (t == 'boolean') {
       return 'bool';
     }
 
     if (t == 'number') {
       if (Number.isInteger(value) != true) {
-        return 'double';
+        return 'float';
       }
     }
 
@@ -5738,10 +6068,17 @@ var CodeUtil = {
    * @param depth
    * @return {string}
    */
-  getBlank: function(depth) {
+  getBlank: function(depth, unit) {
     var s = '';
+    var one = '    ';
+    if (unit != null && unit > 0 && unit != 4) {
+        one = ''
+        for (var i = 0; i < unit; i ++) {
+            one += ' ';
+        }
+    }
     for (var i = 0; i < depth; i ++) {
-      s += '    ';
+      s += one;
     }
     return s;
   },
@@ -6499,6 +6836,7 @@ var CodeUtil = {
         case 'warn':
           return isWarning ? '' : '警告';
         case 'time':
+        case '@time':
           if (CodeUtil.getType4Request(value) == 'integer') {
             return isWarning ? '' : '调用时间';
           }
