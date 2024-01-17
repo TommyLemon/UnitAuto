@@ -1323,8 +1323,8 @@ https://github.com/Tencent/APIJSON/issues
         }
 
         vUrlComment.value = isSingle || StringUtil.isEmpty(this.urlComment, true)
-          ? '' : CodeUtil.getBlank(StringUtil.length(vUrl.value), 1) + CodeUtil.getComment(this.urlComment, false, ' ')
-          + ' - ' + (this.requestVersion > 0 ? 'V' + this.requestVersion : 'V*');
+          ? '' : CodeUtil.getBlank(StringUtil.length(vUrl.value), 1) + ' ' + this.urlComment
+          // + ' - ' + (this.requestVersion > 0 ? 'V' + this.requestVersion : 'V*');
       },
 
       //设置基地址
@@ -1349,12 +1349,12 @@ https://github.com/Tencent/APIJSON/issues
         }
       },
       getUrl: function () {
-        var url = StringUtil.get(this.host) + new String(vUrl.value)
+        var url = StringUtil.get(this.host) + vUrl.value
         return url.replaceAll(' ', '')
       },
       //获取基地址
       getBaseUrl: function (url_) {
-        var url = new String(url_ || vUrl.value).trim()
+        var url = StringUtil.trim(url_ || vUrl.value)
         var length = this.getBaseUrlLength(url)
         url = length <= 0 ? '' : url.substring(0, length)
         return url == '' ? URL_BASE : url
@@ -1372,7 +1372,7 @@ https://github.com/Tencent/APIJSON/issues
       },
       //获取操作方法
       getMethod: function (url) {
-        url = url || new String(vUrl.value).trim()
+        url = StringUtil.trim(url || vUrl.value)
         var index = url.lastIndexOf('.')
         url = index <= 0 ? url : url.substring(index + 1)
         return StringUtil.trim(url.startsWith('.') ? url.substring(1) : url)
@@ -1516,6 +1516,7 @@ https://github.com/Tencent/APIJSON/issues
             isEncodeEnabled: this.isEncodeEnabled,
             isEditResponse: this.isEditResponse,
             isLocalShow: this.isTestCaseShow ? this.isLocalShow : undefined,
+            language: this.language,
             page: this.page,
             count: this.count,
             testCasePage: this.testCasePage,
@@ -1860,7 +1861,7 @@ https://github.com/Tencent/APIJSON/issues
         }
         else if (index == 3) {
           var host = StringUtil.get(this.host)
-          var branch = new String(vUrl.value)
+          var branch = vUrl.value
           this.host = ''
           vUrl.value = host + branch //保证 showUrl 里拿到的 baseUrl = this.host (http://apijson.cn:8080/put /balance)
           this.setBaseUrl() //保证自动化测试等拿到的 baseUrl 是最新的
@@ -2171,7 +2172,7 @@ https://github.com/Tencent/APIJSON/issues
         // localforage.getItem(item.key || '', function (err, value) {
 
           // this.type = item.type;
-          this.urlComment =  ': ' + item.type + CodeUtil.getComment(StringUtil.get(item.detail), false, '  ');
+          this.urlComment =  ': ' + item.type + CodeUtil.getComment(StringUtil.get(item.detail), false, ' ');
           this.requestVersion = item.version;
 
           var host = StringUtil.get(this.host)
@@ -2184,9 +2185,9 @@ https://github.com/Tencent/APIJSON/issues
             this.host = ''
             vUrl.value = url
           }
-          vUrlComment.value = isSingle || StringUtil.isEmpty(this.urlComment, true)
-            ? '' : vUrl.value + this.urlComment;
-
+          vUrlComment.value = isSingle || StringUtil.isEmpty(this.urlComment, true) // 导致重复加前缀 App.showUrl(false, branch)
+            ? '' : CodeUtil.getBlank(StringUtil.length(vUrl.value), 1) + ' ' + this.urlComment
+          // + ' - ' + (this.requestVersion > 0 ? 'V' + this.requestVersion : 'V*');
 
           this.showTestCase(false, this.isLocalShow)
           vInput.value = StringUtil.get(item.request)
@@ -2601,6 +2602,7 @@ https://github.com/Tencent/APIJSON/issues
 
             const extName = App.exTxt.name;
             const baseUrl = App.getBaseUrl();
+            const method = App.getMethod();
             const url = App.server + (isExportRandom || isEditResponse || did == null ? '/post' : '/put')
             const req = isExportRandom && btnIndex <= 0 ? {
               format: false,
@@ -2621,9 +2623,9 @@ https://github.com/Tencent/APIJSON/issues
               'Method': isEditResponse ? null : {
                 'id': did == null ? undefined : did,
 //                'testAccountId': currentAccountId,
-                'operation': CodeUtil.getOperation(path, reqObj),
+                'operation': CodeUtil.getOperation(method),
                 'language': StringUtil.isEmpty(currentResponse.language, true) ? this.language : currentResponse.language,
-                'method': App.getMethod(),
+                'method': method,
                 'detail': App.exTxt.name,
                 'type': returnType,
                 'genericType': returnType,
@@ -3114,12 +3116,11 @@ https://github.com/Tencent/APIJSON/issues
             }
           }
 
-          const baseUrl = this.getBaseUrl(url)
-          this.request(true, REQUEST_TYPE_POST, REQUEST_TYPE_JSON,this.server + '/post', {
+          const baseUrl = this.getBaseUrl()
+          const reqObj = {
             format: false,
             'Method': {
               'userId': this.User.id,
-              // 'testAccountId': currentAccountId,
               'language': StringUtil.isEmpty(language, true) ? this.language : language,
               'package': classItem.package == null ? null : classItem.package,  // .replace(/[.]/g, '/'),
               'class': classItem.class,
@@ -3139,51 +3140,42 @@ https://github.com/Tencent/APIJSON/issues
               'genericExceptions': methodItem.genericExceptionTypeList == null ? null : methodItem.genericExceptionTypeList.join(), //  .replace(/[.]/g, '/').join(),
               'detail': methodItem.name
             },
-            'Random': isRandom ? {
-                toId: 0,
-                documentId: did,
-                count: 1,
-                name: '常量取值 ' + App.formatDateTime(),
-                config: config
-            } : undefined,
             'TestRecord': {
-                'randomId': 0,
-                'host': baseUrl,
-                'testAccountId': currentAccountId,
-                'response': rspObj == null ? '' : JSON.stringify(rspObj, null, '    '),
-                'standard': standard == null ? '' : JSON.stringify(standard, null, '    '),
+              'randomId': 0,
+              'host': baseUrl,
+              'testAccountId': currentAccountId,
+              'response': ""
             },
-              'tag': isRandom ? 'Random' : 'Method'
-          }, {}, function (url, res, err) {
-          //太卡 App.onResponse(url, res, err)
+            'tag': 'Method'
+          }
+
+          this.request(true, REQUEST_TYPE_POST, REQUEST_TYPE_JSON,this.server + '/post', reqObj, {}, function (url, res, err) {
+            // 太卡 App.onResponse(url, res, err)
             var rpObj = res.data || {}
-            var tblObj = isRandom ? rpObj.Random : rpObj.Method
+            var tblObj = rpObj.Method
             if (tblObj.id != null && tblObj.id > 0) {
                 App.uploadDoneCount ++
-                if (isRandom) {
-                  App.uploadRandomCount ++
-                }
             } else {
               App.uploadFailCount ++
             }
 
-              if (isRandom != true) {
-                App.newAndUploadRandomConfig(baseUrl, reqObj, tblObj.id, null, 5)
-              }
+            App.newAndUploadRandomConfig(baseUrl, reqObj, tblObj.id, null, 5)
             App.exTxt.button = 'All:' + App.uploadTotal + '\nDone:' + App.uploadDoneCount + '\nFail:' + App.uploadFailCount
             if (App.uploadDoneCount + App.uploadFailCount >= App.uploadTotal) {
-                alert('导入完成，其中 ' + App.uploadRandomCount + ' 个用例已存在，改为生成和上传了参数注入配置')
+              alert('导入完成，其中 ' + App.uploadRandomCount + ' 个用例已存在，改为生成和上传了参数注入配置')
               App.isSyncing = false
-                App.testCasePage = 0
-                App.isRandomShow = true
-                App.isRandomListShow = true
+              App.testCasePage = 0
+              App.isRandomShow = true
+              App.isRandomListShow = true
               App.showTestCase(false, false)
               App.remotes = []
               var branch = vUrl.value
               vUrl.value = StringUtil.get(App.host) + branch
               App.host = ''
 
-              vUrlComment.value = isSingle || StringUtil.isEmpty(App.urlComment, true) ? '' : vUrl.value + App.urlComment;  //导致重复加前缀 App.showUrl(false, branch)
+              vUrlComment.value = isSingle || StringUtil.isEmpty(App.urlComment, true) // 导致重复加前缀 App.showUrl(false, branch)
+                  ? '' : CodeUtil.getBlank(StringUtil.length(vUrl.value), 1) + ' ' + App.urlComment
+              // + ' - ' + (this.requestVersion > 0 ? 'V' + this.requestVersion : 'V*');
 
               App.showTestCase(true, false)
             }
@@ -3692,7 +3684,7 @@ https://github.com/Tencent/APIJSON/issues
             return;
           }
 
-          this.isTestCaseShow = false
+          // this.isTestCaseShow = false
           var reportId = this.reportId
           var lastInd = this.casePaths.length - 1
           var group = this.casePaths[lastInd]
@@ -3801,6 +3793,7 @@ https://github.com/Tencent/APIJSON/issues
             this.onChange(false)
           }
           this.request(true, REQUEST_TYPE_POST, REQUEST_TYPE_JSON,this.server + '/get', req, {}, function (url, res, err) {
+            App.isTestCaseShow = false
             if (callback) {
               callback(url, res, err)
               return
@@ -4272,6 +4265,43 @@ https://github.com/Tencent/APIJSON/issues
         this.setRememberLogin(user.remember)
         this.account = user.phone
         this.password = user.password
+
+        var schemas = StringUtil.isEmpty(this.schema, true) ? null : StringUtil.split(this.schema)
+
+        const req = {
+          type: 0, // 登录方式，非必须 0-密码 1-验证码
+          // asDBAccount: ! isAdminOperation,  // 直接 /execute 接口传 account, password
+          phone: this.account,
+          password: this.password,
+          version: 1, // 全局默认版本号，非必须
+          remember: vRemember.checked,
+          format: false,
+          defaults: isAdmin ? {
+            key: IS_NODE ? this.key : undefined  // 突破常规查询数量限制
+          } : {
+            '@database': StringUtil.isEmpty(this.database, true) ? undefined : this.database,
+            '@schema': schemas == null || schemas.length != 1 ? undefined : this.schema
+          }
+        }
+
+        this.isRandomShow = true
+        this.isRandomListShow = false
+
+        if (IS_BROWSER) {
+          vUrl.value = '/login' // this.showUrl(isAdmin, '/login')
+          vInput.value = JSON.stringify(req, null, '    ')
+
+          this.testRandomCount = 1
+          vRandom.value = `phone: App.account\npassword: App.password\nremember: vRemember.checked`
+        }
+
+        this.scripts = newDefaultScript()
+        this.method = REQUEST_TYPE_POST
+        this.type = REQUEST_TYPE_JSON
+        this.showTestCase(false, this.isLocalShow)
+        if (IS_BROWSER) {
+          this.onChange(false)
+        }
       },
 
       setRememberLogin: function (remember) {
@@ -4725,7 +4755,9 @@ https://github.com/Tencent/APIJSON/issues
               + '\n\n\n                                                                                                       '
               + '                                                                                                       \n';  //解决遮挡
 
-            vUrlComment.value = isSingle || StringUtil.isEmpty(this.urlComment, true) ? '' : vUrl.value + this.urlComment;
+            vUrlComment.value = isSingle || StringUtil.isEmpty(this.urlComment, true)
+              ? '' : CodeUtil.getBlank(StringUtil.length(vUrl.value), 1) + ' ' + this.urlComment
+              // + ' - ' + (this.requestVersion > 0 ? 'V' + this.requestVersion : 'V*');
 
 
             onScrollChanged()
@@ -8811,7 +8843,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
                     autoTestCallback('已完成回归测试')
                   }
 
-                  App.request(false, REQUEST_TYPE_POST, REQUEST_TYPE_JSON,App.project + '/coverage/report', {}, {}, function (url, res, err) {
+                  App.request(false, REQUEST_TYPE_POST, REQUEST_TYPE_JSON, App.project + '/coverage/report', {}, {}, function (url, res, err) {
                     try {
                       App.onResponse(url, res, err)
                       if (DEBUG) {
