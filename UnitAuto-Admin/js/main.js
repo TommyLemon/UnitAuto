@@ -7400,6 +7400,14 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           var type = this.type
           var url = this.getUrl()
           var req = this.getRequest(vInput.value, {})
+          req = Object.assign({
+            "package": this.getPackage(url),
+            "class": this.getClass(url),
+            "method": this.getMethod(url)
+          }, req)
+          type = REQUEST_TYPE_JSON
+          url = this.project + '/method/invoke'
+
           var header = this.getHeader(vHeader.value)
           var callback = null
 
@@ -7409,7 +7417,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
           }
           var err = isPre ? undefined : null
 
-          var sendRequest = function (isAdminOperation, method, type, url, req, header, callback) {
+          var sendRequest = function (isAdminOperation, method, type, url, httpReq, header, callback) {
             App.request(isAdminOperation, method, type, url, req, header, callback)
           }
 
@@ -7526,7 +7534,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
 
             App[testSubList ? 'currentRandomSubIndex' : 'currentRandomIndex'] = index
             try {
-              this.testRandomSingle(show, false, itemAllCount > 1 && ! testSubList, item, method, this.type, url, json, header, isCross, isManual, function (url, res, err) {
+              this.testRandomSingle(show, false, itemAllCount > 1 && ! testSubList, item, REQUEST_TYPE_POST, REQUEST_TYPE_JSON, url, json, header, isCross, isManual, function (url, res, err) {
                 var data = null
                 if (res instanceof Object) {  // 可能通过 onTestResponse 返回的是 callback(true, 18, null)
                   data = res.data
@@ -7545,7 +7553,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               })
             }
             catch (e) {
-              this.compareResponse(res, allCount, list, index, item, data, true, this.currentAccountIndex, false, e, null, isCross, callback)
+              this.compareResponse(null, allCount, list, index, item, data, true, this.currentAccountIndex, false, e, null, isCross, callback)
             }
           }
         }
@@ -8467,8 +8475,10 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
         const isEnvCompare = StringUtil.isNotEmpty(otherBaseUrl, true) // 对比自己也行，看看前后两次是否幂等  && otherBaseUrl != baseUrl
 
         for (var i = 0; i < allCount; i++) {
+          const index = i
+          const item = list[i]
+
           try {
-            const item = list[i]
             const document = item == null ? null : item.Method
             if (document == null || document.method == null) {
               if (isRandom) {
@@ -8492,8 +8502,6 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             if (DEBUG) {
               this.log('test  document = ' + JSON.stringify(document, null, '  '))
             }
-
-            const index = i
 
             var hdr = null
             try {
@@ -8592,7 +8600,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
             }, caseScript)
           }
           catch(e) {
-            this.compareResponse(allCount, list, index, item, null, isRandom, accountIndex, false, e, null, isCross, callback)
+            this.compareResponse(null, allCount, list, index, item, null, isRandom, accountIndex, false, e, null, isCross, callback)
           }
         }
 
