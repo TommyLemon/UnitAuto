@@ -1018,6 +1018,11 @@ fun(true, 1, 'a'..);
   var vRemember = document.getElementById("vRemember");
 
   var lang = App == null ? null : App.language;
+  var project = App.project || App.server || 'http://apijson.cn:8080'
+  if (project.startsWith('http://apijson.cn') || project.startsWith('http://localhost')) {
+      App.project = project.replace('8080', (lang == CodeUtil.LANGUAGE_GO ? '8082' : (lang == CodeUtil.LANGUAGE_PYTHON ? '8083' : '8081')))  //main.js里访问不到，可能是script引用顺序问题
+  }
+
   vUrl.value = lang == CodeUtil.LANGUAGE_GO ? 'test.Divide' : (lang == CodeUtil.LANGUAGE_PYTHON ? 'unitauto.test.testutil.divide' : 'unitauto.test.TestUtil.divide')  //main.js里访问不到，可能是script引用顺序问题
   vInput.value = (lang == CodeUtil.LANGUAGE_GO ? `{
     "methodArgs": [
