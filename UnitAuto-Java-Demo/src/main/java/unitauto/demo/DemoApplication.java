@@ -119,11 +119,12 @@ public class DemoApplication implements WebServerFactoryCustomizer<ConfigurableS
 
 				RuntimeData data = Agent.getInstance().getData();
 				System.out.println("data = " + data);
-//				try {
-//					Agent.getInstance().dump(false); // FIXME 数据总是空的，手动执行 jacoco-maven-plugin 的 dump 及 report 可以
-//				} catch (IOException e) {
+				try {
+					Agent.getInstance().dump(false); // FIXME 数据总是空的，手动执行 jacoco-maven-plugin 的 dump 及 report 可以
+				} catch (IOException e) {
 //					throw new RuntimeException(e);
-//				}
+					e.printStackTrace();
+				}
 				byte[] executionData = Agent.getInstance().getExecutionData(false);
 				System.out.println("executionData = " + new String(executionData));
 
