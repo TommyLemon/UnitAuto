@@ -26,6 +26,46 @@ func Divide(a int, b int) float64 {
 	return float64(a) / float64(b)
 }
 
+func Len(arr []int) int {
+	if arr == nil {
+		return 0
+	}
+	return len(arr)
+}
+
+func Index(arr []any, item any) int {
+	l := len(arr)
+	if l <= 0 {
+		return -1
+	}
+
+	for i := 0; i < l; i++ {
+		if arr[i] == item {
+			return i
+		}
+	}
+
+	return -1
+}
+
+func GetByIndex[T any](arr []T, index int) *T {
+	l := len(arr)
+	if l <= 0 || l <= index {
+		return nil
+	}
+
+	return &arr[index]
+}
+
+func SetByIndex[T any](arr []T, index int, item T) {
+	l := len(arr)
+	if l <= 0 || l <= index {
+		return
+	}
+
+	arr[index] = item
+}
+
 func TestGeneric[T int | int8 | int16 | int32 | int64 | uint | uint8 | uint16 | uint32 | uint64 | float32 | float64, R int | float64](a T, b R) float64 {
 	return float64(a) + float64(b)
 }

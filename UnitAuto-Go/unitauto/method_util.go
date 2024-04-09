@@ -57,7 +57,7 @@ var MSG_SUCCESS = "success"
 var KEY_LANGUAGE = "language"
 var KEY_REUSE = "reuse"
 var KEY_UI = "ui"
-var KEY_TIME = "time"
+var KEY_TIME = "@time"
 var KEY_TIMEOUT = "timeout"
 var KEY_PACKAGE = "package"
 var KEY_THIS = "this"
@@ -1300,8 +1300,8 @@ func getInvokeResult(typ reflect.Value, returnType reflect.Type, methodName stri
 						}
 
 						calledArgs[j] = map[string]any{
-							"type":  vt.String(),
-							"value": vv,
+							KEY_TYPE:  vt.String(),
+							KEY_VALUE: vv,
 						}
 					}
 
@@ -1311,8 +1311,8 @@ func getInvokeResult(typ reflect.Value, returnType reflect.Type, methodName stri
 					}
 
 					var callInfo = map[string]any{
-						"time":       callTime,
-						"methodArgs": calledArgs,
+						KEY_TIME:        callTime,
+						KEY_METHOD_ARGS: calledArgs,
 					}
 					fcm[KEY_CALL_MAP] = append(cm, callInfo)
 
@@ -1384,7 +1384,9 @@ func getInvokeResult(typ reflect.Value, returnType reflect.Type, methodName stri
 		}
 
 		var vt = val.Type()
-		if val.CanInt() {
+		if val.IsNil() {
+			vs[i] = nil
+		} else if val.CanInt() {
 			vs[i] = val.Int()
 		} else if val.CanFloat() {
 			vs[i] = val.Float()
@@ -1392,6 +1394,13 @@ func getInvokeResult(typ reflect.Value, returnType reflect.Type, methodName stri
 			vs[i] = val.Bool()
 		} else if vt == TYPE_STRING {
 			vs[i] = val.String()
+		} else if vt == TYPE_ERROR || vt.String() == "error" {
+			//fn := val.MethodByName("Error")
+			//if fn.IsNil() || fn.IsZero() || ! fn.IsValid() {
+			vs[i] = fmt.Sprint(val)
+			//} else {
+			//	vs[i] = fmt.Sprint(fn.Call([]reflect.Value{}))
+			//}
 		} else if val.CanConvert(vt) {
 			vs[i] = val.Convert(vt)
 		} else {
@@ -2335,6 +2344,7 @@ var TYPE_INT64 = reflect.TypeOf(int64(0))
 var TYPE_FLOAT32 = reflect.TypeOf(float32(0.0))
 var TYPE_FLOAT64 = reflect.TypeOf(float64(0.0))
 var TYPE_STRING = reflect.TypeOf("")
+var TYPE_ERROR = reflect.TypeOf(errors.New(""))
 var TYPE_MAP_ANY_ANY = reflect.TypeOf(map[any]any{})
 var TYPE_MAP_STRING_ANY = reflect.TypeOf(map[string]any{})
 var TYPE_MAP_INTERFACE_INTERFACE = reflect.TypeOf(map[interface{}]interface{}{})
@@ -2376,9 +2386,12 @@ func cast(obj any, typ reflect.Type) (any, error) {
 	}
 
 	if IsMapType(typ.String()) {
-		var s = fmt.Sprint(obj)
+		var b, err = json.Marshal(obj)
+		if err != nil {
+			var s = fmt.Sprintf("%q\n", obj)
+			b = []byte(s)
+		}
 
-		var b = []byte(s)
 		var m = map[string]any{}
 		if err := json.Unmarshal(b, m); err != nil {
 			return nil, err
@@ -2401,9 +2414,17 @@ func cast(obj any, typ reflect.Type) (any, error) {
 
 	var al = 0
 	if IsArrType(typ.String()) {
-		var s = fmt.Sprint(obj)
+		//rt := reflect.TypeOf(obj)
+		//if IsArrType(rt.String()) {
+		// 这里没法用 len 函数	al = len(obj)
+		//}
 
-		var b = []byte(s)
+		var b, err = json.Marshal(obj)
+		if err != nil {
+			var s = fmt.Sprintf("%q\n", obj)
+			b = []byte(s)
+		}
+
 		var a []any
 		if err := json.Unmarshal(b, &a); err != nil {
 			return nil, err
