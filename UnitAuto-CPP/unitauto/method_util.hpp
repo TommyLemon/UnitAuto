@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <typeinfo>
 
 namespace unitauto {
     using json = nlohmann::json;
@@ -48,6 +49,11 @@ namespace unitauto {
     template<typename T>
     static void add_type(const std::string& type) {
         TYPE_MAP[type] = [](const std::string& str) -> void* {
+            if (str.empty()) {
+                T* obj = new T();
+                return static_cast<void*>(obj);
+            }
+
             json j = json::parse(str);
             T* obj = new T(j.get<T>());
             return static_cast<void*>(obj);
@@ -291,6 +297,199 @@ namespace unitauto {
     }
 
 
+    template <typename Func>
+    struct function_traits;
+
+    template <typename Ret, typename... Args>
+    struct function_traits<std::function<Ret(Args...)>> {
+        using return_type = Ret;
+        using argument_types = std::tuple<Args...>;
+    };
+
+    static nlohmann::json list_json(nlohmann::json j) {
+        nlohmann::json result;
+
+        try {
+            json method = j["method"];
+            std::string mtd = method.empty() ? "" : method.get<std::string>();
+
+            json package = j["package"];
+            std::string pkg = package.empty() ? "" : package.get<std::string>();
+
+            json clazz = j["class"];
+            std::string cls = clazz.empty() ? "" : clazz.get<std::string>();
+
+            int packageTotal = 0;
+            int classTotal = 0;
+            int methodTotal = 0;
+
+            json packageList;
+
+            for (const auto& kv : FUNC_MAP) {
+                auto key = kv.first;
+                auto value = kv.second;
+
+                auto ind = key.find_last_of('.');
+                std::string pkg2 = "";
+                std::string cls2 = "";
+                std::string mtd2 = "";
+                while (ind != std::string::npos && ind >= 0) {
+                    if (mtd2.empty()) {
+                        mtd2 = key.substr(ind + 1);
+                    } else {
+                        auto last = key.substr(ind + 1);
+                        auto first = cls2.empty() ? last.at(0) : '0';
+                        if (first >= 'A' && first <= 'Z') {
+                            cls2 = last;
+                        }
+                        else {
+                            pkg2 += (pkg2.empty() ? "" : ".") + last;
+                        }
+                    }
+
+                    key = key.substr(0, ind);
+                    ind = key.find_last_of('.');
+                }
+
+                if (mtd2.empty()) {
+                    mtd2 = key;
+                }
+
+                if ((pkg2 != pkg && ! pkg.empty()) || (cls2 != cls && ! cls.empty()) || (mtd2 != mtd && ! mtd.empty())) {
+                    continue;
+                }
+
+                std::string path2 = "";
+                if (! cls.empty()) {
+                    path2 = cls + "." + path2;
+                }
+                if (! pkg.empty()) {
+                    path2 = pkg + "." + path2;
+                }
+
+                auto it = FUNC_MAP.find(path2);
+                if (it == FUNC_MAP.end()) {
+                    it = FUNC_MAP.find(mtd2);
+                }
+
+                if (it == FUNC_MAP.end()) {
+                    continue;
+                }
+
+                auto func = it->second;
+                if (func == nullptr) {
+                    continue;
+                }
+
+                using traits = function_traits<decltype(func)>;
+                // std::cout << "Argument types: ";
+                // std::apply( { ((std::cout << typeid(args).name() << " "), ...); }, traits::argument_types{});
+                // std::cout << std::endl;
+
+                json mtdObj;
+                mtdObj["name"] = mtd2;
+                // mtdObj["parameterTypeList"] = parameterTypeList;
+                // mtdObj["genericParameterTypeList"] = genericParameterTypeList;
+                mtdObj["returnType"] = typeid(traits::return_type).name();
+                mtdObj["genericReturnType"] = typeid(traits::return_type).name();
+                // mtdObj["static"] = is_static;
+                // mtdObj["exceptionTypeList"] = exceptionTypeList;
+                // mtdObj["genericExceptionTypeList"] = genericExceptionTypeList;
+                // mtdObj["parameterDefaultValueList"] = parameterDefaultValueList;
+
+
+                json pkgObj;
+                int pkgInd = -1;
+                for (int i = 0; i < packageList.size(); ++i) {
+                    json po = packageList[i];
+                    if (po["package"] == pkg2) {
+                        pkgObj = po;
+                        pkgInd = i;
+                        break;
+                    }
+                }
+
+                if (pkgObj.empty()) {
+                    pkgObj["package"] = pkg2;
+                    pkgObj["classTotal"] = 1;
+
+                    packageList.push_back(pkgObj);
+                    packageTotal ++;
+                } else {
+                    auto t = pkgObj["classTotal"] ;
+                    pkgObj["classTotal"] = t.get<int>() + 1;
+                }
+
+                if (packageList.empty()) {
+                    packageList.push_back(pkgObj);
+                }
+
+                json classList = pkgObj["classList"];
+
+                json clsObj;
+                int clsInd = -1;
+                for (int i = 0; i < classList.size(); ++i) {
+                    json co = classList[i];
+                    if (co["class"] == cls2) {
+                        clsObj = co;
+                        clsInd = i;
+                        break;
+                    }
+                }
+
+                if (clsObj.empty()) {
+                    // auto clsConf = json_2_obj("", pkg2.empty() ? cls2 : pkg2 + "." + cls2);
+                    // if (clsConf == nullptr) {
+                    //     clsConf = json_2_obj("", cls2);
+                    // }
+
+                    clsObj["class"] = cls2;
+                    // 父类 clsObj["type"] = typeid(clsConf).name();
+                    clsObj["methodTotal"] = 1;
+
+                    classList.push_back(clsObj);
+                    classTotal ++;
+                } else {
+                    auto t = clsObj["methodTotal"] ;
+                    pkgObj["methodTotal"] = t.get<int>() + 1;
+                }
+
+                if (classList.empty()) {
+                    classList.push_back(clsObj);
+                }
+
+                json methodList = clsObj["methodList"];
+                methodList.push_back(mtdObj);
+                methodTotal ++;
+
+                clsObj["methodList"] = methodList;
+
+                if (clsInd < 0) {
+                    clsInd = static_cast<int>(classList.size()) - 1;
+                }
+                classList[clsInd] = clsObj;
+                pkgObj["classList"] = classList;
+
+                if (pkgInd < 0) {
+                    pkgInd = static_cast<int>(packageList.size()) - 1;
+                }
+                packageList[pkgInd] = pkgObj;
+            }
+
+            result["code"] = 200;
+            result["msg"] = "success";
+            result["packageTotal"] = packageTotal;
+            result["classTotal"] = classTotal;
+            result["methodTotal"] = methodTotal;
+            result["packageList"] = packageList;
+        } catch (const std::exception& e) {
+            result["code"] = 500;
+            result["msg"] = e.what();
+        }
+
+        return result;
+    }
+
     static nlohmann::json invoke_json(nlohmann::json j) {
         nlohmann::json result;
 
@@ -443,16 +642,21 @@ namespace unitauto {
                     "msg": "Only support HTTP POST Method！"
                 })";
             }
-            else if (path != "/method/invoke" && method != "/method/list") {
+            else if (path == "/method/invoke") {
+                json j = json::parse(json_data);
+                json result = invoke_json(j);
+                response_json = result.dump();
+            }
+            else if (path == "/method/list") {
+                json j = json::parse(json_data);
+                json result = list_json(j);
+                response_json = result.dump();
+            }
+            else {
                 response_json = R"({
                     "code": 404,
                     "msg": "Only support POST /method/invoke and POST /method/list ！"
                 })";
-            }
-            else {
-                json j = json::parse(json_data);
-                json result = invoke_json(j);
-                response_json = result.dump();
             }
 
 
