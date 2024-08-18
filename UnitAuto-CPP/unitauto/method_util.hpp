@@ -610,9 +610,17 @@ namespace unitauto {
 
             bool first = true;
             bool start = false;
+            std::string host = "";
+            int len = static_cast<int>(strlen("Origin:"));
+
             while (! request_stream.eof()) {
                 std::string line;
                 std::getline(request_stream, line); // 跳过空行
+                std::string pre = line.length() < len ? "" : line.substr(0, len);
+                if (host.empty() && (pre == "Origin:" || pre == "origin:")) {
+                    host = line.substr(len + 1);
+                }
+
                 if (start) {
                     json_data += "\n" + line;
                 } else if (! first) {
@@ -635,36 +643,42 @@ namespace unitauto {
                 "msg": "success"
             })";
 
+            bool isOpt = method == "options" || method == "OPTIONS";
+            bool isPost = method == "post" || method == "POST";
 
-            if (method != "post" && method != "POST") {
+            if (isPost) {
+                if (path == "/method/invoke") {
+                    json j = json::parse(json_data);
+                    json result = invoke_json(j);
+                    response_json = result.dump();
+                }
+                else if (path == "/method/list") {
+                    json j = json::parse(json_data);
+                    json result = list_json(j);
+                    response_json = result.dump();
+                }
+                else {
+                    response_json = R"({
+                    "code": 404,
+                    "msg": "Only support POST /method/invoke and POST /method/list ！"
+                })";
+                }
+            }
+            else if (! isOpt) {
                 response_json = R"({
                     "code": 400,
                     "msg": "Only support HTTP POST Method！"
                 })";
             }
-            else if (path == "/method/invoke") {
-                json j = json::parse(json_data);
-                json result = invoke_json(j);
-                response_json = result.dump();
-            }
-            else if (path == "/method/list") {
-                json j = json::parse(json_data);
-                json result = list_json(j);
-                response_json = result.dump();
-            }
-            else {
-                response_json = R"({
-                    "code": 404,
-                    "msg": "Only support POST /method/invoke and POST /method/list ！"
-                })";
-            }
-
 
             // 构建 HTTP 响应
             std::ostringstream response;
             response << "HTTP/1.1 200 OK\r\n";
             response << "Content-Type: application/json\r\n";
-            response << "Access-Control-Allow-Origin: *\r\n";
+            response << "Access-Control-Allow-Origin:" + host + "\n";
+            response << "Access-Control-Allow-Credentials: true\r\n";
+            response << "Access-Control-Allow-Headers: content-type\r\n";
+            response << "Access-Control-Request-Method: POST\r\n";
             response << "Content-Length: " << response_json.size() << "\r\n";
             response << "\r\n";
             response << response_json;
