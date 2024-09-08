@@ -27,25 +27,49 @@ struct User {
     std::string name;
     std::time_t date;
 
-    // TODO FIXME 对 char 等部分类型无效
-    // NLOHMANN_DEFINE_TYPE_INTRUSIVE(User, id, sex, name, date)
+    long getId() {
+        return id;
+    }
 
-    int is_male()
+    void setId(long id_) {
+        id = id_;
+    }
+
+    std::string getName() {
+        return name;
+    }
+
+    void setName(std::string name_) {
+        name = name_;
+    }
+
+    std::time_t getDate() {
+        return date;
+    }
+
+    void setDate(std::time_t date_) {
+        date = date_;
+    }
+
+    // TODO FIXME 对 char 等部分类型无效
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(User, id, sex, name, date)
+
+    bool is_male()
     {
         return sex == 0;
     }
 };
 
-void to_json(json& j, const User& p) {
-    j = json{{"id", p.id}, {"sex", p.sex}, {"name", p.name}, {"date", p.date}};
-}
-
-void from_json(const json& j, User& p) {
-    j.at("id").get_to(p.id);
-    j.at("sex").get_to(p.sex);
-    j.at("name").get_to(p.name);
-    j.at("date").get_to(p.date);
-}
+// void to_json(json& j, const User& p) {
+//     j = json{{"id", p.id}, {"sex", p.sex}, {"name", p.name}, {"date", p.date}};
+// }
+//
+// void from_json(const json& j, User& p) {
+//     j.at("id").get_to(p.id);
+//     j.at("sex").get_to(p.sex);
+//     j.at("name").get_to(p.name);
+//     j.at("date").get_to(p.date);
+// }
 
 class Moment {
 public:
@@ -93,28 +117,22 @@ Moment newMoment(long id) {
     return Moment(id);
 }
 
+User newUser(long id, std::string name) {
+    User u = User();
+    u.id = id;
+    u.setName(name);
+    return u;
+}
+
 
 
 // 自定义类型示例
 struct Person {
     std::string name;
     int age;
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(Person, name, age)
 };
-
-// 自定义类型的 to_json 函数
-void to_json(json& j, const Person& p) {
-    j = json{{"name", p.name}, {"age", p.age}};
-}
-
-// // 特化自定义类型的转换函数
-// template<>
-// void register_converter<Person>() {
-//     unitauto::converters[typeid(Person).name()] = [](std::any value) -> json {
-//         return std::any_cast<Person>(value);
-//     };
-// }
-//
-
 
 
  int test() {
@@ -122,32 +140,7 @@ void to_json(json& j, const Person& p) {
     std::any ret = Person{"Alice", 30};
     auto type = typeid(ret).name();
 
-    unitauto::register_converter<Person>();
-
-    json result;
-    result["code"] = 200;
-    result["msg"] = "success";
-    result["type"] = type;
-    result["return"] = unitauto::any_to_json(ret);
-    result["methodArgs"] = json::array({{{"type", "long"}, {"value", 1}}, {{"type", "long"}, {"value", 2}}});
-
-    std::cout << "\n\ntest return " << result.dump(4) << std::endl;
-
-    return 0;
-}
-
-
-int main() {
-    // 注册函数
-    unitauto::add_func("print", std::function<void(const std::string &)>(print));
-    unitauto::add_func("add", std::function<int(int, int)>(add));
-    unitauto::add_func("divide", std::function<double(double, double)>(divide));
-    unitauto::add_func("newMoment", std::function<Moment(long)>(newMoment));
-
-    // 注册方法(成员函数)
-    Moment moment;
-    unitauto::add_func("setId", &moment, &Moment::setId);
-    unitauto::add_func("getId", &moment, &Moment::getId);
+    unitauto::add_struct<Person>("Person");
 
     // 执行函数
     try {
@@ -160,23 +153,29 @@ int main() {
         auto divideRet = unitauto::invoke("divide", {5.6, static_cast<double>(3)});
         std::cout << "invoke(\"divide\", {5.6, 3}) = " << std::any_cast<double>(divideRet) << std::endl;
 
-        auto moment2Ret = unitauto::invoke("newMoment", {12L});
+        auto moment2Ret = unitauto::invoke("main.newMoment", {12L});
         Moment moment2 = std::any_cast<Moment>(moment2Ret);
-        std::cout << "invoke(\"newMoment\", {12}).id = " << moment2.id << std::endl;
+        std::cout << "invoke(\"main.newMoment\", {12}).id = " << moment2.id << std::endl;
+        json j;
+        j["type"] = "main.Moment";
+        unitauto::invoke_method(j, "main.Moment.setId", {static_cast<long>(123)});
 
-        unitauto::invoke("setId", {static_cast<long>(123)});
+        auto getIdRet = unitauto::invoke_method(j, "main.Moment.getId", {});
+        std::cout << "invoke(\"main.Moment.getId\", {}) = " << std::any_cast<long>(getIdRet) << std::endl;
 
-        auto getIdRet = unitauto::invoke("getId", {});
-        std::cout << "invoke(\"getId\", {}) = " << std::any_cast<long>(getIdRet) << std::endl;
+        User user = User();
+        auto userRet = unitauto::invoke("main.User.setId",{static_cast<long>(225)});
+        std::cout << "invoke(\"main.Moment.getId\", {}) = " << std::any_cast<long>(getIdRet) << std::endl;
+
+        std::vector<std::any> v;
+        v.emplace_back(3.08);
+        v.emplace_back(0.5);
+
+        auto dr = unitauto::invoke("unitauto.test.divide", v);
+        std::cout << "invoke(\"unitauto.test.divide\", {3.08, 0.5}) = " << std::any_cast<double>(dr) << std::endl;
     } catch (const std::exception e) {
         std::cerr << "Exception: " << e.what() << std::endl;
     }
-
-
-    // 必须先注册类型
-    unitauto::add_type<User>("User");
-    // add_func("add", std::function<int(int,int)>(add));
-    // add_func("add", std::bind(add));
 
     std::string str = R"({"id":1, "sex":1, "name":"John Doe", "date":1705293785163})";
     json j = json::parse(str);
@@ -184,10 +183,9 @@ int main() {
     User u = j.get<User>();
     void* obj;
     try {
-        obj = unitauto::json_2_obj(str, "User");
+        obj = unitauto::json_2_obj(j, "User");
     } catch (const std::exception& e) {
         std::cerr << "json 2 obj failed:" << e.what() << std::endl;
-        return 1;
     }
 
     User* userPtr = static_cast<User*>(obj);
@@ -199,74 +197,87 @@ int main() {
         std::cout << "  date: " << userPtr->date << std::endl;
         std::cout << "}" << userPtr->id << std::endl;
 
-        unitauto::del_obj<User>(obj);
+        // malloc: *** error for object 0x16cf96110: pointer being freed was not allocated unitauto::del_obj<User>(obj);
     } else {
         std::cerr << "Type match error, have u added type with add_type?" << std::endl;
     }
 
-    // add_type<Func<int(int, int)>>("add", new Func<int(int, int)>(add) {});
+
+    // json result;
+    // result["code"] = 200;
+    // result["msg"] = "success";
+    // result["type"] = type;
+    // result["return"] = unitauto::any_to_json(ret);
+    // result["methodArgs"] = json::array({{{"type", "long"}, {"value", 1}}, {{"type", "long"}, {"value", 2}}});
+
+    // std::cout << "\n\ntest return " << result.dump(4) << std::endl;
+
+    return 0;
+}
+
+static int compare(User u, User u2) {
+     if (u.id < u2.id) {
+         return -1;
+     }
+
+     if (u.id > u2.id) {
+         return 1;
+     }
+
+     return 0;
+ }
 
 
-    // auto FUNC_MAP = Func<void*(*)>.FUNC_MAP;
+int main() {
+    // 必须先注册类型
+    // unitauto::add_type<Moment>("main.Moment");
+    unitauto::add_struct<Moment>("main.Moment", [](json &j) -> Moment {
+        std::cout << "\ncallback Moment: {" << std::endl;
+        Moment ins = unitauto::INSTANCE_GETTER<Moment>(j);
+        unitauto::add_func("main.Moment.getId", ins, &Moment::getId);
+        unitauto::add_func("main.Moment.setId", ins, &Moment::setId);
+        unitauto::add_func("main.Moment.setContent", ins, &Moment::setContent);
+        unitauto::add_func("main.Moment.getContent", ins, &Moment::getContent);
+        std::cout << "\ncallback return ins;" << std::endl;
+        return ins;
+    // }, [](std::any val) -> json {
+    //     auto j = std::any_cast<Moment>(val);
+    //     return j;
+    });
 
-    // auto funcMap = getFuncMap<>()
-    //
-    // FUNC_MAP["add"] = &add;
-    // FUNC_MAP["minus"] = &minus;
+    unitauto::add_struct<User>("User");
+    unitauto::add_struct<unitauto::test::TestUtil>("unitauto.test.TestUtil");
 
-    // auto add2 = FUNC_MAP["add"];
-    // std::function<void*(*)>
+    // 注册函数
+    unitauto::add_func("print", std::function<void(const std::string &)>(print));
+    unitauto::add_func("add", std::function<int(int, int)>(add));
+    unitauto::add_func("divide", std::function<double(double, double)>(divide));
+    unitauto::add_func("main.newMoment", std::function<Moment(long)>(newMoment));
+    unitauto::add_func("unitauto.test.divide", std::function<double(double,double)>(unitauto::test::divide));
+    unitauto::add_func("unitauto.test.contains", std::function<bool(long[],long)>(unitauto::test::contains));
+    unitauto::add_func("unitauto.test.index", std::function<int(std::string[],std::string)>(unitauto::test::index));
+    unitauto::add_func("unitauto.test.is_contain", std::function<bool(std::vector<int>,int)>(unitauto::test::is_contain));
+    unitauto::add_func("unitauto.test.index_of", std::function<int(std::vector<std::string>,std::string)>(unitauto::test::index_of));
+    unitauto::add_func("main.newUser", std::function<User(long, std::string)>(newUser));
 
+    // 注册方法(成员函数)
+    User user = User();
+    user.setId(1);
+    user.name = "Test User";
+    user.date = time(nullptr);
 
-    // for (auto pair : FUNC_MAP) {
-    //     auto key = pair.first;
-    //     auto val = pair.second;
-    //
-    //     std::cout << "\nkey = " << key << "; val = " << val;
-    //
-    // }
+    unitauto::add_func("unitauto.test.User.is_male", user, &User::is_male);
+    unitauto::add_func("main.User.setId", user, &User::setId);
+    unitauto::add_func("main.User.getId", user, &User::getId);
+    unitauto::add_func("main.User.setName", &user, &User::setName);
+    unitauto::add_func("main.User.getName", &user, &User::getName);
+    unitauto::add_func("main.User.setDate", (User *) nullptr, &User::setDate);
+    unitauto::add_func("main.User.getDate", User(), &User::getDate);
 
-    // User user;
-    //
-    // auto f3 = std::mem_fn(&User::is_male);
-    // auto r3 = f3(&user);
-    // std::cout << "\nf3(&user) = " << r3;
-
-    // auto f4 = std::bind(ptr_to_print_sum, &user, 95, 1);
-    // int r4 = f4();
-    // std::cout << "\nf4(5) = " << r4;
-
-    // auto ps = &User::print_sum;
-    // int r = ps(&user, 1, 2);
-    // std::cout << "\nps(User(), 1, 2) = " << r;
-
-
-    // std::function func = minus;
-    // std::vector<std::any> arr = {};
-    // arr.push_back(5);
-    // arr.push_back(2);
-
-    // std::tuple args2 = {2, 6};
-
-    // auto c = func((int) arr.at(0), arr.at(1));
-
-
-    // auto c = func(arr...);
-    // std::cout << "\nfunc(5, 2) = " << c;
+    unitauto::add_func("unitauto.test.TestUtil.divide", (unitauto::test::TestUtil *) nullptr, &unitauto::test::TestUtil::divide);
 
     test();
-
-    // unitauto::add_type<unitauto::test::TestUtil>("unitauto.test.TestUtil");
-    unitauto::add_func("unitauto.test.divide", std::function<double(double,double)>(unitauto::test::divide));
-    std::vector<std::any> v;
-    v.push_back(3.08);
-    v.push_back(0.5);
-
-    auto dr = unitauto::invoke("unitauto.test.divide", v);
-    std::cout << "invoke(\"unitauto.test.divide\", {3.08, 0.5}) = " << std::any_cast<double>(dr) << std::endl;
-
-    User user;
-    unitauto::add_func("unitauto.test.User.is_male", &user, &User::is_male);
+    unitauto::add_func("main.compare", std::function<int(User,User)>(compare));
 
     unitauto::start(8084);
 
