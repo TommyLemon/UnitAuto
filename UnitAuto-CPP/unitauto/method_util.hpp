@@ -1313,6 +1313,31 @@ namespace unitauto {
         system("genhtml coverage_filtered.info --output-directory coverage");
     }
 
+    static bool coverage_enabled = false;
+
+    // 清除之前的覆盖率数据
+    void reset_coverage_data() {
+        system("lcov --directory . --zerocounters");
+    }
+
+    // 启动覆盖率统计
+    void start_coverage() {
+        if (! coverage_enabled) {
+            reset_coverage_data();
+            coverage_enabled = true;
+            std::cout << "Coverage collection started." << std::endl;
+        }
+    }
+
+    // 停止覆盖率统计并生成报告
+    void stop_coverage() {
+        if (coverage_enabled) {
+            coverage_enabled = false;
+            std::cout << "Coverage collection stopped." << std::endl;
+            generate_coverage_report();
+        }
+    }
+
     // 读取文件内容
     std::string read_file(const std::string& file_path) {
         std::ifstream file(file_path);
@@ -1382,10 +1407,21 @@ namespace unitauto {
             bool isGetOrPost = isGet || isPost;
 
             if (isGetOrPost && path == "/coverage/start") {
-                // TODO system("");
+                start_coverage();
+                json result;
+                result["code"] = 200;
+                result["msg"] = "Coverage collection started";
+                response_json = result.dump();
             }
             else if (isGetOrPost && path == "/coverage/stop") {
-                // TODO system("");
+                stop_coverage();
+                json result;
+                result["code"] = 200;
+                result["msg"] = "Coverage collection stopped and report generated";
+                result["url"] = "/coverage_report/index.html";
+                result["html"] = read_file("coverage_report/index.html");
+                result["json"] = read_file("coverage_filtered.info");
+                response_json = result.dump();
             }
             else if (isGetOrPost && path == "/coverage/save") {
                 generate_coverage_report();
@@ -1393,7 +1429,7 @@ namespace unitauto {
             else if (isGetOrPost && path == "/coverage/report") {
                 json result;
                 result["code"] = 200;
-                result["msg"] = "success";
+                result["msg"] = "Coverage generated";
                 result["url"] = "/coverage/index.html";
                 result["html"] = read_file("coverage/index.html");
                 result["json"] = read_file("coverage_filtered.info");
