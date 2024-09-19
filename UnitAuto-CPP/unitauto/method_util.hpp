@@ -28,6 +28,7 @@ limitations under the License.*/
 #include <typeinfo>
 #include <fstream>
 #include <cstdlib> // for system()
+#include<csignal>
 
 /**@author Lemon
  */
