@@ -26,49 +26,62 @@ limitations under the License.*/
 #include <netinet/in.h>
 #include <unistd.h>
 #include <typeinfo>
+#include <cxxabi.h>
 #include <fstream>
 #include <cstdlib> // for system()
 #include<csignal>
+#include <regex>
 
 /**@author Lemon
  */
 namespace unitauto {
+    // 用于解码类型名称的函数
+    static std::string demangle(const char* name) {
+        int status = 0;
+        std::unique_ptr<char, void(*)(void*)> res{
+            abi::__cxa_demangle(name, nullptr, nullptr, &status),
+            std::free
+        };
+        return (status == 0) ? res.get() : name;
+    }
+
     using json = nlohmann::json;
 
-    static const std::string TYPE_ANY = "std::any"; // typeid(bool).name();
+    static std::string DEFAULT_MODULE_PATH = "unitauto::";
+
+    static const std::string TYPE_ANY = "any"; // typeid(bool).name();
     static const std::string TYPE_BOOL = "bool"; // typeid(bool).name();
     static const std::string TYPE_CHAR = "char"; // typeid(char).name();
-    static const std::string TYPE_BYTE = "std::byte"; // typeid(std::byte).name();
+    static const std::string TYPE_BYTE = "byte"; // typeid(std::byte).name();
     static const std::string TYPE_SHORT = "short"; // typeid(bool).name();
     static const std::string TYPE_INT = "int"; // typeid(int).name();
     static const std::string TYPE_LONG = "long"; // typeid(long).name();
     static const std::string TYPE_LONG_LONG = "long long"; // typeid(long).name();
     static const std::string TYPE_FLOAT = "float"; // typeid(float).name();
     static const std::string TYPE_DOUBLE = "double"; // typeid(double).name();
-    static const std::string TYPE_STRING = "std::string"; // typeid(std::string).name();
+    static const std::string TYPE_STRING = "string"; // typeid(std::string).name();
     // static const auto TYPE_ARR = typeid(std::array).name();
-    static const std::string TYPE_ANY_ARR = "std::any[]"; // typeid(bool).name();
+    static const std::string TYPE_ANY_ARR = "any[]"; // typeid(bool).name();
     static const std::string TYPE_BOOL_ARR = "bool[]"; // typeid(bool).name();
     static const std::string TYPE_CHAR_ARR = "char[]"; // typeid(char).name();
-    static const std::string TYPE_BYTE_ARR = "std::byte[]"; // typeid(std::byte).name();
+    static const std::string TYPE_BYTE_ARR = "byte[]"; // typeid(std::byte).name();
     static const std::string TYPE_SHORT_ARR = "short[]"; // typeid(bool).name();
     static const std::string TYPE_INT_ARR = "int[]"; // typeid(int).name();
     static const std::string TYPE_LONG_ARR = "long[]"; // typeid(long).name();
     static const std::string TYPE_LONG_LONG_ARR = "long long[]"; // typeid(long).name();
     static const std::string TYPE_FLOAT_ARR = "float[]"; // typeid(float).name();
     static const std::string TYPE_DOUBLE_ARR = "double[]"; // typeid(double).name();
-    static const std::string TYPE_STRING_ARR = "std::string[]"; // typeid(std::string).name();
+    static const std::string TYPE_STRING_ARR = "string[]"; // typeid(std::string).name();
 
-    std::string get_type(std::any a) {
-        auto type_cs = a.type().name(); // typeid(a).name();  // TYPE.name();
-        std::string type(type_cs);
-        if (type_cs == nullptr || type.empty()) {
-            type = typeid(a.type()).name();
-        }
+    std::string trim_type(std::string type) {
+        type = std::regex_replace(type, std::regex("std::"), "");
+        type = std::regex_replace(type, std::regex("__1::"), "");
+        type = std::regex_replace(type, std::regex(DEFAULT_MODULE_PATH), "");
 
-        if (type.empty() || type == "v") {
+        if (type.empty() || type == "v" || type == "Dn" || type == "NULL" || type == "null" || type == "nullptr" || type == "nullptr_t") {
             return "";
         }
+
         if (type == "b") {
             return TYPE_BOOL;
         }
@@ -103,6 +116,16 @@ namespace unitauto {
         return type;
     }
 
+    std::string get_type(std::any a) {
+        auto type = demangle(a.type().name()); // typeid(a).name();  // TYPE.name();
+        type = trim_type(type);
+        if (type.empty()) {
+            type = demangle(typeid(a.type()).name());
+            type = trim_type(type);
+        }
+        return type;
+    }
+
     static std::map<std::string, std::string> TYEP_ALIAS_MAP;
 
     // 类型转换函数映射
@@ -129,12 +152,12 @@ namespace unitauto {
 
             std::stringstream ss;
             ss << &value;
-            j["type"] = value.type().name();
+            j["type"] = get_type(value);
             j["value"] = ss.str();
             return j;
         };
 
-        std::string t = typeid(T).name();
+        std::string t = trim_type(demangle(typeid(T).name()));
         if (t != type) {
             CAST_MAP[t] = CAST_MAP[type];
             TYEP_ALIAS_MAP[t] = type;
@@ -193,7 +216,9 @@ namespace unitauto {
 
     // any_to_json 函数
     json _any_to_json(const std::any& value, std::string type) {
-        std::string type2 = value.type().name();
+        type = trim_type(type);
+        std::string type2 = get_type(value);
+
         if (type.empty()) {
             type = type2;
         }
@@ -237,7 +262,7 @@ namespace unitauto {
         std::stringstream ss;
         ss << &value;
         json j;
-        j["type"] = value.type().name();
+        j["type"] = get_type(value);
         j["value"] = ss.str();
 
         return j; //
@@ -483,6 +508,8 @@ namespace unitauto {
                 return j;
             }
 
+            type = trim_type(type.get<std::string>());
+
             auto value = j["value"];
             if (type == TYPE_BOOL) {
                 return value.get<bool>();
@@ -612,53 +639,53 @@ namespace unitauto {
                     return *arr;
                 }
             }
-            else if (l > strlen("std::vector<")) { // && type_s.substr(0, strlen("std::vector<")) == "std::vector<") { // && type_s.find('<') < type_s.find_last_of('>')) {
-                if (type == "std::vector<bool>") {
+            else if (l > strlen("vector<")) { // && type_s.substr(0, strlen("vector<")) == "vector<") { // && type_s.find('<') < type_s.find_last_of('>')) {
+                if (type == "vector<bool>") {
                     auto vec = value.get<std::vector<bool>>();
                     return vec;
                 }
 
-                if (type == "std::vector<char>") {
+                if (type == "vector<char>") {
                     auto vec = value.get<std::vector<char>>();
                     return vec;
                 }
 
-                if (type == "std::vector<std::byte>") {
+                if (type == "vector<byte>") {
                     auto vec = value.get<std::vector<std::byte>>();
                     return vec;
                 }
 
-                if (type == "std::vector<short>") {
+                if (type == "vector<short>") {
                     auto vec = value.get<std::vector<short>>();
                     return vec;
                 }
 
-                if (type == "std::vector<int>") {
+                if (type == "vector<int>") {
                     auto vec = value.get<std::vector<int>>();
                     return vec;
                 }
 
-                if (type == "std::vector<long>") {
+                if (type == "vector<long>") {
                     auto vec = value.get<std::vector<long>>();
                     return vec;
                 }
 
-                if (type == "std::vector<long long>") {
+                if (type == "vector<long long>") {
                     auto vec = value.get<std::vector<long long>>();
                     return vec;
                 }
 
-                if (type == "std::vector<float>") {
+                if (type == "vector<float>") {
                     auto vec = value.get<std::vector<float>>();
                     return vec;
                 }
 
-                if (type == "std::vector<double>") {
+                if (type == "vector<double>") {
                     auto vec = value.get<std::vector<double>>();
                     return vec;
                 }
 
-                if (type_s == "std::vector<std::string>") {
+                if (type_s == "vector<string>") {
                     auto vec = value.get<std::vector<std::string>>();
                     return vec;
                 }
@@ -736,7 +763,7 @@ namespace unitauto {
         };
         TYPE_MAP[type + "*"] = TYPE_MAP[type + "&"] = cb;
 
-        std::string t = typeid(T).name();
+        std::string t = trim_type(demangle(typeid(T).name()));
         if (t != type) {
             TYPE_MAP[t + "*"] = TYPE_MAP[t + "&"] = cb;
             TYEP_ALIAS_MAP[t] = type;
@@ -772,7 +799,7 @@ namespace unitauto {
             return std::any_cast<T>(obj);
         };
 
-        std::string t = typeid(T).name();
+        std::string t = trim_type(demangle(typeid(T).name()));
         if (t != type) {
             STRUCT_MAP[t] = STRUCT_MAP[type];
             TYEP_ALIAS_MAP[t] = type;
@@ -820,7 +847,7 @@ namespace unitauto {
         json type = thiz["type"];
         json value = thiz["value"];
         if (! type.empty()) {
-            std::string t = type.get<std::string>();
+            std::string t = trim_type(type.get<std::string>());
             auto it = TYPE_MAP.find(t);
             if (it != TYPE_MAP.end()) {
                 it->second(value);
@@ -1058,8 +1085,8 @@ namespace unitauto {
                 mtdObj["name"] = mtd2;
                 // mtdObj["parameterTypeList"] = parameterTypeList;
                 // mtdObj["genericParameterTypeList"] = genericParameterTypeList;
-                mtdObj["returnType"] = typeid(traits::return_type).name();
-                mtdObj["genericReturnType"] = typeid(traits::return_type).name();
+                mtdObj["returnType"] = trim_type(demangle(typeid(traits::return_type).name()));
+                mtdObj["genericReturnType"] = trim_type(demangle(typeid(traits::return_type).name()));
                 // mtdObj["static"] = is_static;
                 // mtdObj["exceptionTypeList"] = exceptionTypeList;
                 // mtdObj["genericExceptionTypeList"] = genericExceptionTypeList;
@@ -1548,5 +1575,251 @@ namespace unitauto {
         std::cout << "Server stopped!" << std::endl;
         return 0;
     }
+
+    // template<typename Type>
+    // static void add_func(Type ins, ...) {
+    //     auto tup = std::make_tuple(__VA_ARGS__); \
+    //     unitauto::add_func(f, ins, std::get<0>(tup)); \
+    // }
+
+    static std::vector<std::string> splitMethodDef(std::string fs) {
+        auto vec = std::vector<std::string>();
+
+        fs = std::regex_replace(fs, std::regex(" "), "");
+        fs = std::regex_replace(fs, std::regex("::"), ".");
+        while (true) {
+            int ind = fs.find(',');
+            bool no = ind < 0 || ind == std::string::npos;
+            std::string f = no ? fs : fs.substr(0, ind);
+
+            vec.push_back(f);
+            if (no) {
+                break;
+            }
+            fs = fs.substr(ind + 1);
+        }
+
+        return vec;
+    }
+
+
+    #define UNITAUTO_EXPAND( x ) x
+    #define UNITAUTO_GET_MACRO(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _26, _27, _28, _29, _30, _31, _32, _33, _34, _35, _36, _37, _38, _39, _40, _41, _42, _43, _44, _45, _46, _47, _48, _49, _50, _51, _52, _53, _54, _55, _56, _57, _58, _59, _60, _61, _62, _63, _64, NAME,...) NAME
+    #define UNITAUTO_PASTE(...) UNITAUTO_EXPAND(UNITAUTO_GET_MACRO(__VA_ARGS__, \
+            UNITAUTO_PASTE64, \
+            UNITAUTO_PASTE63, \
+            UNITAUTO_PASTE62, \
+            UNITAUTO_PASTE61, \
+            UNITAUTO_PASTE60, \
+            UNITAUTO_PASTE59, \
+            UNITAUTO_PASTE58, \
+            UNITAUTO_PASTE57, \
+            UNITAUTO_PASTE56, \
+            UNITAUTO_PASTE55, \
+            UNITAUTO_PASTE54, \
+            UNITAUTO_PASTE53, \
+            UNITAUTO_PASTE52, \
+            UNITAUTO_PASTE51, \
+            UNITAUTO_PASTE50, \
+            UNITAUTO_PASTE49, \
+            UNITAUTO_PASTE48, \
+            UNITAUTO_PASTE47, \
+            UNITAUTO_PASTE46, \
+            UNITAUTO_PASTE45, \
+            UNITAUTO_PASTE44, \
+            UNITAUTO_PASTE43, \
+            UNITAUTO_PASTE42, \
+            UNITAUTO_PASTE41, \
+            UNITAUTO_PASTE40, \
+            UNITAUTO_PASTE39, \
+            UNITAUTO_PASTE38, \
+            UNITAUTO_PASTE37, \
+            UNITAUTO_PASTE36, \
+            UNITAUTO_PASTE35, \
+            UNITAUTO_PASTE34, \
+            UNITAUTO_PASTE33, \
+            UNITAUTO_PASTE32, \
+            UNITAUTO_PASTE31, \
+            UNITAUTO_PASTE30, \
+            UNITAUTO_PASTE29, \
+            UNITAUTO_PASTE28, \
+            UNITAUTO_PASTE27, \
+            UNITAUTO_PASTE26, \
+            UNITAUTO_PASTE25, \
+            UNITAUTO_PASTE24, \
+            UNITAUTO_PASTE23, \
+            UNITAUTO_PASTE22, \
+            UNITAUTO_PASTE21, \
+            UNITAUTO_PASTE20, \
+            UNITAUTO_PASTE19, \
+            UNITAUTO_PASTE18, \
+            UNITAUTO_PASTE17, \
+            UNITAUTO_PASTE16, \
+            UNITAUTO_PASTE15, \
+            UNITAUTO_PASTE14, \
+            UNITAUTO_PASTE13, \
+            UNITAUTO_PASTE12, \
+            UNITAUTO_PASTE11, \
+            UNITAUTO_PASTE10, \
+            UNITAUTO_PASTE9, \
+            UNITAUTO_PASTE8, \
+            UNITAUTO_PASTE7, \
+            UNITAUTO_PASTE6, \
+            UNITAUTO_PASTE5, \
+            UNITAUTO_PASTE4, \
+            UNITAUTO_PASTE3, \
+            UNITAUTO_PASTE2, \
+            UNITAUTO_PASTE1)(__VA_ARGS__))
+    #define UNITAUTO_PASTE2(func, v1) func(v1)
+    #define UNITAUTO_PASTE3(func, v1, v2) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE2(func, v2)
+    #define UNITAUTO_PASTE4(func, v1, v2, v3) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE3(func, v2, v3)
+    #define UNITAUTO_PASTE5(func, v1, v2, v3, v4) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE4(func, v2, v3, v4)
+    #define UNITAUTO_PASTE6(func, v1, v2, v3, v4, v5) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE5(func, v2, v3, v4, v5)
+    #define UNITAUTO_PASTE7(func, v1, v2, v3, v4, v5, v6) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE6(func, v2, v3, v4, v5, v6)
+    #define UNITAUTO_PASTE8(func, v1, v2, v3, v4, v5, v6, v7) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE7(func, v2, v3, v4, v5, v6, v7)
+    #define UNITAUTO_PASTE9(func, v1, v2, v3, v4, v5, v6, v7, v8) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE8(func, v2, v3, v4, v5, v6, v7, v8)
+    #define UNITAUTO_PASTE10(func, v1, v2, v3, v4, v5, v6, v7, v8, v9) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE9(func, v2, v3, v4, v5, v6, v7, v8, v9)
+    #define UNITAUTO_PASTE11(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE10(func, v2, v3, v4, v5, v6, v7, v8, v9, v10)
+    #define UNITAUTO_PASTE12(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE11(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11)
+    #define UNITAUTO_PASTE13(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE12(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12)
+    #define UNITAUTO_PASTE14(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE13(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13)
+    #define UNITAUTO_PASTE15(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE14(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14)
+    #define UNITAUTO_PASTE16(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE15(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15)
+    #define UNITAUTO_PASTE17(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE16(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16)
+    #define UNITAUTO_PASTE18(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE17(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17)
+    #define UNITAUTO_PASTE19(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE18(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18)
+    #define UNITAUTO_PASTE20(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE19(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19)
+    #define UNITAUTO_PASTE21(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE20(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20)
+    #define UNITAUTO_PASTE22(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE21(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21)
+    #define UNITAUTO_PASTE23(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE22(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22)
+    #define UNITAUTO_PASTE24(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE23(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23)
+    #define UNITAUTO_PASTE25(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE24(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24)
+    #define UNITAUTO_PASTE26(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE25(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25)
+    #define UNITAUTO_PASTE27(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE26(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26)
+    #define UNITAUTO_PASTE28(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE27(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27)
+    #define UNITAUTO_PASTE29(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE28(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28)
+    #define UNITAUTO_PASTE30(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE29(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29)
+    #define UNITAUTO_PASTE31(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE30(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30)
+    #define UNITAUTO_PASTE32(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE31(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31)
+    #define UNITAUTO_PASTE33(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE32(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32)
+    #define UNITAUTO_PASTE34(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE33(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33)
+    #define UNITAUTO_PASTE35(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE34(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34)
+    #define UNITAUTO_PASTE36(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE35(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35)
+    #define UNITAUTO_PASTE37(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE36(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36)
+    #define UNITAUTO_PASTE38(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE37(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37)
+    #define UNITAUTO_PASTE39(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE38(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38)
+    #define UNITAUTO_PASTE40(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE39(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39)
+    #define UNITAUTO_PASTE41(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE40(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40)
+    #define UNITAUTO_PASTE42(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE41(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41)
+    #define UNITAUTO_PASTE43(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE42(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42)
+    #define UNITAUTO_PASTE44(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE43(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43)
+    #define UNITAUTO_PASTE45(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE44(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44)
+    #define UNITAUTO_PASTE46(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE45(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45)
+    #define UNITAUTO_PASTE47(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE46(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46)
+    #define UNITAUTO_PASTE48(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE47(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47)
+    #define UNITAUTO_PASTE49(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE48(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48)
+    #define UNITAUTO_PASTE50(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE49(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49)
+    #define UNITAUTO_PASTE51(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE50(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50)
+    #define UNITAUTO_PASTE52(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE51(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51)
+    #define UNITAUTO_PASTE53(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE52(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52)
+    #define UNITAUTO_PASTE54(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE53(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53)
+    #define UNITAUTO_PASTE55(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53, v54) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE54(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53, v54)
+    #define UNITAUTO_PASTE56(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53, v54, v55) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE55(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53, v54, v55)
+    #define UNITAUTO_PASTE57(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53, v54, v55, v56) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE56(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53, v54, v55, v56)
+    #define UNITAUTO_PASTE58(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53, v54, v55, v56, v57) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE57(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53, v54, v55, v56, v57)
+    #define UNITAUTO_PASTE59(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53, v54, v55, v56, v57, v58) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE58(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53, v54, v55, v56, v57, v58)
+    #define UNITAUTO_PASTE60(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53, v54, v55, v56, v57, v58, v59) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE59(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53, v54, v55, v56, v57, v58, v59)
+    #define UNITAUTO_PASTE61(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53, v54, v55, v56, v57, v58, v59, v60) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE60(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53, v54, v55, v56, v57, v58, v59, v60)
+    #define UNITAUTO_PASTE62(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53, v54, v55, v56, v57, v58, v59, v60, v61) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE61(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53, v54, v55, v56, v57, v58, v59, v60, v61)
+    #define UNITAUTO_PASTE63(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53, v54, v55, v56, v57, v58, v59, v60, v61, v62) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE62(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53, v54, v55, v56, v57, v58, v59, v60, v61, v62)
+    #define UNITAUTO_PASTE64(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53, v54, v55, v56, v57, v58, v59, v60, v61, v62, v63) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE63(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53, v54, v55, v56, v57, v58, v59, v60, v61, v62, v63)
+
+
+    // #define UNITAUTO_ADD_FUNC(Type, ...) \
+    //     unitauto::add_struct<Type>(#Type); \
+    //     Type ins = Type(); \
+    //     std::string fs = #__VA_ARGS__; \
+    //     while (true) { \
+    //         int ind = fs.find(','); \
+    //         bool no = ind < 0 || ind == std::string::npos; \
+    //         std::string f = no ? fs : fs.substr(0, ind); \
+    //         f = std::regex_replace(f, std::regex(" "), ""); \
+    //         f = std::regex_replace(f, std::regex("::"), "."); \
+    //         \
+    //         if (ind == 0) { \
+    //             auto tup = std::make_tuple(__VA_ARGS__); \
+    //             unitauto::add_func(f, ins, std::get<0>(tup)); \
+    //         } \
+    //         else if (ind == 1) { \
+    //             auto tup = std::make_tuple(__VA_ARGS__); \
+    //             unitauto::add_func(f, ins, std::get<1>(tup)); \
+    //         } \
+    //         else if (ind == 2) { \
+    //             auto tup2 = std::make_tuple(__VA_ARGS__); \
+    //             unitauto::add_func(f, ins, std::get<2>(tup2)); \
+    //         } \
+    //         \
+    //         if (no) { \
+    //             break; \
+    //         } \
+    //         fs = fs.substr(ind + 1); \
+    //     } \
+    //     \
+
+    #define UNITAUTO_ADD_FUNC_1(...) \
+        s = #__VA_ARGS__; \
+        s = s.substr(1); \
+        s = std::regex_replace(s, std::regex(name), path); \
+        s = std::regex_replace(s, std::regex(" "), ""); \
+        s = std::regex_replace(s, std::regex("::"), "."); \
+        unitauto::add_func(s, ins, __VA_ARGS__); \
+
+    #define UNITAUTO_ADD_FUNC(Type, ...) \
+        { \
+            std::string name = #Type; \
+            unitauto::add_struct<Type>(name); \
+            Type ins; /* = Type(); */ \
+            const std::type_info& ti = typeid(ins); \
+            std::string path = unitauto::demangle(ti.name()); \
+            std::string s; \
+            UNITAUTO_EXPAND(UNITAUTO_PASTE(UNITAUTO_ADD_FUNC_1, __VA_ARGS__)) \
+        } \
+
+
+    // #define UNITAUTO_ADD_FUNC_2(Type, ...) \
+    //     unitauto::add_struct<Type>(#Type); \
+    //     Type ins = Type(); \
+    //     std::string fs = #__VA_ARGS__; \
+    //     std::vector<std::string> vec = unitauto::splitMethodDef(#__VA_ARGS__); \
+    //     auto tup = std::make_tuple(__VA_ARGS__); \
+    //     unitauto::add_func(vec.at(0), ins, std::get<0>(tup)); \
+    //     unitauto::add_func(vec.at(1), ins, std::get<1>(tup)); \
+    //
+    // #define UNITAUTO_ADD_FUNC_20(Type, ...) \
+    //     unitauto::add_struct<Type>(#Type); \
+    //     Type ins = Type(); \
+    //     std::string fs = #__VA_ARGS__; \
+    //     std::vector<std::string> vec = unitauto::splitMethodDef(#__VA_ARGS__); \
+    //     auto tup = std::make_tuple(__VA_ARGS__); \
+    //     unitauto::add_func(vec.at(0), ins, std::get<0>(tup)); \
+    //     unitauto::add_func(vec.at(1), ins, std::get<1>(tup)); \
+    //     unitauto::add_func(vec.at(2), ins, std::get<2>(tup)); \
+    //     unitauto::add_func(vec.at(3), ins, std::get<3>(tup)); \
+    //     unitauto::add_func(vec.at(4), ins, std::get<4>(tup)); \
+    //     unitauto::add_func(vec.at(5), ins, std::get<5>(tup)); \
+    //     unitauto::add_func(vec.at(6), ins, std::get<6>(tup)); \
+    //     unitauto::add_func(vec.at(7), ins, std::get<7>(tup)); \
+    //     unitauto::add_func(vec.at(8), ins, std::get<8>(tup)); \
+    //     unitauto::add_func(vec.at(9), ins, std::get<9>(tup)); \
+    //     unitauto::add_func(vec.at(1), ins, std::get<10>(tup)); \
+    //     unitauto::add_func(vec.at(11), ins, std::get<11>(tup)); \
+    //     unitauto::add_func(vec.at(12), ins, std::get<12>(tup)); \
+    //     unitauto::add_func(vec.at(13), ins, std::get<13>(tup)); \
+    //     unitauto::add_func(vec.at(14), ins, std::get<14>(tup)); \
+    //     unitauto::add_func(vec.at(15), ins, std::get<15>(tup)); \
+    //     unitauto::add_func(vec.at(16), ins, std::get<16>(tup)); \
+    //     unitauto::add_func(vec.at(17), ins, std::get<17>(tup)); \
+    //     unitauto::add_func(vec.at(18), ins, std::get<18>(tup)); \
+    //     unitauto::add_func(vec.at(19), ins, std::get<19>(tup)); \
 
 }
