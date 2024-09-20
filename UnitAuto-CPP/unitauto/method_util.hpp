@@ -47,7 +47,7 @@ namespace unitauto {
 
     using json = nlohmann::json;
 
-    static std::string DEFAULT_MODULE_PATH = "unitauto::";
+    static std::string DEFAULT_MODULE_PATH = "unitauto";
 
     static const std::string TYPE_ANY = "any"; // typeid(bool).name();
     static const std::string TYPE_BOOL = "bool"; // typeid(bool).name();
@@ -74,9 +74,12 @@ namespace unitauto {
     static const std::string TYPE_STRING_ARR = "string[]"; // typeid(std::string).name();
 
     std::string trim_type(std::string type) {
+        type = std::regex_replace(type, std::regex(DEFAULT_MODULE_PATH + "::"), "");
+        type = std::regex_replace(type, std::regex(DEFAULT_MODULE_PATH + "."), "");
         type = std::regex_replace(type, std::regex("std::"), "");
+        type = std::regex_replace(type, std::regex("std."), "");
         type = std::regex_replace(type, std::regex("__1::"), "");
-        type = std::regex_replace(type, std::regex(DEFAULT_MODULE_PATH), "");
+        type = std::regex_replace(type, std::regex("__1."), "");
 
         if (type.empty() || type == "v" || type == "Dn" || type == "NULL" || type == "null" || type == "nullptr" || type == "nullptr_t") {
             return "";

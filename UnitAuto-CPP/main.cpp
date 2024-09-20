@@ -229,59 +229,10 @@ static int compare(User u, User u2) {
 
 
 int main() {
-    unitauto::DEFAULT_MODULE_PATH = "unitauto::"; // TODO 改为你项目的默认包名
+    unitauto::DEFAULT_MODULE_PATH = "unitauto"; // TODO 改为你项目的默认包名
 
-    UNITAUTO_ADD_FUNC(Moment, &Moment::getId, &Moment::setContent, &Moment::getUserId);
-
-    // unitauto::add_struct<Moment>("Moment");
-    // Moment ins = Moment();
-    // auto tup = std::make_tuple(&Moment::getId, &Moment::setContent);
-    // // std::vector<void*> arr = {&Moment::getId, &Moment::setContent};
-    // const size_t count = std::tuple_size_v<decltype(tup)>;
-    //  if (count > 0) {
-    //      auto tup2 = std::make_tuple(&Moment::getId, &Moment::setContent);
-    //      unitauto::add_func("Moment.getId", ins, std::get<0>(tup2));
-    //  }
-    //  if (count > 1) {
-    //      auto tup2 = std::make_tuple(&Moment::getId, &Moment::setContent);
-    //      unitauto::add_func("Moment.setContent", ins, std::get<1>(tup2));
-    //  }
-    //  if (count > 2) {
-    //      auto tup2 = std::make_tuple(&Moment::getId, &Moment::setContent, &Moment::getUserId);
-    //      unitauto::add_func("Moment.setContent", ins, std::get<2>(tup2));
-    //  }
-
-    // for (int i = 0; i < count; ++i) {
-    //     // const size_t ind = i;
-    //     if (i == 0) {
-    //         unitauto::add_func("Moment.getId", ins, std::get<0>(tup));
-    //     }
-    //     else if (i == 1) {
-    //         unitauto::add_func("Moment.setContent", ins, std::get<1>(tup));
-    //     }
-    //     else if (i == 2) {
-    //         unitauto::add_func("Moment.getId", ins, std::get<2>(tup));
-    //     }
-    // }
-
-    // // 必须先注册类型
-    // // unitauto::add_type<Moment>("main.Moment");
-    // unitauto::add_struct<Moment>("main.Moment", [](json &j) -> Moment {
-    //     std::cout << "\ncallback Moment: {" << std::endl;
-    //     Moment ins = unitauto::INSTANCE_GETTER<Moment>(j);
-    //     unitauto::add_func("main.Moment.getId", ins, &Moment::getId);
-    //     unitauto::add_func("main.Moment.setId", ins, &Moment::setId);
-    //     unitauto::add_func("main.Moment.setContent", ins, &Moment::setContent);
-    //     unitauto::add_func("main.Moment.getContent", ins, &Moment::getContent);
-    //     std::cout << "\ncallback return ins;" << std::endl;
-    //     return ins;
-    // // }, [](std::any val) -> json {
-    // //     auto j = std::any_cast<Moment>(val);
-    // //     return j;
-    // });
-
-    unitauto::add_struct<User>("User");
-    // unitauto::add_struct<unitauto::test::TestUtil>("unitauto.test.TestUtil");
+    UNITAUTO_ADD_FUNC(Moment, &Moment::getId, &Moment::setId, &Moment::getUserId, &Moment::setUserId, &Moment::getContent, &Moment::setContent);
+    UNITAUTO_ADD_FUNC(User, &User::getId, &User::setId, &User::getName, &User::setName, &User::getDate, &User::setDate);
     UNITAUTO_ADD_FUNC(unitauto::test::TestUtil, &unitauto::test::TestUtil::divide);
 
     // 注册函数
