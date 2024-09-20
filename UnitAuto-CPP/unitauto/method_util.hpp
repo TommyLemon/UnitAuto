@@ -1738,7 +1738,7 @@ namespace unitauto {
     #define UNITAUTO_PASTE64(func, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53, v54, v55, v56, v57, v58, v59, v60, v61, v62, v63) UNITAUTO_PASTE2(func, v1) UNITAUTO_PASTE63(func, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v38, v39, v40, v41, v42, v43, v44, v45, v46, v47, v48, v49, v50, v51, v52, v53, v54, v55, v56, v57, v58, v59, v60, v61, v62, v63)
 
 
-    // #define UNITAUTO_ADD_FUNC(Type, ...) \
+    //  Compile Error #define UNITAUTO_ADD_FUNC(Type, ...) \
     //     unitauto::add_struct<Type>(#Type); \
     //     Type ins = Type(); \
     //     std::string fs = #__VA_ARGS__; \
@@ -1757,7 +1757,7 @@ namespace unitauto {
     //             auto tup = std::make_tuple(__VA_ARGS__); \
     //             unitauto::add_func(f, ins, std::get<1>(tup)); \
     //         } \
-    //         else if (ind == 2) { \
+    //         else if (ind == 2) { \ Compile Error
     //             auto tup2 = std::make_tuple(__VA_ARGS__); \
     //             unitauto::add_func(f, ins, std::get<2>(tup2)); \
     //         } \
@@ -1769,24 +1769,20 @@ namespace unitauto {
     //     } \
     //     \
 
+
     #define UNITAUTO_ADD_FUNC_1(...) \
+        s = #__VA_ARGS__; \
+        s = std::regex_replace(s, std::regex(" "), ""); \
+        s = std::regex_replace(s, std::regex("::"), "."); \
+        unitauto::add_func(s, std::function(__VA_ARGS__)); \
+
+    #define UNITAUTO_ADD_METHOD_1(...) \
         s = #__VA_ARGS__; \
         s = s.substr(1); \
         s = std::regex_replace(s, std::regex(name), path); \
         s = std::regex_replace(s, std::regex(" "), ""); \
         s = std::regex_replace(s, std::regex("::"), "."); \
         unitauto::add_func(s, ins, __VA_ARGS__); \
-
-    #define UNITAUTO_ADD_FUNC(Type, ...) \
-        { \
-            std::string name = #Type; \
-            unitauto::add_struct<Type>(name); \
-            Type ins; /* = Type(); */ \
-            const std::type_info& ti = typeid(ins); \
-            std::string path = unitauto::demangle(ti.name()); \
-            std::string s; \
-            UNITAUTO_EXPAND(UNITAUTO_PASTE(UNITAUTO_ADD_FUNC_1, __VA_ARGS__)) \
-        } \
 
 
     // #define UNITAUTO_ADD_FUNC_2(Type, ...) \
@@ -1798,7 +1794,7 @@ namespace unitauto {
     //     unitauto::add_func(vec.at(0), ins, std::get<0>(tup)); \
     //     unitauto::add_func(vec.at(1), ins, std::get<1>(tup)); \
     //
-    // #define UNITAUTO_ADD_FUNC_20(Type, ...) \
+    // too many codes  #define UNITAUTO_ADD_FUNC_20(Type, ...) \
     //     unitauto::add_struct<Type>(#Type); \
     //     Type ins = Type(); \
     //     std::string fs = #__VA_ARGS__; \
@@ -1824,5 +1820,23 @@ namespace unitauto {
     //     unitauto::add_func(vec.at(17), ins, std::get<17>(tup)); \
     //     unitauto::add_func(vec.at(18), ins, std::get<18>(tup)); \
     //     unitauto::add_func(vec.at(19), ins, std::get<19>(tup)); \
+
+
+    #define UNITAUTO_ADD_FUNC(...) \
+        { \
+            std::string s; \
+            UNITAUTO_EXPAND(UNITAUTO_PASTE(UNITAUTO_ADD_FUNC_1, __VA_ARGS__)) \
+        } \
+
+    #define UNITAUTO_ADD_METHOD(Type, ...) \
+        { \
+            std::string name = #Type; \
+            unitauto::add_struct<Type>(name); \
+            Type ins; /* = Type(); */ \
+            const std::type_info& ti = typeid(ins); \
+            std::string path = unitauto::demangle(ti.name()); \
+            std::string s; \
+            UNITAUTO_EXPAND(UNITAUTO_PASTE(UNITAUTO_ADD_METHOD_1, __VA_ARGS__)) \
+        } \
 
 }

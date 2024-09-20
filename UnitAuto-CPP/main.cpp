@@ -231,23 +231,19 @@ static int compare(User u, User u2) {
 int main() {
     unitauto::DEFAULT_MODULE_PATH = "unitauto"; // TODO 改为你项目的默认包名
 
-    UNITAUTO_ADD_FUNC(Moment, &Moment::getId, &Moment::setId, &Moment::getUserId, &Moment::setUserId, &Moment::getContent, &Moment::setContent);
-    UNITAUTO_ADD_FUNC(User, &User::getId, &User::setId, &User::getName, &User::setName, &User::getDate, &User::setDate);
-    UNITAUTO_ADD_FUNC(unitauto::test::TestUtil, &unitauto::test::TestUtil::divide);
-
     // 注册函数
-    unitauto::add_func("print", std::function<void(const std::string &)>(print));
-    unitauto::add_func("add", std::function<int(int, int)>(add));
-    unitauto::add_func("divide", std::function<double(double, double)>(divide));
+    UNITAUTO_ADD_FUNC(print, add, divide, newMoment, unitauto::test::divide, unitauto::test::contains, unitauto::test::index, unitauto::test::is_contain, unitauto::test::index_of);
+
+    // 注册类型(class/struct)及方法(成员函数)
+    UNITAUTO_ADD_METHOD(Moment, &Moment::getId, &Moment::setId, &Moment::getUserId, &Moment::setUserId, &Moment::getContent, &Moment::setContent);
+    UNITAUTO_ADD_METHOD(User, &User::getId, &User::setId, &User::getName, &User::setName, &User::getDate, &User::setDate);
+    UNITAUTO_ADD_METHOD(unitauto::test::TestUtil, &unitauto::test::TestUtil::divide);
+
+    // 自定义注册函数路径
     unitauto::add_func("main.newMoment", std::function<Moment(long)>(newMoment));
-    unitauto::add_func("unitauto.test.divide", std::function<double(double,double)>(unitauto::test::divide));
-    unitauto::add_func("unitauto.test.contains", std::function<bool(long[],long)>(unitauto::test::contains));
-    unitauto::add_func("unitauto.test.index", std::function<int(std::string[],std::string)>(unitauto::test::index));
-    unitauto::add_func("unitauto.test.is_contain", std::function<bool(std::vector<int>,int)>(unitauto::test::is_contain));
-    unitauto::add_func("unitauto.test.index_of", std::function<int(std::vector<std::string>,std::string)>(unitauto::test::index_of));
     unitauto::add_func("main.newUser", std::function<User(long, std::string)>(newUser));
 
-    // 注册方法(成员函数)
+    // 自定义注册方法(成员函数)路径
     User user = User();
     user.setId(1);
     user.name = "Test User";
