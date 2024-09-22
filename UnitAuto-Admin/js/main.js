@@ -1386,16 +1386,18 @@ https://github.com/Tencent/APIJSON/issues
       getClass: function (url) {
         url = url || this.getUrl()
         var index = url.lastIndexOf('.')
-        if (index <= 0) {
+        var lang = this.language
+        if (index <= 0 && [CodeUtil.LANGUAGE_JAVA, CodeUtil.LANGUAGE_KOTLIN, CodeUtil.LANGUAGE_C_SHARP].indexOf(lang) >= 0) {
           throw new Error('完整的 URI 必须符合格式 Java/Kotlin: package.Class.method, Go: package.func / package.Struct.method, ' +
+              '\n C++: package.function / package.Struct.method / package.Class.method！' +
               '\n Python: package.function / package.file.function / package.Class.method / package.file.Class.method ！')
         }
+
         url = url.substring(0, index)
         index = url.lastIndexOf('.')
         var clazz = StringUtil.trim(index < 0 ? url : url.substring(index + 1))
-        var lang = this.language
         if (StringUtil.isBigName(clazz) != true) {
-          if (lang == CodeUtil.LANGUAGE_GO) {
+          if (lang == CodeUtil.LANGUAGE_GO || lang == CodeUtil.LANGUAGE_CPP) {
             return ''
           }
 
@@ -1409,20 +1411,24 @@ https://github.com/Tencent/APIJSON/issues
       getPackage: function (url) {
         url = url || this.getUrl()
         var index = url.lastIndexOf('.')
-        if (index <= 0) {
+        var lang = this.language
+        if (index <= 0 && [CodeUtil.LANGUAGE_JAVA, CodeUtil.LANGUAGE_KOTLIN, CodeUtil.LANGUAGE_C_SHARP].indexOf(lang) >= 0) {
           throw new Error('完整的 URI 必须符合格式 Java/Kotlin: package.Class.method, Go: package.func / package.Struct.method, ' +
+              '\n C++: package.function / package.Struct.method / package.Class.method！' +
               '\n Python: package.function / package.file.function / package.Class.method / package.file.Class.method ！')
         }
+
         url = url.substring(0, index)
         index = url.lastIndexOf('.')
         var cls = url.substring(index + 1)
         var pkg = index < 0 ? '' : url.substring(0, index)
 
-        if (this.language == CodeUtil.LANGUAGE_GO && StringUtil.isBigName(cls) != true) {
+        if ((lang == CodeUtil.LANGUAGE_GO || lang == CodeUtil.LANGUAGE_CPP) && StringUtil.isBigName(cls) != true) {
           pkg = StringUtil.isEmpty(pkg) ? cls : pkg + '.' + cls
         }
         return StringUtil.trim(pkg)
       },
+
       //获取请求的tag
       getTag: function () {
         var req = null;
@@ -1711,7 +1717,7 @@ https://github.com/Tencent/APIJSON/issues
                 case CodeUtil.LANGUAGE_GO:
                   suffix = '.go';
                   break;
-                case CodeUtil.LANGUAGE_C_PLUS_PLUS:
+                case CodeUtil.LANGUAGE_CPP:
                   suffix = '.cpp';
                   break;
 
@@ -2181,7 +2187,7 @@ https://github.com/Tencent/APIJSON/issues
           this.requestVersion = item.version;
 
           var host = StringUtil.get(this.host)
-          var url = item.package + '.' + item.class + '.' + item.method
+          var url = (StringUtil.isEmpty(item.package) ? '' : item.package + '.') + (StringUtil.isEmpty(item.class) ? '' : item.class + '.') + item.method
           if (url.startsWith(host.trim())) {
             var branch = url.substring(host.endsWith(' ') ? host.length - 1 : host.length)
             vUrl.value = branch
@@ -2331,7 +2337,7 @@ https://github.com/Tencent/APIJSON/issues
               case CodeUtil.LANGUAGE_GO:
                 s += '(Go):\n\n' + CodeUtil.parseGoResponse('', res, 0)
                 break;
-              case CodeUtil.LANGUAGE_C_PLUS_PLUS:
+              case CodeUtil.LANGUAGE_CPP:
                 s += '(C++):\n\n' + CodeUtil.parseCppResponse('', res, 0, isSingle)
                 break;
 
@@ -2629,7 +2635,7 @@ https://github.com/Tencent/APIJSON/issues
                 'id': did == null ? undefined : did,
 //                'testAccountId': currentAccountId,
                 'operation': CodeUtil.getOperation(method),
-                'language': StringUtil.isEmpty(currentResponse.language, true) ? this.language : currentResponse.language,
+                'language': StringUtil.isEmpty(currentResponse.language, true) ? App.language : currentResponse.language,
                 'method': method,
                 'detail': App.exTxt.name,
                 'type': returnType,
@@ -6134,7 +6140,7 @@ Content-Type: ` + contentType) + (StringUtil.isEmpty(headerStr, true) ? '' : hea
               + CodeUtil.parseGoRequest(null, JSON.parse(rq), 0)
               + '\n ``` \n注：对象 {} 用 map[string]interface{} {"key": value}，数组 [] 用 []interface{} {value0, value1}\n';
             break;
-          case CodeUtil.LANGUAGE_C_PLUS_PLUS:
+          case CodeUtil.LANGUAGE_CPP:
             s += '\n#### <= Web-C++: 使用 RapidJSON'
               + ' \n ```cpp \n'
               + StringUtil.trim(CodeUtil.parseCppRequest(null, JSON.parse(rq), 0, isSingle))

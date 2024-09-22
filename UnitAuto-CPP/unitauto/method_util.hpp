@@ -31,10 +31,78 @@ limitations under the License.*/
 #include <cstdlib> // for system()
 #include<csignal>
 #include <regex>
+#include <chrono>
 
 /**@author Lemon
  */
 namespace unitauto {
+    // using any = std::any;
+    // using string = std::string;
+    // using vector = std::vector;
+    using json = nlohmann::json;
+
+    long long current_time_millis() {
+        // 获取当前时间点
+        auto now = std::chrono::high_resolution_clock::now();
+        // 将时间点转换为毫秒
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch());
+        return duration.count(); // 返回毫秒值
+    }
+
+    // 打印单个元素的辅助函数
+    template<typename T>
+    static void print(const T& value) {
+        std::cout << value << " ";
+    }
+
+    // 递归打印参数包的辅助函数
+    template<typename T, typename... Args>
+    static void print(const T& first, const Args&... args) {
+        print(first); // 打印第一个参数
+        print(args...); // 递归打印剩余参数
+    }
+
+    // 打印单个元素的辅助函数
+    template<typename T>
+    static void println(const T& value) {
+        std::cout << value << std::endl;
+    }
+
+    // 递归打印参数包的辅助函数
+    template<typename T, typename... Args>
+    static void println(const T& first, const Args&... args) {
+        print(first); // 打印第一个参数
+        print(args...); // 递归打印剩余参数
+        print("\n");
+    }
+
+    // 打印单个元素的辅助函数
+    template<typename T>
+    static void printErr(const T& value) {
+        std::cerr << value << " ";
+    }
+
+    // 递归打印参数包的辅助函数
+    template<typename T, typename... Args>
+    static void printErr(const T& first, const Args&... args) {
+        printErr(first); // 打印第一个参数
+        printErr(args...); // 递归打印剩余参数
+    }
+
+    // 打印单个元素的辅助函数
+    template<typename T>
+    static void printlnErr(const T& value) {
+        std::cerr << value << std::endl;
+    }
+
+    // 递归打印参数包的辅助函数
+    template<typename T, typename... Args>
+    static void printlnErr(const T& first, const Args&... args) {
+        printErr(first); // 打印第一个参数
+        printErr(args...); // 递归打印剩余参数
+        print("\n");
+    }
+
     // 用于解码类型名称的函数
     static std::string demangle(const char* name) {
         int status = 0;
@@ -45,7 +113,6 @@ namespace unitauto {
         return (status == 0) ? res.get() : name;
     }
 
-    using json = nlohmann::json;
 
     static std::string DEFAULT_MODULE_PATH = "unitauto";
 
@@ -80,6 +147,7 @@ namespace unitauto {
         type = std::regex_replace(type, std::regex("std."), "");
         type = std::regex_replace(type, std::regex("__1::"), "");
         type = std::regex_replace(type, std::regex("__1."), "");
+        type = std::regex_replace(type, std::regex("::"), ".");
 
         if (type.empty() || type == "v" || type == "Dn" || type == "NULL" || type == "null" || type == "nullptr" || type == "nullptr_t") {
             return "";
@@ -176,8 +244,28 @@ namespace unitauto {
     //     auto j = nlohmann::to_json(obj);
     // }
 
+    // JSON 字符串转对应类型的值对象
+    template<typename T>
+    static T json_2_val(json &j, const std::string& type) {
+        auto it = STRUCT_MAP.find(type);
+        if (it == STRUCT_MAP.end()) {
+            std::string t = TYEP_ALIAS_MAP[type];
+            if (t != type && ! t.empty()) {
+                it = STRUCT_MAP.find(t);
+            }
+        }
+
+        if (it != STRUCT_MAP.end()) {
+            auto val = it->second(j);
+            return any_cast<T>(val);
+        }
+
+        throw std::runtime_error("Unknown struct type: "+ type + ", call add_strcut/add_type firstly!");
+    }
+
     // JSON 字符串转对应类型的对象
-    static void* json_2_obj(json &j, const std::string& type) {
+    template<typename T>
+    static T* json_2_obj(json &j, const std::string& type) {
         auto it = TYPE_MAP.find(type);
         if (it == TYPE_MAP.end()) {
             std::string t = TYEP_ALIAS_MAP[type];
@@ -187,10 +275,14 @@ namespace unitauto {
         }
 
         if (it != TYPE_MAP.end()) {
-            return it->second(j);
+            auto val = it->second(j);
+            return static_cast<T*>(val);
         }
 
-        throw std::runtime_error("Unknown type: "+ type + ", call add_type firstly!");
+        T val = json_2_val<T>(j, type);
+        return &val;
+
+        // throw std::runtime_error("Unknown type: "+ type + ", call add_type firstly!");
     }
 
 
@@ -404,14 +496,14 @@ namespace unitauto {
             // if (value.type() == typeid(std::map<std::string, std::any>)) {
             //     return std::any_cast<std::map<std::string, std::any>>(value);
             // }
-        } catch (const std::exception& e) {
-            std::cout << e.what() << std::endl;
         } catch (const nlohmann::json::parse_error& ex) {
             std::cout << "nlohmann::json::parse_error at byte " << ex.byte << ": " << ex.what() << std::endl;
         } catch (const nlohmann::json::type_error& ex) {
             std::cout << "nlohmann::json::type_error " << ex.what() << std::endl;
         } catch (const nlohmann::json::other_error& ex) {
             std::cout << "nlohmann::json::other_error " << ex.what() << std::endl;
+        } catch (const std::exception& e) {
+            std::cout << e.what() << std::endl;
         }
 
         return _any_to_json(value, type);
@@ -493,15 +585,10 @@ namespace unitauto {
 
             json j = vs;
             try {
-                return json_2_obj(j, type);
+                return json_2_obj<std::any>(j, type);
             } catch (const std::exception& e) {
+                printlnErr(get_type(e), ": ", e.what());
                 return json_2_any(j, type);
-            } catch (const nlohmann::json::parse_error& ex) {
-                std::cout << "nlohmann::json::parse_error at byte " << ex.byte << ": " << ex.what() << std::endl;
-            } catch (const nlohmann::json::type_error& ex) {
-                std::cout << "nlohmann::json::type_error " << ex.what() << std::endl;
-            } catch (const nlohmann::json::other_error& ex) {
-                std::cout << "nlohmann::json::other_error " << ex.what() << std::endl;
             }
         }
 
@@ -695,15 +782,10 @@ namespace unitauto {
             }
 
             try {
-                return json_2_obj(value, type);
+                return json_2_obj<std::any>(value, type);
             } catch (const std::exception& e) {
+                printlnErr(get_type(e), ": ", e.what());
                 return json_2_any(value, type);
-            } catch (const nlohmann::json::parse_error& ex) {
-                std::cout << "nlohmann::json::parse_error at byte " << ex.byte << ": " << ex.what() << std::endl;
-            } catch (const nlohmann::json::type_error& ex) {
-                std::cout << "nlohmann::json::type_error " << ex.what() << std::endl;
-            } catch (const nlohmann::json::other_error& ex) {
-                std::cout << "nlohmann::json::other_error " << ex.what() << std::endl;
             }
         }
 
@@ -1004,6 +1086,37 @@ namespace unitauto {
         using argument_types = std::tuple<Args...>;
     };
 
+    static nlohmann::json new_ok_result() {
+        nlohmann::json result;
+        result["language"] = "C++";
+        result["code"] = 200;
+        result["msg"] = "success";
+        return result;
+    }
+
+    static nlohmann::json new_err_result(int code, std::string msg) {
+        nlohmann::json result;
+        result["language"] = "C++";
+        result["code"] = code;
+        result["msg"] = msg;
+        return result;
+    }
+
+    template <typename E>
+    static nlohmann::json new_err_result(E& e) {
+        nlohmann::json result = new_err_result(500, e.what());
+        result["throw"] = get_type(e);
+        // result["trace"] = get_type(e);
+        return result;
+    }
+
+    // static nlohmann::json new_err_result(nlohmann::json::parse_error& e) {
+    //     nlohmann::json result = new_err_result(500, e.what());
+    //     result["throw"] = get_type(e);
+    //     // result["trace"] = get_type(e);
+    //     return result;
+    // }
+
     static nlohmann::json list_json(nlohmann::json j) {
         nlohmann::json result;
 
@@ -1180,25 +1293,45 @@ namespace unitauto {
             result["classTotal"] = classTotal;
             result["methodTotal"] = methodTotal;
             result["packageList"] = packageList;
-        } catch (const std::exception& e) {
-            result["code"] = 500;
-            result["msg"] = e.what();
         } catch (const nlohmann::json::parse_error& ex) {
             std::cout << "nlohmann::json::parse_error at byte " << ex.byte << ": " << ex.what() << std::endl;
-            result["code"] = 500;
-            result["msg"] = ex.what();
+            result = new_err_result(ex);
         } catch (const nlohmann::json::type_error& ex) {
             std::cout << "nlohmann::json::type_error " << ex.what() << std::endl;
-            result["code"] = 500;
-            result["msg"] = ex.what();
+            result = new_err_result(ex);
         } catch (const nlohmann::json::other_error& ex) {
             std::cout << "nlohmann::json::other_error " << ex.what() << std::endl;
-            result["code"] = 500;
-            result["msg"] = ex.what();
+            result = new_err_result(ex);
+        } catch (const std::exception& e) {
+            result = new_err_result(e);
         }
 
         return result;
     }
+
+    static nlohmann::json list_str(std::string& str) {
+        nlohmann::json result;
+        json j;
+        try {
+            j = json::parse(str);
+        } catch (const nlohmann::json::parse_error& e) {
+            result = new_err_result(e);
+        } catch (const nlohmann::json::type_error& e) {
+            result = new_err_result(e);
+        } catch (const nlohmann::json::other_error& e) {
+            result = new_err_result(e);
+        } catch (const std::exception& e) {
+            result = new_err_result(e);
+        }
+
+        if (! result.empty()) {
+            result["code"] = 400;
+            return result;
+        }
+
+        return list_json(j);
+    }
+
 
 
     static nlohmann::json invoke_json(nlohmann::json j) {
@@ -1296,10 +1429,15 @@ namespace unitauto {
                 methodArgs.push_back(ma);
             }
 
+            long long start = current_time_millis();
             std::any ret = invoke_method(thiz, path, args);
+            long long end = current_time_millis();
 
-            result["code"] = 200;
-            result["msg"] = "success";
+            result = new_ok_result();
+            std::ostringstream time_str;
+            time_str << start << "|" << (end - start) << "|" << end;
+            result["time:start|duration|end"] = time_str.str();
+
             std::string type = get_type(ret);
             if (! type.empty()) {
                 result["type"] = type;  // type_cs;
@@ -1314,25 +1452,46 @@ namespace unitauto {
             }
 
             result["methodArgs"] = methodArgs; // any_to_json(args);
-        } catch (const std::exception& e) {
-            result["code"] = 500;
-            result["msg"] = e.what();
         } catch (const nlohmann::json::parse_error& ex) {
             std::cout << "nlohmann::json::parse_error at byte " << ex.byte << ": " << ex.what() << std::endl;
-            result["code"] = 500;
-            result["msg"] = ex.what();
+            result = new_err_result(ex);
         } catch (const nlohmann::json::type_error& ex) {
             std::cout << "nlohmann::json::type_error " << ex.what() << std::endl;
-            result["code"] = 500;
-            result["msg"] = ex.what();
+            result = new_err_result(ex);
         } catch (const nlohmann::json::other_error& ex) {
             std::cout << "nlohmann::json::other_error " << ex.what() << std::endl;
-            result["code"] = 500;
-            result["msg"] = ex.what();
+            result = new_err_result(ex);
+        } catch (const std::exception& e) {
+            result = new_err_result(e);
         }
 
         return result;
     }
+
+
+    static nlohmann::json invoke_str(std::string& str) {
+        nlohmann::json result;
+        json j;
+        try {
+            j = json::parse(str);
+        } catch (const nlohmann::json::parse_error& e) {
+            result = new_err_result(e);
+        } catch (const nlohmann::json::type_error& e) {
+            result = new_err_result(e);
+        } catch (const nlohmann::json::other_error& e) {
+            result = new_err_result(e);
+        } catch (const std::exception& e) {
+            result = new_err_result(e);
+        }
+
+        if (! result.empty()) {
+            result["code"] = 400;
+            return result;
+        }
+
+        return invoke_json(j);
+    }
+
 
     // 生成覆盖率报告
     void generate_coverage_report() {
@@ -1427,11 +1586,8 @@ namespace unitauto {
             std::string location = "";
 
             // 处理数据并生成响应 JSON
-            std::string response_json = R"({
-                "code": 200,
-                "msg": "success"
-            })";
-
+            std::string response_json = new_ok_result().dump();
+;
             bool isOpt = method == "options" || method == "OPTIONS";
             bool isPost = method == "post" || method == "POST";
             bool isGet = method == "get" || method == "GET";
@@ -1440,14 +1596,14 @@ namespace unitauto {
             if (isGetOrPost && path == "/coverage/start") {
                 start_coverage();
                 json result;
-                result["code"] = 200;
+                result = new_ok_result();
                 result["msg"] = "Coverage collection started";
                 response_json = result.dump();
             }
             else if (isGetOrPost && path == "/coverage/stop") {
                 stop_coverage();
                 json result;
-                result["code"] = 200;
+                result = new_ok_result();
                 result["msg"] = "Coverage collection stopped and report generated";
                 result["url"] = "/coverage_report/index.html";
                 result["html"] = read_file("coverage_report/index.html");
@@ -1459,7 +1615,7 @@ namespace unitauto {
             }
             else if (isGetOrPost && path == "/coverage/report") {
                 json result;
-                result["code"] = 200;
+                result = new_ok_result();
                 result["msg"] = "Coverage generated";
                 result["url"] = "/coverage/index.html";
                 result["html"] = read_file("coverage/index.html");
@@ -1471,21 +1627,18 @@ namespace unitauto {
                 location = "Location: " + host + "/coverage/index.html";
             }
             else if (isPost) {
-                json j = json::parse(json_data);
+                nlohmann::json result;
                 if (path == "/method/invoke") {
-                    json result = invoke_json(j);
-                    response_json = result.dump(-1, ' ', false, nlohmann::detail::error_handler_t::ignore);
+                    result = invoke_str(json_data);
                 }
                 else if (path == "/method/list") {
-                    json result = list_json(j);
-                    response_json = result.dump(-1, ' ', false, nlohmann::detail::error_handler_t::ignore);
+                    result = list_str(json_data);
                 }
                 else {
-                    response_json = R"({
-                    "code": 404,
-                    "msg": "Only support POST /method/invoke, POST /method/list, POST /coverage/save ！"
-                })";
+                    result = new_err_result(404, "Only support POST /method/invoke, POST /method/list, POST /coverage/save ！");
                 }
+
+                response_json = result.dump(-1, ' ', false, nlohmann::detail::error_handler_t::ignore);
             }
             else if (! isOpt) {
                 response_json = R"({
@@ -1513,6 +1666,7 @@ namespace unitauto {
             // 发送响应
             send(client_socket, response.str().c_str(), response.str().size(), 0);
         }
+
         close(client_socket);
     }
 

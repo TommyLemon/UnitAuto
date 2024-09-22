@@ -6,6 +6,8 @@
 
 using json = unitauto::json;
 
+// 模拟你的业务项目中需要测试的函数、自定义类型等 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 // 普通函数 Demo
 int add(int a, int b) {
     return a + b;
@@ -15,9 +17,6 @@ double divide(double a, double b) {
     return a / b;
 }
 
-void print(const std::string &message) {
-    std::cout << message << std::endl;
-}
 
 // 类和方法(成员函数) Demo
 
@@ -52,7 +51,7 @@ struct User {
     }
 
     // TODO FIXME 对 char 等部分类型无效
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(User, id, sex, name, date)
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(User, id, sex, name, date)
 
     bool is_male()
     {
@@ -110,7 +109,7 @@ public:
         return this->content;
     }
 
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(Moment, id, userId, content)
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(Moment, id, userId, content)
 };
 
 Moment newMoment(long id) {
@@ -125,28 +124,37 @@ User newUser(long id, std::string name) {
 }
 
 
-
 // 自定义类型示例
 struct Person {
     std::string name;
     int age;
 
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(Person, name, age)
+    static bool testStatic() {
+        return true;
+    }
+
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(Person, name, age)
 };
 
 
- int test() {
-    // 示例值
-    std::any ret = Person{"Alice", 30};
-    auto type = typeid(ret).name();
+static int compare(User u, User u2) {
+    if (u.id < u2.id) {
+        return -1;
+    }
 
-    unitauto::add_struct<Person>("Person");
+    if (u.id > u2.id) {
+        return 1;
+    }
 
-    // 执行函数
+    return 0;
+}
+
+// 模拟你的业务项目中需要测试的函数、自定义类型等 >>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+// 测试 UnitAuto 功能
+int test() {
     try {
         //显式转换字符串字面量为 std::string
-        unitauto::invoke("print", {std::string("Hello, UnitAuto C++ !")});
-
         auto ret = unitauto::invoke("add", {1, 2});
         std::cout << "invoke(\"add\", {1, 2}) = " << std::any_cast<int>(ret) << std::endl;
 
@@ -174,74 +182,66 @@ struct Person {
         auto dr = unitauto::invoke("unitauto.test.divide", v);
         std::cout << "invoke(\"unitauto.test.divide\", {3.08, 0.5}) = " << std::any_cast<double>(dr) << std::endl;
     } catch (const std::exception e) {
-        std::cerr << "Exception: " << e.what() << std::endl;
+        unitauto::printlnErr("Exception: ", e.what());
     }
 
     std::string str = R"({"id":1, "sex":1, "name":"John Doe", "date":1705293785163})";
     json j = json::parse(str);
 
     User u = j.get<User>();
-    void* obj;
+    User* userPtr;
     try {
-        obj = unitauto::json_2_obj(j, "User");
+        // obj = unitauto::json_2_obj(j, "User");
+        userPtr = unitauto::json_2_obj<User>(j, "User");
     } catch (const std::exception& e) {
-        std::cerr << "json 2 obj failed:" << e.what() << std::endl;
+        unitauto::printlnErr("json_2_obj<User> failed:", e.what());
+        try {
+            // obj = unitauto::json_2_obj(j, "User");
+            User user = unitauto::json_2_val<User>(j, "User");
+            userPtr = &user;
+        } catch (const std::exception& e2) {
+            unitauto::printlnErr("json_2_val<User> failed:", e2.what());
+        }
     }
 
-    User* userPtr = static_cast<User*>(obj);
     if (userPtr) {
-        std::cout << "\nUser: {" << std::endl;
-        std::cout << "  id: " << userPtr->id << std::endl;
-        std::cout << "  sex: " << userPtr->sex << std::endl;
-        std::cout << "  name: " << userPtr->name << std::endl;
-        std::cout << "  date: " << userPtr->date << std::endl;
-        std::cout << "}" << userPtr->id << std::endl;
+        unitauto::println("\nUser: {");
+        unitauto::println("  id: ", userPtr->id);
+        unitauto::println("  sex: ", userPtr->sex);
+        unitauto::println("  name: ", userPtr->name);
+        unitauto::println("  date: ", userPtr->date);
+        unitauto::println("}");
 
         // malloc: *** error for object 0x16cf96110: pointer being freed was not allocated unitauto::del_obj<User>(obj);
     } else {
-        std::cerr << "Type match error, have u added type with add_type?" << std::endl;
+        unitauto::printlnErr("Type match error, have u added type with add_type?");
     }
-
-
-    // json result;
-    // result["code"] = 200;
-    // result["msg"] = "success";
-    // result["type"] = type;
-    // result["return"] = unitauto::any_to_json(ret);
-    // result["methodArgs"] = json::array({{{"type", "long"}, {"value", 1}}, {{"type", "long"}, {"value", 2}}});
-
-    // std::cout << "\n\ntest return " << result.dump(4) << std::endl;
 
     return 0;
 }
 
-static int compare(User u, User u2) {
-     if (u.id < u2.id) {
-         return -1;
-     }
 
-     if (u.id > u2.id) {
-         return 1;
-     }
-
-     return 0;
- }
-
-
+// 点左侧运行按钮 运行/调试
 int main() {
     unitauto::DEFAULT_MODULE_PATH = "unitauto"; // TODO 改为你项目的默认包名
 
     // 注册函数
-    UNITAUTO_ADD_FUNC(print, add, divide, newMoment, unitauto::test::divide, unitauto::test::contains, unitauto::test::index, unitauto::test::is_contain, unitauto::test::index_of);
+    UNITAUTO_ADD_FUNC(add, divide, newMoment, unitauto::test::divide, unitauto::test::contains, unitauto::test::index, unitauto::test::is_contain, unitauto::test::index_of);
 
     // 注册类型(class/struct)及方法(成员函数)
     UNITAUTO_ADD_METHOD(Moment, &Moment::getId, &Moment::setId, &Moment::getUserId, &Moment::setUserId, &Moment::getContent, &Moment::setContent);
     UNITAUTO_ADD_METHOD(User, &User::getId, &User::setId, &User::getName, &User::setName, &User::getDate, &User::setDate);
     UNITAUTO_ADD_METHOD(unitauto::test::TestUtil, &unitauto::test::TestUtil::divide);
+    // UNITAUTO_ADD_METHOD(Person, Person::testStatic);
+
+    // 自定义注册类型
+    unitauto::add_struct<Person>("Person");
 
     // 自定义注册函数路径
-    unitauto::add_func("main.newMoment", std::function<Moment(long)>(newMoment));
-    unitauto::add_func("main.newUser", std::function<User(long, std::string)>(newUser));
+    unitauto::add_func("main.newMoment", std::function(newMoment));
+    unitauto::add_func("main.newUser", std::function(newUser));
+    unitauto::add_func("main.compare", std::function(compare));
+    unitauto::add_func("Person.testStatic", std::function(Person::testStatic));
 
     // 自定义注册方法(成员函数)路径
     User user = User();
@@ -260,7 +260,12 @@ int main() {
     // unitauto::add_func("unitauto.test.TestUtil.divide", (unitauto::test::TestUtil *) nullptr, &unitauto::test::TestUtil::divide);
 
     test();
-    unitauto::add_func("main.compare", std::function<int(User,User)>(compare));
+
+    unitauto::println("\n\nUnitAuto-最先进、最省事、ROI 最高的单元测试，机器学习 零代码、全方位、自动化 测试 方法/函数");
+    unitauto::println("https://github.com/TommyLemon/UnitAuto");
+    unitauto::println("https://gitee.com/TommyLemon/UnitAuto");
+    unitauto::println("打开以下链接开始 零代码单元测试 吧 ^_^");
+    unitauto::println("http://apijson.cn/unit/?language=C++&host=http://localhost:8084");
 
     unitauto::start(8084);
 

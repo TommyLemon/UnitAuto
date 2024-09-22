@@ -40,7 +40,7 @@ var CodeUtil = {
   LANGUAGE_OBJECTIVE_C: 'Objective-C',
 
   LANGUAGE_GO: 'Go',
-  LANGUAGE_C_PLUS_PLUS: 'C++',
+  LANGUAGE_CPP: 'C++',
 
   LANGUAGE_TYPE_SCRIPT: 'TypeScript',
   LANGUAGE_JAVA_SCRIPT: 'JavaScript',
@@ -1525,7 +1525,7 @@ var CodeUtil = {
 
             for (var i = 0; i < value.length; i++) {
               if (value[i] instanceof Object == false) {
-                inner += '\n' + nextPrefix + varName + '.PushBack(' + CodeUtil.getCode4Value(CodeUtil.LANGUAGE_C_PLUS_PLUS, value[i]) + ', allocator);';
+                inner += '\n' + nextPrefix + varName + '.PushBack(' + CodeUtil.getCode4Value(CodeUtil.LANGUAGE_CPP, value[i]) + ', allocator);';
               }
               else {
                 inner += '\n\n' + nextPrefix + '{   ' + '// ' + key + '[' + i + '] <<<<<<<<<<<<<<<<<<<<<<<<<<<<<';
@@ -1539,7 +1539,7 @@ var CodeUtil = {
                   inner += '//FIXME 这里不可能出现 value[' + i + '] 类型为 ' + (typeof value[i]) + '！'; //不可能
                 }
 
-                inner += CodeUtil.getCode4Value(CodeUtil.LANGUAGE_C_PLUS_PLUS, value[i], itemName, depth + 1, isSmart, true, CodeUtil.parseCppRequest);
+                inner += CodeUtil.getCode4Value(CodeUtil.LANGUAGE_CPP, value[i], itemName, depth + 1, isSmart, true, CodeUtil.parseCppRequest);
                 inner += '\n' + innerPrefix + varName + '.PushBack(' + itemName + ', allocator);';
                 inner += '\n' + nextPrefix + '}   ' + '// ' + key + '[' + i + '] >>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n';
               }
@@ -1568,7 +1568,7 @@ var CodeUtil = {
           if (value instanceof Array) {
             return this.onParseArray(key, value, index, isOuter);
           }
-          return '\n' + prefix + parentKey + '.AddMember("' + key + '", ' + CodeUtil.getCode4Value(CodeUtil.LANGUAGE_C_PLUS_PLUS, value) + ', allocator);';
+          return '\n' + prefix + parentKey + '.AddMember("' + key + '", ' + CodeUtil.getCode4Value(CodeUtil.LANGUAGE_CPP, value) + ', allocator);';
         }
       })
 
@@ -5316,7 +5316,7 @@ res_data = rep.json()
 
         case CodeUtil.LANGUAGE_GO:
           return 'nil';
-        case CodeUtil.LANGUAGE_C_PLUS_PLUS:
+        case CodeUtil.LANGUAGE_CPP:
           return 'Value().Move()'; //报错：AddMemeber 不允许 NULL ！ 'NULL';
 
         case CodeUtil.LANGUAGE_TYPE_SCRIPT:
@@ -5343,7 +5343,7 @@ res_data = rep.json()
           break;
 
         case CodeUtil.LANGUAGE_GO:
-        case CodeUtil.LANGUAGE_C_PLUS_PLUS:
+        case CodeUtil.LANGUAGE_CPP:
           break;
 
         //以下都不需要解析，直接用左侧的 JSON
@@ -5370,7 +5370,7 @@ res_data = rep.json()
           break;
 
         case CodeUtil.LANGUAGE_GO:
-        case CodeUtil.LANGUAGE_C_PLUS_PLUS:
+        case CodeUtil.LANGUAGE_CPP:
           break;
 
         case CodeUtil.LANGUAGE_TYPE_SCRIPT:
@@ -5701,7 +5701,7 @@ res_data = rep.json()
    * @param saveLength
    */
   getCppType: function(type, saveLength) {
-    return CodeUtil.getType4Language(CodeUtil.LANGUAGE_C_PLUS_PLUS, type, saveLength);
+    return CodeUtil.getType4Language(CodeUtil.LANGUAGE_CPP, type, saveLength);
   },
   getType4Language: function(language, type, saveLength) {
     log(CodeUtil.TAG, 'getJavaType  type = ' + type + '; saveLength = ' + saveLength);
@@ -5772,7 +5772,7 @@ res_data = rep.json()
 
       case CodeUtil.LANGUAGE_GO:
         return 'interface{}' + length;
-      case CodeUtil.LANGUAGE_C_PLUS_PLUS:
+      case CodeUtil.LANGUAGE_CPP:
         return 'GenericValue';
 
       case CodeUtil.LANGUAGE_TYPE_SCRIPT:
@@ -5799,7 +5799,7 @@ res_data = rep.json()
         return 'bool' + length;
 
       case CodeUtil.LANGUAGE_GO:
-      case CodeUtil.LANGUAGE_C_PLUS_PLUS:
+      case CodeUtil.LANGUAGE_CPP:
         return 'bool' + length;
 
       case CodeUtil.LANGUAGE_TYPE_SCRIPT:
@@ -5829,7 +5829,7 @@ res_data = rep.json()
 
 
       case CodeUtil.LANGUAGE_GO:
-      case CodeUtil.LANGUAGE_C_PLUS_PLUS:
+      case CodeUtil.LANGUAGE_CPP:
         return 'int' + length;
 
       case CodeUtil.LANGUAGE_TYPE_SCRIPT:
@@ -5858,7 +5858,7 @@ res_data = rep.json()
 
       case CodeUtil.LANGUAGE_GO:
         return 'int64' + length;
-      case CodeUtil.LANGUAGE_C_PLUS_PLUS:
+      case CodeUtil.LANGUAGE_CPP:
         return 'long' + length;
 
       case CodeUtil.LANGUAGE_TYPE_SCRIPT:
@@ -5888,7 +5888,7 @@ res_data = rep.json()
 
       case CodeUtil.LANGUAGE_GO:
         return 'float64' + length;
-      case CodeUtil.LANGUAGE_C_PLUS_PLUS:
+      case CodeUtil.LANGUAGE_CPP:
         return 'double' + length;
 
       case CodeUtil.LANGUAGE_TYPE_SCRIPT:
@@ -5915,7 +5915,7 @@ res_data = rep.json()
         return 'NSString' + length;
 
       case CodeUtil.LANGUAGE_GO:
-      case CodeUtil.LANGUAGE_C_PLUS_PLUS:
+      case CodeUtil.LANGUAGE_CPP:
         return 'string' + length;
 
       case CodeUtil.LANGUAGE_TYPE_SCRIPT:
@@ -5945,7 +5945,7 @@ res_data = rep.json()
 
       case CodeUtil.LANGUAGE_GO:
         return 'time.Time' + length;
-      case CodeUtil.LANGUAGE_C_PLUS_PLUS:
+      case CodeUtil.LANGUAGE_CPP:
         return 'tm' + length;
 
       case CodeUtil.LANGUAGE_JAVA_SCRIPT:
@@ -5975,7 +5975,7 @@ res_data = rep.json()
 
       case CodeUtil.LANGUAGE_GO:
         return 'time.Time' + length;
-      case CodeUtil.LANGUAGE_C_PLUS_PLUS:
+      case CodeUtil.LANGUAGE_CPP:
         return 'time_t' + length;
 
       case CodeUtil.LANGUAGE_JAVA_SCRIPT:
@@ -6005,7 +6005,7 @@ res_data = rep.json()
 
       case CodeUtil.LANGUAGE_GO:
         return 'map[string]interface{}';
-      case CodeUtil.LANGUAGE_C_PLUS_PLUS:
+      case CodeUtil.LANGUAGE_CPP:
         return 'map<string, object>';
 
       case CodeUtil.LANGUAGE_JAVA_SCRIPT:
@@ -6037,7 +6037,7 @@ res_data = rep.json()
 
       case CodeUtil.LANGUAGE_GO:
         return '[]interface{}';
-      case CodeUtil.LANGUAGE_C_PLUS_PLUS:
+      case CodeUtil.LANGUAGE_CPP:
         return 'vector<object>';
 
       case CodeUtil.LANGUAGE_JAVA_SCRIPT:
