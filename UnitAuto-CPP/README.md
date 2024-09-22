@@ -30,17 +30,21 @@ https://cloud.tencent.com/developer/news/1309383
 #### 1. Copy & Paste method_util.hpp to your project
 https://github.com/TommyLemon/unitauto-cpp/blob/main/unitauto/method_util.hpp
 
+<br />
+
 #### 2. 注册类型(class/strcut)和函数
 #### 2. Register type(class/strcut) and function
-由于 C++ 的语言限制，目前做不到像 Java, Kotlin 版几乎绝对零代码，还需要注册 func 和 struct/class 的实例。
+由于 C++ 的语言限制，目前做不到像 Java, Kotlin 版几乎绝对零代码，还需要注册 func 和 struct/class 的实例。<br />
 Due to the limitation of C++, it's not almost absolutely coding free like Java and Kotlin, <br />
 and you need to write few code to register the funcs and structs to be tested. <br />
 https://github.com/TommyLemon/unitauto-cpp/blob/main/main.cpp#L226-L260
 ```c++
-    // 注册普通函数
+    // 注册普通函数，多个可以一起合并注册，超过 64 个可以分拆成多次调用
+    // Multiple functions(<= 64) can be register on one call
     UNITAUTO_ADD_FUNC(add, divide, newMoment, unitauto::test::divide);
 
     // 注册类型(class/struct)及方法(成员函数)
+    // Register type(class/struct) and method(member function)
     UNITAUTO_ADD_METHOD(Moment, &Moment::getId, &Moment::setId, &Moment::getUserId, &Moment::setUserId, &Moment::getContent, &Moment::setContent);
     UNITAUTO_ADD_METHOD(User, &User::getId, &User::setId, &User::getName, &User::setName, &User::getDate, &User::setDate);
     UNITAUTO_ADD_METHOD(unitauto::test::TestUtil, &unitauto::test::TestUtil::divide);
