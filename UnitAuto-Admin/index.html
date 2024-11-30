@@ -908,8 +908,8 @@ fun(true, 1, 'a'..);
 <script type="text/x-template" id="val-template">
     <div class="keyval">
         <template v-if="!isObjectArr(val)">
-      <span class="key hint--top-right hint--rounded hint--no-animate" v-show="field" :style="{color: theme.key}"
-            ref="responseKey" @mouseover="setResponseHint(val, field, $event)">"{{field}}": </span>
+            <span class="key hint--top-right hint--rounded hint--no-animate" v-show="field" :style="{color: theme.key}"
+                ref="responseKey" @mouseover="setResponseHint(val, field, $event)">"{{field}}": </span>
 
             <span  :class="'val val-' + getTyp(val, field)" :style="{color: theme[getTyp(val)]}">
             <span v-if="!isaLink(val)">{{formatVal(val)}}</span>
@@ -921,8 +921,8 @@ fun(true, 1, 'a'..);
 
         <!--key + 展开折叠ICON-->
         <template v-if="isObjectArr(val)">
-      <span class="key hint--right hint--rounded hint--no-animate" :style="{color: theme.key}" v-show="field"
-            ref="responseKey" @mouseover="setResponseHint(val, field, $event)">"{{field}}": </span>
+            <span class="key hint--right hint--rounded hint--no-animate" :style="{color: theme.key}" v-show="field"
+                ref="responseKey" @mouseover="setResponseHint(val, field, $event)">"{{field}}": </span>
             <vue-expand></vue-expand>
         </template>
 

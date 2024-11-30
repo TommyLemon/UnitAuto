@@ -26,9 +26,14 @@ https://cloud.tencent.com/developer/news/1309383
 
 <br />
 
-#### 1. 复制粘贴 method_util.hpp 到你的项目
-#### 1. Copy & Paste method_util.hpp to your project
+#### 1. 复制粘贴 method_util.hpp & nlohmann/json.hpp 到你的项目
+#### 1. Copy & Paste method_util.hpp & nlohmann/json.hpp to your project
 https://github.com/TommyLemon/unitauto-cpp/blob/main/unitauto/method_util.hpp
+<br />
+
+如果这个文件已经在你的项目中，只需要在 method_util.hpp 修正 #include "[nlohmann/json.hpp](https://github.com/nlohmann/json)" 为正确的路径  <br />
+If this file already exists in your project, you need to correct #include "[nlohmann/json.hpp](https://github.com/nlohmann/json)" in method_util.hpp instead
+https://github.com/TommyLemon/unitauto-cpp/blob/main/unitauto/nlohmann/json.hpp
 
 <br />
 
@@ -38,6 +43,34 @@ https://github.com/TommyLemon/unitauto-cpp/blob/main/unitauto/method_util.hpp
 Due to the limitation of C++, it's not almost absolutely coding free like Java and Kotlin, <br />
 and you need to write few code to register the funcs and structs to be tested. <br />
 https://github.com/TommyLemon/unitauto-cpp/blob/main/main.cpp#L226-L260
+<br />
+
+class: UNITAUTO_ADD_CLASS, eg: Moment
+```c++
+class Moment {
+public:
+    long id;
+    long userId;
+    std::string content;
+
+    UNITAUTO_ADD_CLASS(Moment, id, userId, content)
+};
+```
+<b />
+
+struct: UNITAUTO_ADD_STRUCT, eg: User
+```c++
+struct User {
+    int id;
+    std::string name;
+    std::time_t date;
+
+    UNITAUTO_ADD_STRUCT(User, id, name, date)
+};
+```
+<b />
+
+static function: UNITAUTO_ADD_FUNC, method(member function): UNITAUTO_ADD_METHOD
 ```c++
     // 注册普通函数，多个可以一起合并注册，超过 64 个可以分拆成多次调用
     // Multiple functions(<= 64) can be register on one call
