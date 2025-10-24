@@ -1,6 +1,6 @@
 # unitauto-rust
-UnitAuto Rust 库，可通过 GitHub 仓库等远程依赖。<br />
-UnitAuto Rust Library for remote dependencies with GitHub repo, etc.
+UnitAuto Rust 库。<br />
+UnitAuto Rust Library, etc.
 
 <img width="1530" height="405" alt="image" src="https://github.com/user-attachments/assets/36f0a2ad-8219-482a-9312-5d9123289557" />
 <img width="1532" height="970" alt="image" src="https://github.com/user-attachments/assets/cea94bfc-59ff-44ca-a881-285b291e3fd8" />
