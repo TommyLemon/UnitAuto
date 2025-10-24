@@ -1,4 +1,4 @@
-# unitauto-rust <img src="https://img.shields.io/badge/C%2B%2B-17%2B-brightgreen.svg?style=flat"></a>
+# unitauto-rust
 UnitAuto Rust 库，可通过 GitHub 仓库等远程依赖。<br />
 UnitAuto Rust Library for remote dependencies with GitHub repo, etc.
 
