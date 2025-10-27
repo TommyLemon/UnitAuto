@@ -1,10 +1,8 @@
-mod method_util;
-mod server;
-mod macros;
+mod unitauto;
 
+use unitauto::method_util::*;
+use unitauto::server::*;
 use std::io::Error;
-use method_util::*;
-use server::*;
 
 
 fn no_args() -> String {
