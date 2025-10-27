@@ -2,6 +2,9 @@
 UnitAuto Rust 库。<br />
 UnitAuto Rust Library, etc.
 
+<img width="1531" height="539" alt="image" src="https://github.com/user-attachments/assets/9bb26e67-f5af-4ef4-be37-32148c6b9cf4" />
+<img width="1531" height="967" alt="image" src="https://github.com/user-attachments/assets/4b0a6d70-4dff-4ebf-884b-88c7d8e22f22" />
+
 <img width="1530" height="405" alt="image" src="https://github.com/user-attachments/assets/36f0a2ad-8219-482a-9312-5d9123289557" />
 <img width="1532" height="970" alt="image" src="https://github.com/user-attachments/assets/cea94bfc-59ff-44ca-a881-285b291e3fd8" />
 
@@ -9,7 +12,7 @@ UnitAuto Rust Library, etc.
 
 #### 1. 复制粘贴 method_util.rs, server.rs, macros.rs, lib.rs 等到你的项目
 #### 1. Copy & Paste method_util.rs, server.rs, macros.rs, lib.rs, etc to your project
-https://github.com/TommyLemon/unitauto-rust/blob/main/unitauto/method_util.rust
+https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Rust/src/unitauto/method_util.rs
 <br />
 
 #### 2. 注册类型(class/strcut)和函数
@@ -17,7 +20,7 @@ https://github.com/TommyLemon/unitauto-rust/blob/main/unitauto/method_util.rust
 由于 Rust 的语言限制，目前做不到像 Java, Kotlin 版几乎绝对零代码，还需要注册 func 和 struct/class 的实例。<br />
 Due to the limitation of Rust, it's not almost absolutely coding free like Java and Kotlin, <br />
 and you need to write few code to register the funcs and structs to be tested. <br />
-https://github.com/TommyLemon/unitauto-rust/blob/main/main.rust#L226-L260
+https://github.com/TommyLemon/UnitAuto/blob/master/UnitAuto-Rust/src/main.rs#L67-L73
 <br />
 
 static function: add_function{number of args}
@@ -26,6 +29,7 @@ static function: add_function{number of args}
     add_function0("no_args", || no_args())?;
     add_function1("greet", |args| greet(args))?;
     add_function2("add", |arg0, arg1| add(arg0, arg1))?;
+    add_function2("multiply", |arg0, arg1| multiply(arg0, arg1))?;
 ```
 <br />
 
