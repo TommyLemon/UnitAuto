@@ -8,7 +8,7 @@ use axum::{
 use tower_http::cors::CorsLayer;
 use serde_json::{Value, json};
 use std::net::SocketAddr;
-
+use std::time::{SystemTime, UNIX_EPOCH};
 use crate::unitauto::method_util::*;
 use crate::InvokeRequest;
 
@@ -38,8 +38,6 @@ async fn list_methods(Json(_req): Json<Value>) -> JsonResponse<Value> {
 
 /// 处理方法调用请求
 async fn invoke_method(Json(req): Json<InvokeRequest>) -> JsonResponse<Value> {
-    let start_time = std::time::Instant::now();
-    
     // 确定方法名
     let pkg_name = if let Some(ref pkg) = req.package_name {
         if let Some(ref cls) = req.class {
@@ -55,16 +53,22 @@ async fn invoke_method(Json(req): Json<InvokeRequest>) -> JsonResponse<Value> {
 
     // 获取参数
     let args = req.args.or(req.method_args).unwrap_or_default();
-    
+
+    // let start_time = SystemTime::now(); // std::time::Instant::now();
+    let start_time = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
     // 调用函数
     match invoke_function(&method_name, args.clone()) {
         Ok(result) => {
-            let duration = start_time.elapsed();
-            let time_detail = format!("{}|{}|{}", 
-                start_time.elapsed().as_millis(),
-                duration.as_millis(),
-                start_time.elapsed().as_millis() + duration.as_millis()
-            );
+            let end_time = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis();
+
+            let duration = end_time - start_time;
+            let time_detail = format!("{}|{}|{}", start_time, duration, end_time);
             
             let mut response = create_success_response(Some(result), Some(args), req.this);
             response.time_detail = Some(time_detail);
