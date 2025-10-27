@@ -70,8 +70,9 @@ async fn main() -> Result<(), Error> {
     add_function1("greet2", |args: String| greet(args))?;
     add_function2("add", |arg0, arg1| add(arg0, arg1))?;
     add_function2("add2", |arg0: i32, arg1: i32| add(arg0, arg1))?;
-    // add_function2("multiply", |args: (f64, f64)| multiply(args.0, args.1))?;
-    //
+    add_function2("multiply", |arg0, arg1| multiply(arg0, arg1))?;
+    add_function2("multiply2", |arg0: f64, arg1: f64| multiply(arg0, arg1))?;
+
     // // 注册函数
     // add_function("add", |args: (i32, i32)| args.0 + args.1)?;
     // add_function("multiply", |args: (f64, f64)| args.0 * args.1)?;
