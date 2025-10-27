@@ -17,7 +17,7 @@ pub async fn start_server(port: u16) -> Result<(), Error> {
     let app = Router::new()
         .route("/method/list", post(list_methods))
         .route("/method/invoke", post(invoke_method))
-        .layer(CorsLayer::permissive());
+        .layer(CorsLayer::very_permissive());
 
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     println!("UnitAuto Rust server listening on {}", addr);

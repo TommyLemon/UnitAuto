@@ -21,13 +21,13 @@ pub struct Response {
     pub code: i32,
     pub msg: String,
     pub language: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "return", skip_serializing_if = "Option::is_none")]
     pub return_value: Option<Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "methodArgs", skip_serializing_if = "Option::is_none")]
     pub method_args: Option<Vec<Value>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub this: Option<Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "time:start|duration|end", skip_serializing_if = "Option::is_none")]
     pub time_detail: Option<String>,
 }
 
@@ -39,9 +39,10 @@ pub struct InvokeRequest {
     pub package_name: Option<String>,
     pub class: Option<String>,
     pub args: Option<Vec<Value>>,
-    #[serde(rename = "args")]
+    #[serde(rename = "methodArgs")]
     pub method_args: Option<Vec<Value>>,
     pub this: Option<Value>,
+    #[serde(rename = "static")]
     pub static_call: Option<bool>,
 }
 
