@@ -1156,7 +1156,7 @@ https://github.com/Tencent/APIJSON/issues
       server: 'http://apijson.cn:9090',  //apijson.cn
       // server: 'http://47.74.39.68:9090',  // apijson.org
       project: 'http://apijson.cn:8080', // 'http://localhost:8081',
-      language: 'Java,Kotlin,Go', // CodeUtil.LANGUAGE_JAVA,
+      language: 'Java,Kotlin,Go,Python,C++,Rust', // CodeUtil.LANGUAGE_JAVA,
       header: {},
       page: 0,
       count: 15,
