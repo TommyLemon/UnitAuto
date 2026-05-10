@@ -58,7 +58,7 @@ var CodeUtil = {
   DATABASE_KINGBASE: 'KINGBASE',
   DATABASE_TIDB: 'TIDB',
   DATABASE_TDENGINE: 'TDENGINE',
-  DATABASE_NEBULA: 'NEBULA',
+  DATABASE_SURREALDB: 'SURREALDB',
   DATABASE_PRESTO: 'PRESTO',
   DATABASE_TRINO: 'TRINO',
   DATABASE_INFLUXDB: 'INFLUXDB',
@@ -68,6 +68,13 @@ var CodeUtil = {
   DATABASE_KAFKA: 'KAFKA',
   DATABASE_MARIADB: 'MARIADB',
   DATABASE_HIVE: 'HIVE',
+  DATABASE_SNOWFLAKE: 'SNOWFLAKE',
+  DATABASE_DATABRICKS: 'DATABRICKS',
+  DATABASE_MILVUS: 'MILVUS',
+  DATABASE_IOTDB: 'IOTDB',
+  DATABASE_DUCKDB: 'DUCKDB',
+  DATABASE_CASSANDRA: 'CASSANDRA',
+  DATABASE_MONGODB: 'MONGODB',
 
   type: 'JSON',
   database: 'MYSQL',
@@ -3770,7 +3777,7 @@ res_data = rep.json()
       delete reqObj.orderBy;
     }
 
-    // var columnStr = (StringUtil.isEmpty(colums, true) ? '' : StringUtil.trim(colums));
+    // var columnStr = (StringUtil.isEmpty(columns, true) ? '' : StringUtil.trim(columns));
     var quote = database == 'MYSQL' ? '`' : '"';
     var tablePath = (StringUtil.isEmpty(schema, true) ? '' : quote + schema + quote + '.') + quote + modelName + quote;
     if (isPost) {
@@ -3789,11 +3796,11 @@ res_data = rep.json()
         '    DELETE FROM ' + tablePath;
     }
     else {
-      var colums = Object.keys(reqObj);
+      var columns = Object.keys(reqObj);
       var cs = '';
-      if (colums != null && colums.length > 0) {
-        for (var i = 0; i < colums.length; i++) {
-          cs += (i <= 0 ? '' : ', ') + quote + colums[i] + quote; //需要尽可能保留原字段 [] 肯定不是字段名 JSONResponse.getVariableName(colums[i]) + quote;
+      if (columns != null && columns.length > 0) {
+        for (var i = 0; i < columns.length; i++) {
+          cs += (i <= 0 ? '' : ', ') + quote + columns[i] + quote; //需要尽可能保留原字段 [] 肯定不是字段名 JSONResponse.getVariableName(columns[i]) + quote;
         }
       }
 
@@ -6219,7 +6226,7 @@ res_data = rep.json()
     OWNER: '拥有者',
     ADMIN: '管理员'
   },
-  DATABASE_KEYS: ['MYSQL', 'POSTGRESQL', 'SQLSERVER', 'ORACLE', 'DB2', 'DAMENG', 'KINGBASE', 'MARIADB', 'SQLITE', 'INFLUXDB', 'TDENGINE', 'PRESTO', 'TRINO', 'HIVE', 'TIDB', 'CLICKHOUSE', 'ELASTICSEARCH', 'REDIS'], // , 'KAFKA'],
+  DATABASE_KEYS: ['MYSQL', 'POSTGRESQL', 'SQLSERVER', 'ORACLE', 'DB2', 'DAMENG', 'KINGBASE', 'MARIADB', 'SQLITE', 'INFLUXDB', 'TDENGINE', 'PRESTO', 'TRINO', 'HIVE', 'TIDB', 'CLICKHOUSE', 'ELASTICSEARCH', 'REDIS', 'IOTDB', 'SURREALDB', 'DUCKDB', 'CASSANDRA', 'MONGODB', 'SNOWFLAKE', 'DATABRICKS', 'MILVUS'], // , 'KAFKA'],
 
   getComment4Function: function (funCallStr, method, language) {
     if (typeof funCallStr != 'string') {
