@@ -555,13 +555,11 @@ https://github.com/TommyLemon/APIAuto/issues
 
 [APIAuto](https://github.com/TommyLemon/APIAuto) ☔ 敏捷开发最强大易用的接口工具，零代码测试与 AI 问答、生成代码与静态检查、生成文档与光标悬浮注释，腾讯、华为、SHEIN、传音、工行等使用
 
+[AutoUI](https://github.com/TommyLemon/AutoUI) 📱 AI 零代码快准稳 UI 自动化测试平台 🚀 3 像素内精准定位，2 毫秒内精准等待，自动断言 UI 和数据、界定前/后端 bug
+
 [CVAuto](https://github.com/TommyLemon/CVAuto) 👁 零代码零标注 CV AI 自动化测试平台 🚀 免除大量人工画框和打标签等，直接快速测试 CV 计算机视觉 AI 图像识别算法
 
 [SQLAuto](https://github.com/TommyLemon/SQLAuto) 智能零代码自动化测试 SQL 数据库工具，任意增删改查、任意 SQL 模板变量、一键批量生成参数组合、快速构造大量测试数据
-
-[UIGO](https://github.com/TommyLemon/UIGO) 📱 零代码快准稳 UI 智能录制回放平台 🚀 3 像素内自动精准定位，2 毫秒内自动精准等待，用户包含腾讯，微信团队邀请分享
-
-[UIGOX](https://github.com/TommyLemon/UIGOX) UIGO 的 AndroidX 版 📱 零代码快准稳 UI 智能录制回放平台 🚀 3 像素内自动精准定位，2 毫秒内自动精准等待
 
 [apijson-doc](https://github.com/vincentCheng/apijson-doc) APIJSON 官方文档，提供排版清晰、搜索方便的文档内容展示，包括设计规范、图文教程等
 
