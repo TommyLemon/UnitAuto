@@ -555,7 +555,7 @@ https://github.com/TommyLemon/APIAuto/issues
 
 [APIAuto](https://github.com/TommyLemon/APIAuto) ☔ 敏捷开发最强大易用的接口工具，零代码测试与 AI 问答、生成代码与静态检查、生成文档与光标悬浮注释，腾讯、华为、SHEIN、传音、工行等使用
 
-[AutoUI](https://github.com/TommyLemon/AutoUI) 📱 AI 零代码快准稳 UI 自动化测试平台 🚀 3 像素内精准定位，2 毫秒内精准等待，自动断言 UI 和数据、界定前/后端 bug
+[AutoUI](https://github.com/TommyLemon/AutoUI) 📱 AI 零代码快准稳 UI 自动化测试平台 🚀 3 像素内精准定位，2 毫秒内精准等待，自动断言 UI 和数据、界定前/后端 bug，用户包含腾讯，微信团队邀请分享
 
 [CVAuto](https://github.com/TommyLemon/CVAuto) 👁 零代码零标注 CV AI 自动化测试平台 🚀 免除大量人工画框和打标签等，直接快速测试 CV 计算机视觉 AI 图像识别算法
 
