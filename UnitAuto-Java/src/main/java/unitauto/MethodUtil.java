@@ -778,8 +778,12 @@ public class MethodUtil {
 					String value = index < 0 ? str : str.substring(index + 1);
 					list.add(new Argument(type, value));
 				}
-				else { //null 合法，也要加，按顺序调用的
-					list.add(item == null ? null : JSON.parseObject(JSON.toJSONString(item), Argument.class));
+				else { // null 合法，也要加，按顺序调用的
+					Argument arg = item == null ? null : JSON.parseObject(JSON.toJSONString(item), Argument.class);
+					if (arg != null) {
+						arg.setUndefined(! item.containsKey(KEY_VALUE));
+					}
+					list.add(arg);
 				}
 			}
 		}
@@ -903,7 +907,7 @@ public class MethodUtil {
 	@SuppressWarnings("rawtypes")
 	public static Object getEnumInstance(Class clazz, String name) throws NoSuchFieldException {
 		Object[] constants = clazz == null ? null : clazz.getEnumConstants();
-		if (constants == null || constants.length < 0) {
+		if (constants == null || constants.length <= 0) {
 			return null;
 		}
 		if (StringUtil.isEmpty(name, false)) {
@@ -1320,16 +1324,11 @@ public class MethodUtil {
 			throw new IllegalArgumentException("methodArgs.isEmpty() || types.length != methodArgs.size() || args.length != methodArgs.size() !");
 		}
 
-		Argument argObj;
-
-		String typeName;
-		Class<?> type;
-		Object value;
 		for (int i = 0; i < methodArgs.size(); i++) {
-			argObj = methodArgs.get(i);
+			Argument argObj = methodArgs.get(i);
 
-			typeName = argObj == null ? null : argObj.getType();
-			value = argObj == null ? null : argObj.getValue();
+			String typeName = argObj == null ? null : argObj.getType();
+			Object value = argObj == null ? null : argObj.getValue();
 
 			//			if (typeName != null && value != null && value.getClass().equals(CLASS_MAP.get(typeName)) == false) {
 			////				if ("double".equals(typeName)) {
@@ -1342,9 +1341,9 @@ public class MethodUtil {
 			////				}
 			//			}
 
-			type = getType(typeName, value, defaultType);
+			Class<?> type = getType(typeName, value, defaultType);
 
-			if (value == null) {
+			if (value == null && Boolean.TRUE.equals(argObj.getUndefined())) {
 				try {
 					value = INSTANCE_GETTER.getInstance(type, null, argObj.getReuse());
 				}
@@ -2299,6 +2298,7 @@ public class MethodUtil {
 		private Boolean reuse;
 		private String type;
 		private Object value;
+		private Boolean undefined;
 		private Boolean global;
 
 		public Argument() {
@@ -2327,6 +2327,12 @@ public class MethodUtil {
 		}
 		public void setValue(Object value) {
 			this.value = value;
+		}
+		public Boolean getUndefined() {
+			return undefined;
+		}
+		public void setUndefined(Boolean undefined) {
+			this.undefined = undefined;
 		}
 		public Boolean getGlobal() {
 			return global;
