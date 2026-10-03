@@ -1517,9 +1517,6 @@ public class MethodUtil {
 				return String.valueOf(cs);
 			}
 
-			if (Date.class.isAssignableFrom(type)) {
-				return new java.sql.Date((long) (System.currentTimeMillis() * r));
-			}
 			if (Time.class.isAssignableFrom(type)) {
 				return new Time((long) (System.currentTimeMillis() * r));
 			}
@@ -1533,7 +1530,7 @@ public class MethodUtil {
 			// JDK 1.8+
 			if (ChronoLocalDateTime.class.isAssignableFrom(type)) {
 				Date d = new Date((long) (System.currentTimeMillis() * r));
-				return LocalDateTime.of(d.getYear(), d.getMonth(), d.getDay(), d.getHours(), d.getMinutes(), d.getSeconds());
+				return LocalDateTime.of(d.getYear(), d.getMonth(), d.getDayOfMonth(), d.getHours(), d.getMinutes(), d.getSeconds());
 			}
 			if (ChronoLocalDate.class.isAssignableFrom(type)) {
 				Date d = new Date((long) (System.currentTimeMillis() * r));
@@ -1543,7 +1540,10 @@ public class MethodUtil {
 				Date d = new Date((long) (System.currentTimeMillis() * r));
 				return LocalTime.of(d.getHours(), d.getMinutes(), d.getSeconds());
 			}
-
+			if (Date.class.isAssignableFrom(type)) {
+				return new java.sql.Date((long) (System.currentTimeMillis() * r));
+			}
+			
 			if (Map.class.isAssignableFrom(type)) {
 				JSONObject obj = new JSONObject(true);
 
