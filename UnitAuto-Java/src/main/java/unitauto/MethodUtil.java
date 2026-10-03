@@ -790,7 +790,7 @@ public class MethodUtil {
 				else { // null 合法，也要加，按顺序调用的
 					Argument arg = item == null ? null : JSON.parseObject(JSON.toJSONString(item), Argument.class);
 					if (arg != null) {
-						arg.setUndefined(! item.containsKey(KEY_VALUE));
+						arg.setUndefined(! ((Map<?, ?>) item).containsKey(KEY_VALUE));
 					}
 					list.add(arg);
 				}
