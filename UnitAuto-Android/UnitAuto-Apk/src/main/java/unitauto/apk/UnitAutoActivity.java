@@ -45,6 +45,7 @@ import com.koushikdutta.async.http.server.HttpServerRequestCallback;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -76,31 +77,44 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
 
 
     private static AsyncHttpServer server = new AsyncHttpServer();
+    public static AsyncHttpServer getServer() {
+        return server;
+    }
+
     private static AsyncServer mAsyncServer = new AsyncServer();
+    public static AsyncServer getAsyncServer() {
+        return mAsyncServer;
+    }
 
     private Activity context;
     private boolean isAlive;
 
-    private static TextView tvUnitRequest;  // server 回调方法 onRequest 内只能访问到初始化时的变量及 static 变量
-    private static TextView tvUnitResponse;
+    protected TextView tvUnitStart;
+    protected static TextView tvUnitRequest;  // server 回调方法 onRequest 内只能访问到初始化时的变量及 static 变量
+    protected static TextView tvUnitResponse;
 
     private TextView tvUnitOrient;
     private TextView tvUnitIP;
     private TextView etUnitPort;
     private View pbUnit;
 
-    SharedPreferences cache;
+    protected SharedPreferences cache;
 
-    File parentDirectory;
+    protected File parentDirectory;
+
+    protected int getLayoutResId() {
+        return R.layout.unit_auto_activity;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
-        setContentView(R.layout.unit_auto_activity);
+        setContentView(getLayoutResId());
         context = this;
         isAlive = true;
 
-
+        tvUnitStart = findViewById(R.id.tvUnitStart);
         tvUnitRequest = findViewById(R.id.tvUnitRequest);
         tvUnitResponse = findViewById(R.id.tvUnitResponse);
 
@@ -113,8 +127,8 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
         cache = getSharedPreferences(TAG, Context.MODE_PRIVATE);
         port = cache.getString(KEY_PORT, "");
 
-        etUnitPort.setText(port);
         setIp();
+        etUnitPort.setText(port);
 
         getWindow().getDecorView().addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
             @Override
@@ -134,6 +148,7 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
 
     }
 
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -141,6 +156,8 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
 
         etUnitPort.setEnabled(! mAsyncServer.isRunning());
         pbUnit.setVisibility(mAsyncServer.isRunning() ? View.VISIBLE : View.GONE);
+        tvUnitStart.setText(mAsyncServer.isRunning() ? R.string.stop : R.string.start);
+
         setIp();
     }
 
@@ -234,7 +251,7 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
                             }
                         }
                     });
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     e.printStackTrace();
                 }
             }
@@ -262,7 +279,7 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
                     return ip;
                 }
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             e.printStackTrace();
         }
         // return connectIpList;
@@ -319,7 +336,7 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
     //                 }
     //             }
     //         }
-    //     } catch (Exception e) {
+    //     } catch (Throwable e) {
     //         Log.e("test", "Error configuring interface :" + e);
     //         return null;
     //     }
@@ -369,7 +386,7 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
     //         }
     //         ifcg.clearFlag("running");
     //         mNMService.setInterfaceConfig(mIfaceName, ifcg);
-    //     } catch (Exception e) {
+    //     } catch (Throwable e) {
     //         mLog.e("Error configuring interface " + e);
     //         return false;
     //     }
@@ -416,17 +433,28 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
     }
 
 
+    public void onClickStart(View v) {
+        if (mAsyncServer.isRunning()) {
+            stop(v);
+            return;
+        }
+
+        start(v);
+    }
+
     public void start(View v) {
         v.setEnabled(false);
+        ip(v); // copyText(context, "http://" + StringUtil.getTrimedString(tvUnitIP) + getPort());
 
         try {
             startServer(Integer.valueOf(getPort()));
 
             etUnitPort.setEnabled(false);
             pbUnit.setVisibility(View.VISIBLE);
+            tvUnitStart.setText(mAsyncServer.isRunning() ? R.string.stop : R.string.start);
 
             Toast.makeText(context, R.string.please_send_request_with_unit_auto, Toast.LENGTH_LONG).show();
-        } catch (Exception e) {  // FIXME 端口异常 catch 不到
+        } catch (Throwable e) {  // FIXME 端口异常 catch 不到
             Toast.makeText(context, e.getMessage(), Toast.LENGTH_LONG).show();
         }
         v.setEnabled(true);
@@ -440,26 +468,30 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
 
             etUnitPort.setEnabled(true);
             pbUnit.setVisibility(View.GONE);
-        } catch (Exception e) {
+            tvUnitStart.setText(mAsyncServer.isRunning() ? R.string.stop : R.string.start);
+        } catch (Throwable e) {
             Toast.makeText(context, e.getMessage(), Toast.LENGTH_LONG).show();
         }
         v.setEnabled(true);
     }
 
 
-    private void startServer(int port) {
+    public void startServer(int port) {
         server.addAction("OPTIONS", "[\\d\\D]*", this);
 //        server.get("[\\d\\D]*", this);
 //        server.post("[\\d\\D]*", this);
         server.get("/", this);
         server.post("/method/list", this);
         server.post("/method/invoke", this);
+        server.post("/login", this);
+        server.post("/logout", this);
         server.post("/upload", this);
         server.get("/download", this);
         server.post("/uploadTo", this);
         server.get("/downloadFrom", this);
         server.listen(mAsyncServer, port);
     }
+
 
     @Override
     public void onRequest(final AsyncHttpServerRequest asyncHttpServerRequest, final AsyncHttpServerResponse asyncHttpServerResponse) {
@@ -496,7 +528,7 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
                         tvUnitRequest.setText(StringUtil.getString(asyncHttpServerRequest) + "Content:\n" + JSON.format(request));   //批量跑测试容易卡死，也没必要显示所有的，专注更好  + "\n\n\n\n\n" + StringUtil.getString(tvUnitRequest));
                         // 导致向上滚回到顶部 tvUnitResponse.setText("...");  // 等待处理中
                     }
-                    catch (Exception e) {
+                    catch (Throwable e) {
                         e.printStackTrace();
                     }
                 }
@@ -510,128 +542,152 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
                 return;
             }
 
-            switch (asyncHttpServerRequest.getPath()) {
-                case "/":
-                    send(asyncHttpServerRequest, asyncHttpServerResponse, request, "ok");
-                    break;
-                case "/method/list":
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            send(asyncHttpServerRequest, asyncHttpServerResponse, request, MethodUtil.listMethod(request).toJSONString());
-                        }
-                    }).start();
-                    break;
-
-                case "/method/invoke":
-                  final boolean[] called = new boolean[] { false };
-                  final JSONObject reqObj = JSON.parseObject(request);
-                  Runnable runnable = new Runnable() {
-
-                    @Override
-                    public void run() {
-                      MethodUtil.Listener<JSONObject> listener = new MethodUtil.Listener<JSONObject>() {
-
-                        @Override
-                        public void complete(JSONObject data, Method method, MethodUtil.InterfaceProxy proxy, Object... extras) throws Exception {
-                          if (called[0] || asyncHttpServerResponse == null || asyncHttpServerResponse.isOpen() == false) {
-                            Log.w(TAG, "invokeMethod  listener.complete  called[0] || asyncHttpServerResponse == null ||  >> return;");
-                            return;
-                          }
-                          called[0] = true;
-
-                          send(asyncHttpServerRequest, asyncHttpServerResponse, request, data.toJSONString());
-                        }
-                      };
-
-                      try {
-                        MethodUtil.invokeMethod(reqObj, null, listener);
-                      }
-                      catch (Exception e) {
-                        Log.e(TAG, "invokeMethod  try { JSONObject req = JSON.parseObject(request); ... } catch (Exception e) { \n" + e.getMessage());
-                        try {
-                          listener.complete(MethodUtil.JSON_CALLBACK.newErrorResult(e));
-                        }
-                        catch (Exception e1) {
-                          e1.printStackTrace();
-                          send(asyncHttpServerRequest, asyncHttpServerResponse, request, MethodUtil.JSON_CALLBACK.newErrorResult(e1).toJSONString());
-                        }
-                      }
-
-                    }
-                  };
-
-                  Boolean ui = reqObj == null ? null : reqObj.getBoolean("ui");
-                  if (ui == null || ui) {
-                    runOnUiThread(runnable);
-                  }
-                  else {
-                    runnable.run();
-                  }
-
-                  break;
-
-                case "/uploadTo":  //FIXME 需要引入 OKHttp 等库来上传，或者直接 HTTPURLConnection?
-                  // new Thread(new Runnable() {
-                  //   @Override
-                  //   public void run() {
-                  //     try {
-                  //       JSONObject reqObj = JSON.parseObject(request);
-                  //       String fileName = reqObj == null ? null : reqObj.getString("fileName");
-                  //       String targetUrl = reqObj == null ? null : reqObj.getString("targetUrl");
-                  //
-                  //       File file = new File(parentDirectory.getAbsolutePath() + "/" + fileName);
-                  //
-                  //       allHeaders.set("Content-Disposition", String.format("attachment;filename=\"%s", fileName));
-                  //       allHeaders.set("Cache-Control", "no-cache,no-store,must-revalidate");
-                  //       allHeaders.set("Pragma", "no-cache");
-                  //       allHeaders.set("Expires", "0");
-                  //
-                  //       asyncHttpServerResponse.sendFile(file);
-                  //     }
-                  //     catch (Exception e) {
-                  //       e.printStackTrace();
-                  //       send(asyncHttpServerRequest, asyncHttpServerResponse, request, MethodUtil.JSON_CALLBACK.newErrorResult(e).toJSONString());
-                  //     }
-                  //   }
-                  // }).start();
-                  break;
-
-                case "/download":
-                  new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                      try {
-                        Multimap query = asyncHttpServerRequest.getQuery();
-                        String fileName = query == null ? null : query.getString("fileName");
-                        File file = new File(parentDirectory.getAbsolutePath() + "/" + fileName);
-
-                        allHeaders.set("Content-Disposition", String.format("attachment;filename=\"%s", fileName));
-                        allHeaders.set("Cache-Control", "no-cache,no-store,must-revalidate");
-                        allHeaders.set("Pragma", "no-cache");
-                        allHeaders.set("Expires", "0");
-
-                        asyncHttpServerResponse.sendFile(file);
-                      }
-                      catch (Exception e) {
-                        e.printStackTrace();
-                        send(asyncHttpServerRequest, asyncHttpServerResponse, request, MethodUtil.JSON_CALLBACK.newErrorResult(e).toJSONString());
-                      }
-                    }
-                  }).start();
-                  break;
-                default:
-                    asyncHttpServerResponse.end();
-                    break;
-            }
-        } catch (Exception e) {
+           onResponse(asyncHttpServerRequest, asyncHttpServerResponse, reqHeaders, request);
+        } catch (Throwable e) {
             e.printStackTrace();
             send(asyncHttpServerRequest, asyncHttpServerResponse, request, MethodUtil.JSON_CALLBACK.newErrorResult(e).toJSONString());
         }
 
     }
 
-    private void send(final AsyncHttpServerRequest asyncHttpServerRequest, final AsyncHttpServerResponse asyncHttpServerResponse, final String request, final String response) {
+    public void onResponse(AsyncHttpServerRequest asyncHttpServerRequest, AsyncHttpServerResponse asyncHttpServerResponse, Headers reqHeaders, String request) {
+        String path = asyncHttpServerRequest.getPath();
+        switch (path) {
+            case "/":
+                send(asyncHttpServerRequest, asyncHttpServerResponse, request, "ok");
+                break;
+            case "/method/list":
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        send(asyncHttpServerRequest, asyncHttpServerResponse, request, MethodUtil.listMethod(request).toJSONString());
+                    }
+                }).start();
+                break;
+            case "/login":
+            case "/logout":
+            case "/method/invoke":
+                final boolean[] called = new boolean[] { false };
+                final JSONObject reqObj = JSON.parseObject(request);
+
+                Runnable runnable = new Runnable() {
+
+                    @Override
+                    public void run() {
+                        MethodUtil.Listener<JSONObject> listener = new MethodUtil.Listener<JSONObject>() {
+
+                            @Override
+                            public void complete(JSONObject data, Method method, MethodUtil.InterfaceProxy proxy, Object... extras) throws Exception {
+                                if (called[0] || asyncHttpServerResponse == null || asyncHttpServerResponse.isOpen() == false) {
+                                    Log.w(TAG, "invokeMethod  listener.complete  called[0] || asyncHttpServerResponse == null ||  >> return;");
+                                    return;
+                                }
+                                called[0] = true;
+
+                                send(asyncHttpServerRequest, asyncHttpServerResponse, request, data.toJSONString());
+                            }
+                        };
+
+                        try {
+                            if ("/login".equals(path)) {
+                                UnitAutoApp.getInstance().login(reqObj, listener); // reqObj = UnitAutoApp.getInstance().getLoginInvokeReq(reqObj);
+                            } else if ("/logout".equals(path)) {
+                                UnitAutoApp.getInstance().logout(reqObj, listener); // reqObj = UnitAutoApp.getInstance().getLogoutInvokeReq(reqObj);
+                            } else {
+                                MethodUtil.invokeMethod(reqObj, null, listener);
+                            }
+                        }
+                        catch (Throwable e) {
+                            Log.e(TAG, "invokeMethod  try { JSONObject req = JSON.parseObject(request); ... } catch (Throwable e) { \n" + e.getMessage());
+                            try {
+                                listener.complete(MethodUtil.JSON_CALLBACK.newErrorResult(e));
+                            }
+                            catch (Throwable e1) {
+                                e1.printStackTrace();
+                                send(asyncHttpServerRequest, asyncHttpServerResponse, request, MethodUtil.JSON_CALLBACK.newErrorResult(e1).toJSONString());
+                            }
+                        }
+
+                    }
+                };
+
+                Boolean ui = reqObj == null ? null : reqObj.getBoolean("ui");
+                if (ui == null || ui) {
+                    runOnUiThread(runnable);
+                }
+                else {
+                    runnable.run();
+                }
+
+                break;
+
+            case "/uploadTo":  //FIXME 需要引入 OKHttp 等库来上传，或者直接 HTTPURLConnection?
+                // new Thread(new Runnable() {
+                //   @Override
+                //   public void run() {
+                //     try {
+                //       JSONObject reqObj = JSON.parseObject(request);
+                //       String fileName = reqObj == null ? null : reqObj.getString("fileName");
+                //       String targetUrl = reqObj == null ? null : reqObj.getString("targetUrl");
+                //
+                //       File file = new File(parentDirectory.getAbsolutePath() + "/" + fileName);
+                //
+                //       allHeaders.set("Content-Disposition", String.format("attachment;filename=\"%s", fileName));
+                //       allHeaders.set("Cache-Control", "no-cache,no-store,must-revalidate");
+                //       allHeaders.set("Pragma", "no-cache");
+                //       allHeaders.set("Expires", "0");
+                //
+                //       asyncHttpServerResponse.sendFile(file);
+                //     }
+                //     catch (Throwable e) {
+                //       e.printStackTrace();
+                //       send(asyncHttpServerRequest, asyncHttpServerResponse, request, MethodUtil.JSON_CALLBACK.newErrorResult(e).toJSONString());
+                //     }
+                //   }
+                // }).start();
+                break;
+
+            case "/download":
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Multimap query = asyncHttpServerRequest.getQuery();
+                            String filePath = query == null ? null : query.getString("filePath");
+                            String fileName;
+                            if (StringUtil.isEmpty(filePath, true)) {
+                                fileName = query == null ? null : query.getString("fileName");
+                                filePath = parentDirectory.getAbsolutePath() + "/" + fileName;
+//                        } else {
+//                            String[] keys = StringUtil.splitPath(filePath);
+//                            fileName = keys == null || keys.length <= 0 ? null : keys[keys.length - 1];
+                            }
+                            File file = new File(filePath);
+                            if (! file.exists()) {
+                                throw new FileNotFoundException(filePath);
+                            }
+
+//                        allHeaders.set("Content-Disposition", String.format("attachment;filename=\"%s", fileName));
+//                        allHeaders.set("Cache-Control", "no-cache,no-store,must-revalidate");
+//                        allHeaders.set("Pragma", "no-cache");
+//                        allHeaders.set("Expires", "0");
+
+                            asyncHttpServerResponse.sendFile(file);
+                        }
+                        catch (Throwable e) {
+                            e.printStackTrace();
+                            send(asyncHttpServerRequest, asyncHttpServerResponse, request, MethodUtil.JSON_CALLBACK.newErrorResult(e).toJSONString());
+                        }
+                    }
+                }).start();
+                break;
+            default:
+                asyncHttpServerResponse.end();
+                break;
+        }
+    }
+
+    public void send(final AsyncHttpServerRequest asyncHttpServerRequest, final AsyncHttpServerResponse asyncHttpServerResponse, final String request, final String response) {
         asyncHttpServerResponse.send("application/json; charset=utf-8", response);
 
         runOnUiThread(new Runnable() {
@@ -643,7 +699,7 @@ public class UnitAutoActivity extends Activity implements HttpServerRequestCallb
                         tvUnitResponse.setText(StringUtil.getString(asyncHttpServerResponse) + "Content:\n" + JSON.format(response));  //批量跑测试容易卡死，也没必要显示所有的，专注更好 + "\n\n\n\n\n" + StringUtil.getString(tvUnitResponse));
                         tvUnitRequest.setText(StringUtil.getString(asyncHttpServerRequest) + "Content:\n" + JSON.format(request));   //批量跑测试容易卡死，也没必要显示所有的，专注更好  + "\n\n\n\n\n" + StringUtil.getString(tvUnitRequest));
                     }
-                    catch (Exception e) {
+                    catch (Throwable e) {
                         e.printStackTrace();
                     }
                 }
