@@ -40,7 +40,7 @@ var CodeUtil = {
   LANGUAGE_OBJECTIVE_C: 'Objective-C',
 
   LANGUAGE_GO: 'Go',
-  LANGUAGE_CPP: 'C++',
+  LANGUAGE_C_PLUS_PLUS: 'C++',
 
   LANGUAGE_TYPE_SCRIPT: 'TypeScript',
   LANGUAGE_JAVA_SCRIPT: 'JavaScript',
@@ -266,7 +266,7 @@ var CodeUtil = {
               }
               else {
                 try {
-                  value = JSON.parse(value)
+                  value = parseJSON(value)
                 }
                 catch (e) {
                   console.log(e)
@@ -972,13 +972,13 @@ var CodeUtil = {
 
           s += '\n\n//回调实体类'
             + '\n@Keep'
-            + '\nopen class ' + responseType + '<T> : BaseResponse<T> {'
+            + '\nopen class ' + responseType + '<T, M, L> : BaseResponse<T, M, L> {'
             + '\n' + nextPadding + '@Transient'
             + '\n' + nextPadding + 'open var ' + varName + ': ' + dataType + CodeUtil.initEmptyValue4Type(dataType, true, true) + '\n'
             + '\n}\n'
             + '\n//通用 HTTP 解析实体基类，全局存一份'
             + '\n@Keep'
-            + '\nopen class BaseResponse<T> {'
+            + '\nopen class BaseResponse<T, M, L> {'
             + '\n' + nextPadding + '@Transient'
             + '\n' + nextPadding + 'open var code: Int' + CodeUtil.initEmptyValue4Type('Int', true, true) + '\n'
             + '\n' + nextPadding + '@Transient'
@@ -1166,40 +1166,40 @@ var CodeUtil = {
           }
 
           s += '\n\n' +
-            'public class ' + responseType + '<T> extends Response<T> {\n' +
+            'public class ' + responseType + '<T, M, L> extends Response<T, M, L> {\n' +
             nextPrefix + 'private ' + dataType + ' ' + varName + ';\n\n' +
             nextPrefix + 'public '+ dataType + ' get' + modelName + '() {\n' +
             nextNextPrefix + 'return ' + varName + ';\n' +
             nextPrefix + '}\n' +
-            nextPrefix + 'public ' + responseType + '<T> set' + modelName + '(' + dataType + ' ' + varName + ') {\n' +
+            nextPrefix + 'public ' + responseType + '<T, M, L> set' + modelName + '(' + dataType + ' ' + varName + ') {\n' +
             nextNextPrefix + 'this.' + varName + ' = ' + varName + ';\n' +
             nextNextPrefix + 'return this;\n' +
             nextPrefix + '}\n' +
             '}';
 
           s += '\n\n' +
-            'public class Response<T> {\n' +
+            'public class Response<T, M, L> {\n' +
             nextPrefix + 'private int code;\n' +
             nextPrefix + 'private String msg;\n' +
             nextPrefix + 'private T data;\n\n' +
             nextPrefix + 'public int getCode() {\n' +
             nextNextPrefix + 'return code;\n' +
             nextPrefix + '}\n' +
-            nextPrefix + 'public Response<T> setCode(int code) {\n' +
+            nextPrefix + 'public Response<T, M, L> setCode(int code) {\n' +
             nextNextPrefix + 'this.code = code;\n' +
             nextNextPrefix + 'return this;\n' +
             nextPrefix + '}\n\n' +
             nextPrefix + 'public String getMsg() {\n' +
             nextNextPrefix + 'return msg;\n' +
             nextPrefix + '}\n' +
-            nextPrefix + 'public Response<T> setMsg(String msg) {\n' +
+            nextPrefix + 'public Response<T, M, L> setMsg(String msg) {\n' +
             nextNextPrefix + 'this.msg = msg;\n' +
             nextNextPrefix + 'return this;\n' +
             nextPrefix + '}\n\n' +
             nextPrefix + 'public T getData() {\n' +
             nextNextPrefix + 'return data;\n' +
             nextPrefix + '}\n' +
-            nextPrefix + 'public Response<T> setData(T data) {\n' +
+            nextPrefix + 'public Response<T, M, L> setData(T data) {\n' +
             nextNextPrefix + 'this.data = data;\n' +
             nextNextPrefix + 'return this;\n' +
             nextPrefix + '}\n' +
@@ -1532,7 +1532,7 @@ var CodeUtil = {
 
             for (var i = 0; i < value.length; i++) {
               if (value[i] instanceof Object == false) {
-                inner += '\n' + nextPrefix + varName + '.PushBack(' + CodeUtil.getCode4Value(CodeUtil.LANGUAGE_CPP, value[i]) + ', allocator);';
+                inner += '\n' + nextPrefix + varName + '.PushBack(' + CodeUtil.getCode4Value(CodeUtil.LANGUAGE_C_PLUS_PLUS, value[i]) + ', allocator);';
               }
               else {
                 inner += '\n\n' + nextPrefix + '{   ' + '// ' + key + '[' + i + '] <<<<<<<<<<<<<<<<<<<<<<<<<<<<<';
@@ -1546,7 +1546,7 @@ var CodeUtil = {
                   inner += '//FIXME 这里不可能出现 value[' + i + '] 类型为 ' + (typeof value[i]) + '！'; //不可能
                 }
 
-                inner += CodeUtil.getCode4Value(CodeUtil.LANGUAGE_CPP, value[i], itemName, depth + 1, isSmart, true, CodeUtil.parseCppRequest);
+                inner += CodeUtil.getCode4Value(CodeUtil.LANGUAGE_C_PLUS_PLUS, value[i], itemName, depth + 1, isSmart, true, CodeUtil.parseCppRequest);
                 inner += '\n' + innerPrefix + varName + '.PushBack(' + itemName + ', allocator);';
                 inner += '\n' + nextPrefix + '}   ' + '// ' + key + '[' + i + '] >>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n';
               }
@@ -1575,7 +1575,7 @@ var CodeUtil = {
           if (value instanceof Array) {
             return this.onParseArray(key, value, index, isOuter);
           }
-          return '\n' + prefix + parentKey + '.AddMember("' + key + '", ' + CodeUtil.getCode4Value(CodeUtil.LANGUAGE_CPP, value) + ', allocator);';
+          return '\n' + prefix + parentKey + '.AddMember("' + key + '", ' + CodeUtil.getCode4Value(CodeUtil.LANGUAGE_C_PLUS_PLUS, value) + ', allocator);';
         }
       })
 
@@ -1846,7 +1846,7 @@ var CodeUtil = {
     return CodeUtil.parseCode(name, resObj, {
 
       onParseParentStart: function () {
-        return depth > 0 || StringUtil.isEmpty(name_, true) == false ? '' : CodeUtil.getBlank(depth) + varKey + ' ' + name + ' = JSON.parse(resultJson) \n';
+        return depth > 0 || StringUtil.isEmpty(name_, true) == false ? '' : CodeUtil.getBlank(depth) + varKey + ' ' + name + ' = parseJSON(resultJson) \n';
       },
 
       onParseParentEnd: function () {
@@ -2692,7 +2692,7 @@ res_data = rep.json()
     else if (format instanceof Array == false && format instanceof Object) {
       s += prefix2 + varName + '_json = json.loads(' + varName + ')'
       try {
-        var realObj = JSON.parse(real);
+        var realObj = parseJSON(real);
         var cs = CodeUtil.parsePythonResponseByStandard(varName + '_json', key, format, realObj, depth, isSmart, true, funDefs, funNames);
         if (StringUtil.isNotEmpty(cs, true)) {
           s += '\n' + padding + cs.trim();
@@ -2756,7 +2756,7 @@ res_data = rep.json()
     return CodeUtil.parseCode(name, resObj, {
 
       onParseParentStart: function () {
-        return depth > 0 || StringUtil.isEmpty(name_, true) == false ? '' : CodeUtil.getBlank(depth) + varKey + ' ' + name + ': object = JSON.parse(resultJson); \n';
+        return depth > 0 || StringUtil.isEmpty(name_, true) == false ? '' : CodeUtil.getBlank(depth) + varKey + ' ' + name + ': object = parseJSON(resultJson); \n';
       },
 
       onParseParentEnd: function () {
@@ -5323,7 +5323,7 @@ res_data = rep.json()
 
         case CodeUtil.LANGUAGE_GO:
           return 'nil';
-        case CodeUtil.LANGUAGE_CPP:
+        case CodeUtil.LANGUAGE_C_PLUS_PLUS:
           return 'Value().Move()'; //报错：AddMemeber 不允许 NULL ！ 'NULL';
 
         case CodeUtil.LANGUAGE_TYPE_SCRIPT:
@@ -5350,7 +5350,7 @@ res_data = rep.json()
           break;
 
         case CodeUtil.LANGUAGE_GO:
-        case CodeUtil.LANGUAGE_CPP:
+        case CodeUtil.LANGUAGE_C_PLUS_PLUS:
           break;
 
         //以下都不需要解析，直接用左侧的 JSON
@@ -5377,7 +5377,7 @@ res_data = rep.json()
           break;
 
         case CodeUtil.LANGUAGE_GO:
-        case CodeUtil.LANGUAGE_CPP:
+        case CodeUtil.LANGUAGE_C_PLUS_PLUS:
           break;
 
         case CodeUtil.LANGUAGE_TYPE_SCRIPT:
@@ -5708,7 +5708,7 @@ res_data = rep.json()
    * @param saveLength
    */
   getCppType: function(type, saveLength) {
-    return CodeUtil.getType4Language(CodeUtil.LANGUAGE_CPP, type, saveLength);
+    return CodeUtil.getType4Language(CodeUtil.LANGUAGE_C_PLUS_PLUS, type, saveLength);
   },
   getType4Language: function(language, type, saveLength) {
     log(CodeUtil.TAG, 'getJavaType  type = ' + type + '; saveLength = ' + saveLength);
@@ -5779,7 +5779,7 @@ res_data = rep.json()
 
       case CodeUtil.LANGUAGE_GO:
         return 'interface{}' + length;
-      case CodeUtil.LANGUAGE_CPP:
+      case CodeUtil.LANGUAGE_C_PLUS_PLUS:
         return 'GenericValue';
 
       case CodeUtil.LANGUAGE_TYPE_SCRIPT:
@@ -5806,7 +5806,7 @@ res_data = rep.json()
         return 'bool' + length;
 
       case CodeUtil.LANGUAGE_GO:
-      case CodeUtil.LANGUAGE_CPP:
+      case CodeUtil.LANGUAGE_C_PLUS_PLUS:
         return 'bool' + length;
 
       case CodeUtil.LANGUAGE_TYPE_SCRIPT:
@@ -5836,7 +5836,7 @@ res_data = rep.json()
 
 
       case CodeUtil.LANGUAGE_GO:
-      case CodeUtil.LANGUAGE_CPP:
+      case CodeUtil.LANGUAGE_C_PLUS_PLUS:
         return 'int' + length;
 
       case CodeUtil.LANGUAGE_TYPE_SCRIPT:
@@ -5865,7 +5865,7 @@ res_data = rep.json()
 
       case CodeUtil.LANGUAGE_GO:
         return 'int64' + length;
-      case CodeUtil.LANGUAGE_CPP:
+      case CodeUtil.LANGUAGE_C_PLUS_PLUS:
         return 'long' + length;
 
       case CodeUtil.LANGUAGE_TYPE_SCRIPT:
@@ -5895,7 +5895,7 @@ res_data = rep.json()
 
       case CodeUtil.LANGUAGE_GO:
         return 'float64' + length;
-      case CodeUtil.LANGUAGE_CPP:
+      case CodeUtil.LANGUAGE_C_PLUS_PLUS:
         return 'double' + length;
 
       case CodeUtil.LANGUAGE_TYPE_SCRIPT:
@@ -5922,7 +5922,7 @@ res_data = rep.json()
         return 'NSString' + length;
 
       case CodeUtil.LANGUAGE_GO:
-      case CodeUtil.LANGUAGE_CPP:
+      case CodeUtil.LANGUAGE_C_PLUS_PLUS:
         return 'string' + length;
 
       case CodeUtil.LANGUAGE_TYPE_SCRIPT:
@@ -5952,7 +5952,7 @@ res_data = rep.json()
 
       case CodeUtil.LANGUAGE_GO:
         return 'time.Time' + length;
-      case CodeUtil.LANGUAGE_CPP:
+      case CodeUtil.LANGUAGE_C_PLUS_PLUS:
         return 'tm' + length;
 
       case CodeUtil.LANGUAGE_JAVA_SCRIPT:
@@ -5982,7 +5982,7 @@ res_data = rep.json()
 
       case CodeUtil.LANGUAGE_GO:
         return 'time.Time' + length;
-      case CodeUtil.LANGUAGE_CPP:
+      case CodeUtil.LANGUAGE_C_PLUS_PLUS:
         return 'time_t' + length;
 
       case CodeUtil.LANGUAGE_JAVA_SCRIPT:
@@ -6012,7 +6012,7 @@ res_data = rep.json()
 
       case CodeUtil.LANGUAGE_GO:
         return 'map[string]interface{}';
-      case CodeUtil.LANGUAGE_CPP:
+      case CodeUtil.LANGUAGE_C_PLUS_PLUS:
         return 'map<string, object>';
 
       case CodeUtil.LANGUAGE_JAVA_SCRIPT:
@@ -6044,7 +6044,7 @@ res_data = rep.json()
 
       case CodeUtil.LANGUAGE_GO:
         return '[]interface{}';
-      case CodeUtil.LANGUAGE_CPP:
+      case CodeUtil.LANGUAGE_C_PLUS_PLUS:
         return 'vector<object>';
 
       case CodeUtil.LANGUAGE_JAVA_SCRIPT:
@@ -7369,7 +7369,7 @@ res_data = rep.json()
   },
 
   getType4Request: function (value) {
-    // return t != 'string' ? t : typeof JSON.parse(value);
+    // return t != 'string' ? t : typeof parseJSON(value);
     if (value instanceof Array) {
       return 'array'
     }

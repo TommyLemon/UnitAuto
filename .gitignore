@@ -29,3 +29,5 @@ UnitAuto-Android/gradle/wrapper/gradle-wrapper.properties
 UnitAuto-Android/gradle/wrapper/gradle-wrapper.jar
 /UnitAuto-Rust/target
 UnitAuto-Rust/Cargo.lock
+/UnitAuto-Admin/jacoco
+UnitAuto-Admin/.DS_Store
