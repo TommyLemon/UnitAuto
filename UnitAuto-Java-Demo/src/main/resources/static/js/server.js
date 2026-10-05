@@ -1,7 +1,6 @@
 const Koa = require('koa');
 //const cors = require('koa2-cors');
-//const bodyParser = require('koa-bodyparser');
-
+const bodyParser = require('koa-bodyparser');
 // const Vue = require('vue');
 const {getRequestFromURL, App} = require('./main');
 // const { createBundleRenderer } = require('vue-server-renderer')
@@ -9,7 +8,7 @@ const {getRequestFromURL, App} = require('./main');
 const JSONResponse = require('../apijson/JSONResponse');
 const StringUtil = require('../apijson/StringUtil');
 
-var isCrossEnabled = false; // true; //
+var isCrossEnabled = true; // false;
 var isLoading = false;
 var startTime = 0;
 var endTime = 0;
@@ -66,25 +65,11 @@ function update() {
     + '\nRandom & Order: ' + App.randomDoneCount + ' / ' + App.randomAllCount + ' = ' + (100*randomProgress) + '%';
 };
 
-const PORT = 3001;
-
-const app = new Koa();
-
-//app.use(cors({
-//  origin: function(ctx) {
-//    return '*';
-//   },
-//   maxAge: 5,
-//   credentials: true,
-//   allowMethods: ['GET', 'HEAD ', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-//   allowHeaders: ['Content-Type', 'Authorization', 'Accept'],
-//   exposeHeaders: ['WWW-Authenticate', 'Server-Authorization']
-//}));
-
-//app.use(bodyParser());
+const PORT = 3000;
 
 var done = false;
-
+const app = new Koa();
+// app.use(bodyParser());
 app.use(async ctx => {
   console.log(ctx);
   var origin = ctx.get('Origin') || ctx.get('origin');
@@ -147,7 +132,10 @@ app.use(async ctx => {
     isCrossEnabled = App.isCrossEnabled;
 
     ctx.status = ctx.response.status = 200; // 302;
-    ctx.body = ctx.response.body = 'Auto testing in node...';
+    ctx.body = ctx.response.body = JSON.stringify({
+      'code': 200,
+      'msg': 'Auto testing in node...'
+    });
 
     // setTimeout(function () {  // 延迟无效
     ctx.redirect('/test/status');
@@ -160,43 +148,51 @@ app.use(async ctx => {
       // ctx.redirect('/status');
     }
 
+    var server = App.server;
+    var ind = server == null ? -1 : server.indexOf('?');
+
     ctx.status = ctx.response.status = 200;  // progress >= 1 ? 200 : 302;
-    ctx.body = ctx.response.body = (message || (progress < 1 || isLoading ? 'Auto testing in node...' : 'Done auto testing in node.')) + timeMsg + progressMsg;
+    ctx.body = ctx.response.body = JSON.stringify({
+      'code': 200,
+      'msg': (message || (progress < 1 || isLoading ? 'Auto testing in node...' : 'Done auto testing in node.')) + timeMsg + progressMsg,
+      'progress': progress,
+      'reportId': App.reportId,
+      'link': server + (ind < 0 ? '?' : '&') + 'reportId=' + App.reportId
+    });
   }
   else if (ctx.path == '/test/compare' || ctx.path == '/test/ml') {
     done = false;
-    var json = '';
-    ctx.req.addListener('data', (data) => {
-  		json += data;
-  	})
-  	ctx.req.addListener('end', function() {
-  		console.log(json);
+//    var json = '';
+//    ctx.req.addListener('data', (data) => {
+//  		json += data;
 //  	})
-
-        var body = JSON.parse(json) || ctx.body || ctx.req.body || ctx.request.body || {};
+//  	ctx.req.addListener('end', function() {
+//  		console.log(json);
+        var body = ctx.body || ctx.req.body || ctx.request.body || {} // || JSON.parse(json) || {};
         console.log(body);
         var isML = ctx.path == '/test/ml' || body.isML;
         var res = body.response;
         var stdd = body.standard;
-
         var response = typeof res != 'string' ? res : (StringUtil.isEmpty(res, true) ? null : JSON.parse(res));
         var standard = typeof stdd != 'string' ? stdd : (StringUtil.isEmpty(stdd, true) ? null : JSON.parse(stdd));
-
         console.log('\n\nresponse = ' + JSON.stringify(response));
         console.log('\n\nstdd = ' + JSON.stringify(stdd));
-        var compare = JSONResponse.compareResponse(standard, response || {}, '', isML, null, null, false) || {}
+        var compare = JSONResponse.compareResponse(null, standard, response || {}, '', isML, null, null, false) || {}
+
+        if (body.newStandard) {
+          compare.newStandard = JSONResponse.updateFullStandard(standard, response, isML)
+        }
         console.log('\n\ncompare = ' + JSON.stringify(compare));
 
         ctx.status = ctx.response.status = 200;
         ctx.body = ctx.response.body = compare == null ? '' : JSON.stringify(compare);
         done = true;
-    })
-
-    while (true) {
-        if (done) {
-           break;
-        }
-    }
+//    })
+//    while (true) {
+//        if (done) {
+//           break;
+//        }
+//    }
   }
 });
 
