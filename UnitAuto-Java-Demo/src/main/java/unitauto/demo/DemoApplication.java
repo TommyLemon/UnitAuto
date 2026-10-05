@@ -28,8 +28,8 @@ import org.jacoco.maven.ReportFormat;
 import org.jacoco.maven.ReportMojo;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.web.server.WebServerFactoryCustomizer;
-import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory;
+//import org.springframework.boot.web.server.WebServerFactoryCustomizer;
+//import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -45,10 +45,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.Locale;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 
 
 /**UnitAuto Demo SpringBoot Application 主应用程序启动类
@@ -59,27 +56,30 @@ import java.util.TimerTask;
  */
 @Configuration
 @SpringBootApplication
-public class DemoApplication implements WebServerFactoryCustomizer<ConfigurableServletWebServerFactory> {
+public class DemoApplication { // implements WebServerFactoryCustomizer<ConfigurableServletWebServerFactory> {
 	private static final String TAG = "DemoApplication";
+	private static final int PORT = 8081;
 
 	public static void main(String[] args) throws Exception {
-		ConfigurableApplicationContext context = SpringApplication.run(DemoApplication.class, args);
+		SpringApplication app = new SpringApplication(DemoApplication.class);
+		app.setDefaultProperties(Map.of("server.port", PORT));
+		ConfigurableApplicationContext context = app.run(args);
 
 		Log.DEBUG = true;  // FIXME 不要开放给项目组后端之外的任何人使用 UnitAuto（强制登录鉴权）！！！
 
 		UnitAutoApplication.init(context);
 
-		System.out.println("\n\n<<<<<<<<< 本 Demo 在 resources/static 内置了 UnitAuto-Admin，Chrome/Firefox 打开 http://localhost:8081 即可调试(端口号根据项目配置而定) ^_^ >>>>>>>>>\n");
+		System.out.println("\n\n<<<<<<<<< 本 Demo 在 resources/static 内置了 UnitAuto-Admin，Chrome/Firefox 打开 http://localhost:" + PORT + " 即可调试(端口号根据项目配置而定) ^_^ >>>>>>>>>\n");
 
 		tryAutoOperateAgent();
 	}
 
 
-	// SpringBoot 2.x 自定义端口方式
-	@Override
-	public void customize(ConfigurableServletWebServerFactory server) {
-		server.setPort(8081);
-	}
+	//// SpringBoot 2.x 自定义端口方式
+	//@Override
+	//public void customize(ConfigurableServletWebServerFactory server) {
+	//	server.setPort(PORT);
+	//}
 
 	// 支持 APIAuto 中 JavaScript 代码跨域请求
 	@Bean
