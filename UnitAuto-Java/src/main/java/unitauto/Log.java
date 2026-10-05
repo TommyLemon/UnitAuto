@@ -19,7 +19,7 @@ package unitauto;
  */
 public class Log {
 
-	public static boolean DEBUG = true;
+	public static boolean DEBUG = false;
 
 	/**
 	 * @param TAG
