@@ -211,7 +211,7 @@ public class MethodUtil {
 
 	public static String KEY_REUSE = "reuse";
 	public static String KEY_UI = "ui";
-	public static String KEY_TIME = "time";
+	public static String KEY_TIME = "@time";
 	public static String KEY_TIMEOUT = "timeout";
 	public static String KEY_PACKAGE = "package";
 	public static String KEY_THIS = "this";
@@ -775,13 +775,22 @@ public class MethodUtil {
 					String str = (String) item;
 					int index = str.indexOf(":");
 					String type = index < 0 ? null : str.substring(0, index);
-					String value = index < 0 ? str : str.substring(index + 1);
+					Object value = index < 0 ? str : str.substring(index + 1);
+
+					if (index >= 0) {
+						try {
+							value = JSON.parse((String) value);
+						} catch (Throwable e) {
+							e.printStackTrace();
+						}
+					}
+
 					list.add(new Argument(type, value));
 				}
 				else { // null 合法，也要加，按顺序调用的
 					Argument arg = item == null ? null : JSON.parseObject(JSON.toJSONString(item), Argument.class);
 					if (arg != null) {
-						arg.setUndefined(! item.containsKey(KEY_VALUE));
+						arg.setUndefined(! ((Map<?, ?>) item).containsKey(KEY_VALUE));
 					}
 					list.add(arg);
 				}

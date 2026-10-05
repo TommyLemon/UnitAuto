@@ -3,15 +3,11 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>unitauto.jar</groupId>
 	<artifactId>unitauto-jar</artifactId>
-	<version>3.0.5</version>
+	<version>3.1.0</version>
 	<name>UnitAuto-Jar</name>
 
 	<build>
 		<plugins>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
@@ -27,19 +23,19 @@
 		<dependency>
 			<groupId>com.alibaba</groupId>
 			<artifactId>fastjson</artifactId>
-			<version>1.2.83</version>
+			<version>1.2.84</version>
 		</dependency>
 
 		<dependency>
 			<groupId>io.github.classgraph</groupId>
 			<artifactId>classgraph</artifactId>
-			<version>4.8.146</version>
+			<version>4.8.196</version>
 		</dependency>
 
 		<dependency>
 			<groupId>com.github.TommyLemon</groupId>
 			<artifactId>unitauto-java</artifactId>
-			<version>3.0.5</version>
+			<version>3.1.0</version>
 		</dependency>
 	</dependencies>
 	
