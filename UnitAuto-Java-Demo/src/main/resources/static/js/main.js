@@ -5212,6 +5212,20 @@ https://github.com/Tencent/APIJSON/issues
             req = newReq
           }
 
+//          Object.defineProperty(req, 'constructor', {
+//            value: 'getInstance',
+//            enumerable: true,
+//            configurable: false,
+//            writable: true
+//          })
+
+          header = header || {}
+          var isJSON = HTTP_JSON_TYPES.indexOf(type) >= 0;
+          if (isJSON && JSONResponse.isObject(req) && (req.constructor != null || req.package != null || req.class != null || req.method != null || req.prototype != null)) {
+            req = JSON.stringify(req)
+            header['Content-Type'] = 'application/json'
+          }
+
           // axios.defaults.withcredentials = true
           axios({
             method: method != null ? method : (HTTP_METHODS.indexOf(type) >= 0 ? type.toLowerCase() : (type == REQUEST_TYPE_PARAM ? 'get' : 'post')),
