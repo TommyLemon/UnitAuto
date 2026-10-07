@@ -21,8 +21,6 @@ jobs:
         cache: gradle
 
     - name: Grant execute permission for gradlew
-      working-directory: UnitAuto-Android
       run: chmod +x gradlew
     - name: Build with Gradle
-      working-directory: UnitAuto-Android
-      run: ./gradlew build
+      run: ./gradlew build UnitAuto-Android
