@@ -4,11 +4,11 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - 'APIJSON-Rust/**'
+      - 'UnitAuto-Rust/**'
   pull_request:
     branches: [ "main" ]
     paths:
-      - 'APIJSON-Rust/**'
+      - 'UnitAuto-Rust/**'
 
 env:
   CARGO_TERM_COLOR: always
