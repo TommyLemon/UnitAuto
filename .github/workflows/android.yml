@@ -3,8 +3,12 @@ name: Android CI
 on:
   push:
     branches: [ "main" ]
+    # paths:
+    #   - 'UnitAuto-Android/**'
   pull_request:
     branches: [ "main" ]
+    # paths:
+    #   - 'UnitAuto-Android/**'
 
 jobs:
   build:
@@ -19,7 +23,8 @@ jobs:
         java-version: '11'
         distribution: 'temurin'
         cache: gradle
-
+    - name: Build gradlew
+      run: gradle wrapper
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Build with Gradle
