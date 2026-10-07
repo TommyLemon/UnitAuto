@@ -6,8 +6,12 @@ name: Go
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'APIJSON-Go/**'
   pull_request:
     branches: [ "main" ]
+    paths:
+      - 'APIJSON-Go/**'
 
 jobs:
 
