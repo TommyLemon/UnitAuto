@@ -3,8 +3,12 @@ name: Rust
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'APIJSON-Rust/**'
   pull_request:
     branches: [ "main" ]
+    paths:
+      - 'APIJSON-Rust/**'
 
 env:
   CARGO_TERM_COLOR: always
