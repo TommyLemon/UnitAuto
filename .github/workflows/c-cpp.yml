@@ -1,0 +1,26 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: configure
+      run: ./configure
+    - name: make
+      working-directory: UnitAuto-CPP
+      run: make
+    - name: make check
+      working-directory: UnitAuto-CPP
+      run: make check
+    - name: make distcheck
+      working-directory: UnitAuto-CPP
+      run: make distcheck
