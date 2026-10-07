@@ -3,8 +3,12 @@ name: C/C++ CI
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'UnitAuto-CPP/**'
   pull_request:
     branches: [ "main" ]
+    paths:
+      - 'UnitAuto-CPP/**'
 
 jobs:
   build:
