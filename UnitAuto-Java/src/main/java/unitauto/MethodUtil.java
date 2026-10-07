@@ -105,7 +105,7 @@ public class MethodUtil {
 		 * @return
 		 * @throws Exception
 		 */
-		Object getInstance(@NotNull Class<?> clazz, List<Argument> classArgs, Boolean reuse) throws Exception;
+		Object getInstance(@NotNull Class<?> clazz, List<Argument> classArgs, String reuse, Boolean tri) throws Exception;
 
 		/**获取实例
 		 * @param clazz
@@ -113,8 +113,8 @@ public class MethodUtil {
 		 * @return
 		 * @throws Exception
 		 */
-		default Object getInstance(@NotNull Class<?> clazz, List<Argument> classArgs) throws Exception {
-			return getInstance(clazz, classArgs, null);
+		default Object getInstance(@NotNull Class<?> clazz, List<Argument> classArgs, Boolean tri) throws Exception {
+			return getInstance(clazz, classArgs, null, tri);
 		}
 
 		/**前置事件，准备依赖等
@@ -124,7 +124,7 @@ public class MethodUtil {
 		 * @return
 		 * @throws Exception
 		 */
-		default Boolean beforeGet(@NotNull Class<?> clazz, List<Argument> classArgs, Boolean reuse) throws Exception {
+		default Boolean beforeGet(@NotNull Class<?> clazz, List<Argument> classArgs, String reuse) throws Exception {
 			return null;
 		}
 
@@ -136,7 +136,7 @@ public class MethodUtil {
 		 * @return
 		 * @throws Exception
 		 */
-		default Object afterGet(Object instance, @NotNull Class<?> clazz, List<Argument> classArgs, Boolean reuse) throws Exception {
+		default Object afterGet(Object instance, @NotNull Class<?> clazz, List<Argument> classArgs, String reuse) throws Exception {
 			return instance;
 		}
 	}
@@ -209,6 +209,7 @@ public class MethodUtil {
 	public static int CODE_SERVER_ERROR = 500;
 	public static String MSG_SUCCESS = "success";
 
+	public static String KEY_TRY = "try";
 	public static String KEY_REUSE = "reuse";
 	public static String KEY_UI = "ui";
 	public static String KEY_TIME = "@time";
@@ -219,6 +220,7 @@ public class MethodUtil {
 	public static String KEY_CONSTRUCTOR = "constructor";
 	public static String KEY_TYPE = "type";
 	public static String KEY_VALUE = "value";
+	public static String KEY_FIELD = "field";
 	public static String KEY_WARN = "warn";
 	public static String KEY_STATIC = "static";
 	public static String KEY_NAME = "name";
@@ -244,14 +246,13 @@ public class MethodUtil {
 	public static String KEY_METHOD_LIST = "methodList";
 
 
-
 	//不能在 static 代码块赋值，否则 MethodUtil 子类中 static 代码块对它赋值的代码不会执行！
 	@NotNull
 	public static InstanceGetter INSTANCE_GETTER = new InstanceGetter() {
 
 		@Override
-		public Object getInstance(@NotNull Class<?> clazz, List<Argument> classArgs, Boolean reuse) throws Exception {
-			return getInvokeInstance(clazz, classArgs, reuse);
+		public Object getInstance(@NotNull Class<?> clazz, List<Argument> classArgs, String reuse, Boolean tri) throws Exception {
+			return getInvokeInstance(clazz, classArgs, reuse, tri);
 		}
 	};
 
@@ -268,7 +269,7 @@ public class MethodUtil {
 				throws ClassNotFoundException, IOException {
 			return findClassList(packageOrFileName, className, ignoreError, limit, offset);
 		}
-	}; 
+	};
 
 	//不能在 static 代码块赋值，否则 MethodUtil 子类中 static 代码块对它赋值的代码不会执行！
 	@NotNull
@@ -291,11 +292,12 @@ public class MethodUtil {
 	};
 
 
-
 	@NotNull
 	public static Map<Class<?>, InterfaceProxy> GLOBAL_CALLBACK_MAP;
 	//  Map<class, <constructorArgs, instance>>
 	public static final Map<Class<?>, Map<Object, Object>> INSTANCE_MAP;
+	//public static final Map<Class<?>, Map<String, Object>> REUSE_MAP;
+
 	public static final Map<String, Class<?>> PRIMITIVE_CLASS_MAP;
 	public static final Map<String, Class<?>> BASE_CLASS_MAP;
 	public static final Map<String, Class<?>> CLASS_MAP;
@@ -304,6 +306,7 @@ public class MethodUtil {
 	static {
 		GLOBAL_CALLBACK_MAP = new HashMap<>();
 		INSTANCE_MAP = new HashMap<>();
+		//REUSE_MAP = new HashMap<>();
 
 		PRIMITIVE_CLASS_MAP = new HashMap<String, Class<?>>();
 		BASE_CLASS_MAP = new HashMap<String, Class<?>>();
@@ -377,18 +380,17 @@ public class MethodUtil {
 	}
 
 
-
 	/**获取方法列表
 	 * @param request :
-	 {
-	    "mock": true,
-	    "query": 0,  // 0-数据，1-总数，2-全部
+	{
+		"mock": true,
+		"query": 0,  // 0-数据，1-总数，2-全部
 		"package": "apijson.demo.server",
 		"class": "DemoFunction",
 		"method": "plus",
 		"types": ["Integer", "String", "com.alibaba.fastjson.JSONObject"]
-		//不返回的话，这个接口没意义		    "return": true,  //返回 class list，方便调试
-	 }
+		// 不返回的话，这个接口没意义		    "return": true,  //返回 class list，方便调试
+	}
 	 * @return
 	 */
 	public static JSONObject listMethod(String request) {
@@ -424,15 +426,13 @@ public class MethodUtil {
 			JSONObject obj = getMethodListGroupByClass(pkgName, clsName, methodName, argTypes, query, mock);
 			result = JSON_CALLBACK.newSuccessResult();
 			result.putAll(obj);  //序列化 Class	只能拿到 name		result.put("Class[]", JSON.parseArray(JSON.toJSONString(classlist)));
-		}
-		catch (Throwable e) {
+		} catch (Throwable e) {
 			e.printStackTrace();
 			result = JSON_CALLBACK.newErrorResult(e);
 		}
 
 		return result;
 	}
-
 
 
 	/**执行方法
@@ -444,73 +444,78 @@ public class MethodUtil {
 	public static void invokeMethod(String request, Object instance, Listener<JSONObject> listener) throws Exception {
 		invokeMethod(parseObject(request), instance, listener);
 	}
+
 	/**执行方法
 	 * @param req :
-	 {
-		"static": false,  //是否为静态方法，false 时可能会用 constructor & classArgs 来初始化一个类的实例或用 this 直接反序列化成一个类的实例
-		"ui": false,  //放 UI 线程执行，仅 Android 可用
-		"timeout": 0,  //超时时间
-		"package": "apijson.demo.server",  //被测方法所在的包名
-		"class": "DemoFunction",  //被测方法所在的类名
-		"constructor": "getInstance",  //如果是类似单例模式的类，不能用默认构造方法，可以自定义获取实例的方法，传参仍用 classArgs
-		"classArgs": [  //构造方法的参数值，可以和 methodArgs 结构一样。这里用了简化形式，只传值不传类型，注意简化形式只能在所有值完全符合构造方法的类型定义时才可用
-			null,  
+	{
+		"static": false, // 是否为静态方法，false 时可能会用 constructor & classArgs 来初始化一个类的实例或用 this 直接反序列化成一个类的实例
+		"ui": false, // 放 UI 线程执行，仅 Android 可用
+		"timeout": 0, // 超时时间
+		"try": true, // 是否尝试，可以绕过 private/protected/package 等非 public 的禁止调用限制
+		"reuse": "testcase1", // 是否复用实例，不同 value 用来隔离不同的用例、避免冲突等
+		"package": "apijson.demo.server", // 被测方法所在的包名
+		"class": "DemoFunctionParser", // 被测方法所在的类名
+		"field": "INSTANCE", // 单例静态成员名称，例如 class TestSingleton { private static final TestSingleton INSTANCE = new TestSingleton(); }
+		"constructor": "getInstance", // 如果是类似单例模式的类，不能用默认构造方法，可以自定义获取实例的方法，传参仍用 classArgs
+		"classArgs": [ // 构造方法的参数值，可以和 methodArgs 结构一样。这里用了简化形式，只传值不传类型，注意简化形式只能在所有值完全符合构造方法的类型定义时才可用
+			null,
 			null,
 			0,
 			null
 		],
-		"this": {  //当前类示例，和 constructor & classArgs 二选一
-			"type": "apijson.demo.server.model.User",  //不可缺省，且必须全称
-			"value": {  //User 的示例值，会根据 type 来转为 Java 类型，这里执行等价于 JSON.parseObject(JSON.toJSONString(value), User.class)
+		"this": { // 当前类示例，和 constructor & classArgs 二选一
+			"type": "apijson.demo.server.model.User", // 不可缺省，且必须全称
+			"value": { // User 的示例值，会根据 type 来转为 Java 类型，这里执行等价于 JSON.parseObject(JSON.toJSONString(value), User.class)
 				"id": 1,
 				"name": "Tommy"
 			}
 		},
-		"method": "plus",  //被测方法名
-		"methodArgs": [  //被测方法的参数值
+		"method": "plus", // 被测方法名
+		"methodArgs": [ // 被测方法的参数值
 			{
-				"type": "Integer",  //Boolean, Integer, Number, String, JSONObject, JSONArray 都可缺省，自动根据 value 来判断
+				"type": "Integer", // Boolean, Integer, Number, String, JSONObject, JSONArray 都可缺省，自动根据 value 来判断
 				"value": 1
 			},
 			{
-				"type": "String",  //可缺省，自动根据 value 来判断
-				"value": "APIJSON"
+				"type": "String", // 可缺省，自动根据 value 来判断
+				"static": true // 是否静态
+				"field": "TAG" // 表示引用 class DemoFunctionParser 里的 static String TAG 的值作为这个传参
 			},
 			{
-				"type": "JSONObject",  //可缺省，JSONObject 已缓存到 CLASS_MAP，也可以写全称 com.alibaba.fastjson.JSONObject
+				"type": "JSONObject", // 可缺省，JSONObject 已缓存到 CLASS_MAP，也可以写全称 com.alibaba.fastjson.JSONObject
 				"value": {}
 			},
 			{
-				"type": "int[]",  //不可缺省，且必须全称
+				"type": "int[]", // 不可缺省，且必须全称
 				"value": [1, 2, 3]
 			},
 			{
-				"type": "java.util.List<apijson.demo.server.model.User>",  //不可缺省，且必须全称
-				"value": [  //TODO 未验证，可能需要解析 type，改用 JSON.parseArray(JSON.toJSONString(value), User.class)，或遍历和递归子项来逐个用 cast
-					{  //apijson.demo.server.model.User
+				"type": "java.util.List<apijson.demo.server.model.User>", // 不可缺省，且必须全称
+				"value": [
+					{ // apijson.demo.server.model.User
 						"id": 1,
 						"name": "Tommy"
 					},
-					{  //apijson.demo.server.model.User
+					{ // apijson.demo.server.model.User
 						"id": 2,
 						"name": "Lemon"
 					}
 				]
 			},
 			{
-				"type": "android.content.Context",  //不可缺省，且必须全称
-				"reuse": true  //复用实例池 INSTANCE_MAP 里的
+				"type": "android.content.Context", // 不可缺省，且必须全称
+				"reuse": true // 复用实例池 INSTANCE_MAP 里的
 			},
 			{
-			    "type": "unitauto.test.TestUtil$Callback",  //interface 示例，注意内部类用 $ 隔开外部类名和内部类名
-			    "value": {
-					"setData(D)": {  //回调方法签名
-					    "callback": true  //设置为最终回调方法，会自动等待它被调用，并自动记录回调的时间点和传入参数值
+				"type": "unitauto.test.TestUtil$Callback", // interface 示例，注意内部类用 $ 隔开外部类名和内部类名
+				"value": {
+					"setData(D)": { // 回调方法签名
+						"callback": true // 设置为最终回调方法，会自动等待它被调用，并自动记录回调的时间点和传入参数值
 					}
-			    }
+				}
 			}
 		]
-	 }
+	}
 	 * @param instance 默认自动 new，传非 null 值一般是因为 Spring 自动注入的 Service, Component, Mapper 等不能自己 new
 	 * @return
 	 * @throws Exception
@@ -523,6 +528,7 @@ public class MethodUtil {
 		String pkgName = req.getString(KEY_PACKAGE);
 		String clsName = req.getString(KEY_CLASS);
 		String cttName = req.getString(KEY_CONSTRUCTOR);
+		String fldName = req.getString(KEY_FIELD);
 		String methodName = req.getString(KEY_METHOD);
 		Boolean trace = req.getBoolean(KEY_TRACE);
 
@@ -557,27 +563,24 @@ public class MethodUtil {
 				JSONObject obj = new JSONObject();
 				obj.put(KEY_METHOD_ARGS, Arrays.asList(this_));
 				List<Argument> mArgs = getArgList(obj, KEY_METHOD_ARGS);
+				Argument mArg0 = mArgs.get(0);
+				Object v = mArg0 == null ? null : mArg0.getValue();
+				Object ins = cast(v == null ? instance : v, clazz);
 
-				Class<?>[] types = new Class<?>[1];
+				Class<?>[] types = new Class<?>[]{clazz};
 				Object[] args = new Object[1];
 
-				initTypesAndValues(mArgs, types, args, true, true);
-				instance = args[0];
+				initTypesAndValues(clazz, ins, mArgs, types, args, true, true);
+				Object ins2 = cast(args[0] == null ? ins : args[0], clazz);
+				if (ins2 != null || instance == null) { // || instance.getClass().isAssignableFrom(clazz) == false) {
+					instance = ins2;
+				}
 			}
 
 			if (instance == null && static_ == false) {
-				Boolean reuse = req.getBoolean(KEY_REUSE);
-				Boolean b = INSTANCE_GETTER.beforeGet(clazz, clsArgs, reuse);
-
-				if (b == null || b == false) {
-					if (StringUtil.isEmpty(cttName, true)) {
-						instance = INSTANCE_GETTER.getInstance(clazz, clsArgs, reuse);
-					} else {
-						instance = getInvokeResult(clazz, null, cttName, clsArgs, null, null);
-					}
-				}
-
-				instance = INSTANCE_GETTER.afterGet(instance, clazz, clsArgs, reuse);
+				String reuse = req.getString(KEY_REUSE);
+				Boolean tri = req.getBoolean(KEY_TRY);
+				instance = getClassInstance(clazz, instance, fldName, cttName, clsArgs, true, reuse, tri);
 			}
 
 			if (timeout < 0 || timeout > 60000) {
@@ -590,8 +593,7 @@ public class MethodUtil {
 					public void run() {
 						try {
 							timer.cancel();
-						} 
-						catch (Throwable e) {
+						} catch (Throwable e) {
 							e.printStackTrace();
 						}
 
@@ -677,8 +679,7 @@ public class MethodUtil {
 			//				throw new IllegalArgumentException("参数 " + KEY_THREAD + " 的值错误！只能是 [null, " + THREAD_CURRENT_STRING
 			//						+ ", " + THREAD_POOL_STRING + ", " + THREAD_MAIN_STRING + "] 中的一个！");
 			//			}
-		}
-		catch (Throwable e) {
+		} catch (Throwable e) {
 			completeWithError(pkgName, clsName, methodName, startTime, e, listener, trace);
 		}
 	}
@@ -712,8 +713,7 @@ public class MethodUtil {
 					}
 				}
 			}, globalInterfaceProxy);
-		}
-		catch (Throwable e) {
+		} catch (Throwable e) {
 			completeWithError(pkgName, clsName, methodName, startTime, e, listener, trace);
 		}
 	}
@@ -749,13 +749,11 @@ public class MethodUtil {
 		if (listener != null) {
 			try {
 				listener.complete(result);
-			}
-			catch (Exception e1) {
+			} catch (Exception e1) {
 				e1.printStackTrace();
 			}
 		}
 	}
-
 
 
 	public static List<Argument> getArgList(JSONObject req, String arrKey) {
@@ -766,12 +764,11 @@ public class MethodUtil {
 			list = new ArrayList<>();
 			for (Object item : arr) {
 				if (item instanceof Boolean || item instanceof Number || item instanceof Collection
-					|| (item instanceof Map && ((Map<?, ?>) item).containsKey(KEY_VALUE) == false
+						|| (item instanceof Map && ((Map<?, ?>) item).containsKey(KEY_VALUE) == false
 						&& ((Map<?, ?>) item).get(KEY_TYPE) instanceof String == false)
 				) {
 					list.add(new Argument(null, item));
-				}
-				else if (item instanceof String) {
+				} else if (item instanceof String) {
 					String str = (String) item;
 					int index = str.indexOf(":");
 					String type = index < 0 ? null : str.substring(0, index);
@@ -786,8 +783,7 @@ public class MethodUtil {
 					}
 
 					list.add(new Argument(type, value));
-				}
-				else { // null 合法，也要加，按顺序调用的
+				} else { // null 合法，也要加，按顺序调用的
 					Argument arg = item == null ? null : JSON.parseObject(JSON.toJSONString(item), Argument.class);
 					if (arg != null) {
 						arg.setUndefined(! ((Map<?, ?>) item).containsKey(KEY_VALUE));
@@ -796,9 +792,9 @@ public class MethodUtil {
 				}
 			}
 		}
+
 		return list;
 	}
-
 
 
 	/**获取类
@@ -818,7 +814,7 @@ public class MethodUtil {
 	 * @return
 	 * @throws Exception
 	 */
-	public static Object getInvokeInstance(@NotNull Class<?> clazz, List<Argument> classArgs, Boolean reuse) throws Exception {
+	public static Object getInvokeInstance(@NotNull Class<?> clazz, List<Argument> classArgs, String reuse, Boolean tri) throws Exception {
 		Objects.requireNonNull(clazz);
 
 		//new 出实例
@@ -828,30 +824,65 @@ public class MethodUtil {
 			INSTANCE_MAP.put(clazz, clsMap);
 		}
 
-		String key = classArgs == null || classArgs.isEmpty() ? "" : JSON.toJSONString(classArgs);
-		Object instance = reuse != null && reuse ? clsMap.get(key) : null;  //必须精确对应值，否则去除缓存的和需要的很可能不符
+		String key = StringUtil.isEmpty(reuse, true) || "false".equals(reuse) ? null : ("true".equals(reuse) ? "" : reuse);
+		boolean isReuse = key != null;
+		Object instance = isReuse ? clsMap.get(key) : null;  //必须精确对应值，否则去除缓存的和需要的很可能不符
 
+		String key2 = classArgs == null || classArgs.isEmpty() ? "[]" : JSON.toJSONString(classArgs);
+		if (isReuse && instance == null) {
+			Object ins = clsMap.get(key2);  //必须精确对应值，否则去除缓存的和需要的很可能不符
+			if (key2.equals(key)) {
+				instance = ins;
+			} else if (ins != null) {
+				try {
+					instance = JSON.parseObject(JSON.toJSONString(ins), clazz);
+					instance = cast(instance, clazz);
+				} catch (Throwable e) {
+					e.printStackTrace();
+				}
+
+				if (instance != null) {
+					clsMap.put(key, instance);
+				}
+			}
+		}
+
+		boolean isTry = tri != null && tri;
 		if (instance == null) {
 			if (classArgs == null || classArgs.isEmpty()) {
 				if (clazz.isAnnotation()) {
 					return clazz;
 				}
-				instance = clazz.isEnum() ? getEnumInstance(clazz, null) : clazz.newInstance();
-			}
-			else if (clazz.isEnum()) {  //通过构造方法
+				if (clazz.isEnum()) {
+					return getEnumInstance(clazz, null);
+				}
+				try {
+					instance = clazz.newInstance();
+				} catch (Throwable e) {
+					Constructor<?> constructor = isTry ? clazz.getDeclaredConstructor() : clazz.getConstructor();
+					if (isTry) {
+						try {
+							constructor.setAccessible(true);
+						} catch (Throwable e2) {
+							e.printStackTrace();
+						}
+					}
+
+					instance = constructor.newInstance();
+				}
+			} else if (clazz.isEnum()) {  //通过构造方法
 				Argument arg = classArgs.get(0);
 				String t = arg == null ? null : arg.getType();
 				Object v = arg == null ? null : arg.getValue();
-				if (classArgs.size() != 1 
+				if (classArgs.size() != 1
 						|| (v != null && v instanceof CharSequence != true)
 						|| (t != null && CharSequence.class.isAssignableFrom(getType(t, v, true)) == false)
-						) {
+				) {
 					throw new IllegalArgumentException("enum " + clazz.getName() + " 对应的 classArgs 数量只能是 0 或 1 ！且选项类型必须为 String！");
 				}
 
 				return getEnumInstance(clazz, v == null ? null : v.toString());
-			}
-			else { //通过构造方法
+			} else { //通过构造方法
 				if (clazz.isAnnotation()) {
 					throw new IllegalArgumentException("@interface " + clazz.getName() + " 没有构造参数，对应的 classArgs 数量只能是 0！");
 				}
@@ -867,29 +898,37 @@ public class MethodUtil {
 
 				Class<?>[] classArgTypes = new Class<?>[classArgs.size()];
 				Object[] classArgValues = new Object[classArgs.size()];
-				initTypesAndValues(classArgs, classArgTypes, classArgValues, exactConstructor);
+				initTypesAndValues(clazz, instance, classArgs, classArgTypes, classArgValues, exactConstructor);
 
 				if (exactConstructor) {  //指定某个构造方法
-					Constructor<?> constructor = clazz.getConstructor(classArgTypes);
+					Constructor<?> constructor = isTry ? clazz.getDeclaredConstructor(classArgTypes) : clazz.getConstructor(classArgTypes);
+					if (isTry) {
+						try {
+							constructor.setAccessible(true);
+						} catch (Throwable e) {
+							e.printStackTrace();
+						}
+					}
+
 					instance = constructor.newInstance(classArgValues);
-				}
-				else {  //尝试参数数量一致的构造方法
-					Constructor<?>[] constructors = clazz.getConstructors();
+				} else {  //尝试参数数量一致的构造方法
+					Constructor<?>[] constructors = isTry ? clazz.getDeclaredConstructors() : clazz.getConstructors();
 					if (constructors != null) {
 						for (int i = 0; i < constructors.length; i++) {
-							if (constructors[i] != null && constructors[i].getParameterCount() == classArgValues.length) {
-								try {
-									constructors[i].setAccessible(true);
-								} 
-								catch (Throwable e) {
-									e.printStackTrace();
+							Constructor<?> constructor = constructors[i];
+							if (constructor != null && constructor.getParameterCount() == classArgValues.length) {
+								if (isTry) {
+									try {
+										constructor.setAccessible(true);
+									} catch (Throwable e) {
+										e.printStackTrace();
+									}
 								}
 
 								try {
-									instance = constructors[i].newInstance(classArgValues);
+									instance = constructor.newInstance(classArgValues);
 									break;
-								}
-								catch (Throwable e) {
+								} catch (Throwable e) {
 									e.printStackTrace();
 								}
 							}
@@ -903,7 +942,66 @@ public class MethodUtil {
 				throw new NullPointerException("找不到 " + clazz.getName() + " 以及 classArgs 对应的构造方法！");
 			}
 
-			clsMap.put(key, instance);
+			if (key != null) {
+				clsMap.put(key, instance);
+			}
+
+			if (! key2.equals(key)) {
+				clsMap.put(key2, instance);
+			}
+		}
+
+		return instance;
+	}
+
+	public static Object getClassInstance(Class<?> clazz, Object instance, String fldName, String cttName, List<Argument> clsArgs, Boolean isStatic, String reuse, Boolean tri) throws IllegalAccessException {
+		Throwable e = null;
+		if (instance == null) {
+			try {
+				if (StringUtil.isEmpty(cttName, true)) {
+					Boolean b = INSTANCE_GETTER.beforeGet(clazz, clsArgs, reuse);
+					if (b == null || b == false) {
+						instance = INSTANCE_GETTER.getInstance(clazz, clsArgs, reuse, tri);
+					}
+					instance = INSTANCE_GETTER.afterGet(instance, clazz, clsArgs, reuse);
+				} else {
+					instance = getInvokeResult(clazz, null, cttName, clsArgs, null, null);
+				}
+			} catch (Throwable e_) {
+				e = e_;
+				e_.printStackTrace();
+			}
+		}
+
+		Throwable e2 = null;
+		if (StringUtil.isNotEmpty(fldName, false)) { // 兼容 Kotlin object singleton INSTANCE
+			Field f = null;
+			try {
+				f = clazz.getDeclaredField(fldName);
+			} catch (Throwable e2_) {
+				e2 = e2_;
+				e2.printStackTrace();
+				try {
+					f = clazz.getField(fldName);
+				} catch (Throwable e3) {
+					e3.printStackTrace();
+				}
+			}
+
+			if (f != null) {
+				try {
+					f.setAccessible(true);
+				} catch (Throwable e2_) {
+					e2_.printStackTrace();
+				}
+
+				instance = f.get(instance); // isStatic != null && isStatic ? null : instance);
+			}
+		}
+
+		if (instance == null && (e2 != null || e != null)) {
+			throw new IllegalArgumentException("Doesn't find a static method or field called " + cttName + "! "
+					+ e.getMessage() + (e2 == null ? "" : ". " + e2.getMessage()), e);
 		}
 
 		return instance;
@@ -913,6 +1011,7 @@ public class MethodUtil {
 	public static Object getEnumInstance(Enum em, String name) throws NoSuchFieldException {
 		return getEnumInstance(em == null ? null : em.getDeclaringClass(), name);
 	}
+
 	@SuppressWarnings("rawtypes")
 	public static Object getEnumInstance(Class clazz, String name) throws NoSuchFieldException {
 		Object[] constants = clazz == null ? null : clazz.getEnumConstants();
@@ -936,6 +1035,7 @@ public class MethodUtil {
 	public static LinkedHashMap<Integer, String> mapEnumConstants(Enum em) throws NoSuchMethodException, SecurityException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
 		return mapEnumConstants(em.getDeclaringClass());
 	}
+
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static LinkedHashMap<Integer, String> mapEnumConstants(Class clazz) throws NoSuchMethodException, SecurityException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
 		LinkedHashMap<Integer, String> map = new LinkedHashMap<Integer, String>();
@@ -947,7 +1047,6 @@ public class MethodUtil {
 		}
 		return map;
 	}
-
 
 
 	/**获取方法
@@ -968,7 +1067,7 @@ public class MethodUtil {
 		if (methodArgs != null && methodArgs.isEmpty() == false) {
 			types = new Class<?>[methodArgs.size()];
 			args = new Object[methodArgs.size()];
-			initTypesAndValues(methodArgs, types, args, true);
+			initTypesAndValues(clazz, null, methodArgs, types, args, true);
 		}
 
 		return clazz.getMethod(methodName, types);
@@ -996,7 +1095,7 @@ public class MethodUtil {
 		Object[] args = isEmpty ? null : new Object[size];
 
 		if (isEmpty == false) {
-			initTypesAndValues(methodArgs, types, args, true, false);
+			initTypesAndValues(clazz, instance, methodArgs, types, args, true, false);
 		}
 
 		Method method = null;
@@ -1044,12 +1143,10 @@ public class MethodUtil {
 								if (t.getComponentType() != null && t.getComponentType().isInterface()) {
 									v = JSON.parseArray(v.toString());
 								}
-							}
-							else if (t.isInterface()) {
+							} else if (t.isInterface()) {
 								v = parseObject(v.toString());
 							}
-						}
-						catch (Throwable e) {
+						} catch (Throwable e) {
 							e.printStackTrace();
 						}
 
@@ -1074,8 +1171,8 @@ public class MethodUtil {
 				Object value = args[i];
 
 				if (value instanceof InterfaceProxy || (type != null && type.isInterface())) {  // @interface 也必须代理  && type.isAnnotation() == false)) {  //如果这里不行，就 initTypesAndValues 给个回调
-					try {  //不能交给 initTypesAndValues 中 castValue2Type，否则会导致这里 cast 抛异常 
-						InterfaceProxy proxy = value instanceof InterfaceProxy ? ((InterfaceProxy) value) : cast(value, InterfaceProxy.class, ParserConfig.getGlobalInstance());
+					try {  //不能交给 initTypesAndValues 中 castValue2Type，否则会导致这里 cast 抛异常
+						InterfaceProxy proxy = value instanceof InterfaceProxy ? ((InterfaceProxy) value) : cast(value, InterfaceProxy.class);
 						Set<Entry<String, Object>> set = proxy.entrySet();
 						if (set != null)  {
 							for (Entry<String, Object> e : set) {
@@ -1099,20 +1196,18 @@ public class MethodUtil {
 							GLOBAL_CALLBACK_MAP.put(clazz, proxy);
 						}
 
-						args[i] = cast(proxy, type, ParserConfig.getGlobalInstance());
+						args[i] = cast(proxy, type);
 						if (isSync) {
 							isSync = proxy.$_getCallbackMap().isEmpty();
 						}
-					}
-					catch (Throwable e) {
+					} catch (Throwable e) {
 						e.printStackTrace();
 					}
 				}
 				//始终需要 cast	 else {  //前面 initTypesAndValues castValue2Type = false
 				try {
-					args[i] = cast(value, type, ParserConfig.getGlobalInstance());
-				}
-				catch (Throwable e) {
+					args[i] = cast(value, type);
+				} catch (Throwable e) {
 					e.printStackTrace();
 				}
 				//				}
@@ -1229,8 +1324,7 @@ public class MethodUtil {
 								methodList.add(mObj);
 							}
 						}
-					}
-					else {
+					} else {
 						Method[] methods = cls.getDeclaredMethods(); //父类的就用父类去获取 cls.getMethods();
 						if (methods != null && methods.length > 0) {
 							methodList = queryData ? new JSONArray(methods.length) : null;
@@ -1270,12 +1364,11 @@ public class MethodUtil {
 					if (classList != null && classList.isEmpty() == false) {
 						pkgObj.put(KEY_CLASS_LIST, classList);
 					}
-					
+
 					if (pkgNotExist && pkgObj != null && pkgObj.isEmpty() == false) {
 						packageList.add(pkgObj);
 					}
-				}
-				catch (Throwable e) {
+				} catch (Throwable e) {
 					e.printStackTrace();
 				}
 
@@ -1298,8 +1391,6 @@ public class MethodUtil {
 	}
 
 
-
-
 	public static String dot2Separator(String name) {
 		return name == null ? null : name.replaceAll("\\.", "\\".equals(File.separator) ? "\\\\" : File.separator);
 	}
@@ -1313,16 +1404,17 @@ public class MethodUtil {
 	//		initTypesAndValues(methodArgs, types, args, false);
 	//	}
 
-	public static void initTypesAndValues(List<Argument> methodArgs, Class<?>[] types, Object[] args, boolean defaultType)
-			throws IllegalArgumentException, ClassNotFoundException, IOException {
-		initTypesAndValues(methodArgs, types, args, defaultType, true);
+	public static void initTypesAndValues(Class<?> clazz, Object instance, List<Argument> methodArgs, Class<?>[] types, Object[] args, boolean defaultType) throws Exception {
+		initTypesAndValues(clazz, instance, methodArgs, types, args, defaultType, true);
 	}
-	public static void initTypesAndValues(List<Argument> methodArgs, Class<?>[] types, Object[] args, boolean defaultType, boolean castValue2Type)
-			throws IllegalArgumentException, ClassNotFoundException, IOException {
-		initTypesAndValues(methodArgs, types, args, defaultType, castValue2Type, null);
+
+	public static void initTypesAndValues(Class<?> clazz, Object instance, List<Argument> methodArgs, Class<?>[] types, Object[] args, boolean defaultType
+			, boolean castValue2Type) throws Exception {
+		initTypesAndValues(clazz, instance, methodArgs, types, args, defaultType, castValue2Type, null);
 	}
-	public static void initTypesAndValues(List<Argument> methodArgs, Class<?>[] types, Object[] args, boolean defaultType, boolean castValue2Type, Listener<Object> listener)
-			throws IllegalArgumentException, ClassNotFoundException, IOException {
+
+	public static void initTypesAndValues(Class<?> clazz, Object instance, List<Argument> methodArgs, Class<?>[] types, Object[] args, boolean defaultType
+			, boolean castValue2Type, Listener<Object> listener) throws Exception {
 		if (methodArgs == null || methodArgs.isEmpty()) {
 			return;
 		}
@@ -1341,7 +1433,7 @@ public class MethodUtil {
 
 			//			if (typeName != null && value != null && value.getClass().equals(CLASS_MAP.get(typeName)) == false) {
 			////				if ("double".equals(typeName)) {
-			//				value = cast(value, CLASS_MAP.get(typeName), ParserConfig.getGlobalInstance());
+			//				value = cast(value, CLASS_MAP.get(typeName));
 			////				}
 			////				else if (PRIMITIVE_CLASS_MAP.containsKey(typeName)) {
 			////					value = JSON.parse(JSON.toJSONString(value));
@@ -1354,9 +1446,14 @@ public class MethodUtil {
 
 			if (value == null && Boolean.TRUE.equals(argObj.getUndefined())) {
 				try {
-					value = INSTANCE_GETTER.getInstance(type, null, argObj.getReuse());
-				}
-				catch (Exception e) {
+					Boolean static_ = argObj.getStatic();
+					String reuse = argObj.getReuse();
+					Boolean tri = argObj.getTry();
+					List<MethodUtil.Argument> clsArgs = argObj.getClassArgs();
+					String cttName = argObj.getConstructor();
+					String fldName = argObj.getField();
+					value = getClassInstance(clazz, instance, fldName, cttName, clsArgs, static_, reuse, tri);
+				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
@@ -1371,22 +1468,20 @@ public class MethodUtil {
 					}
 					// @interface 也必须代理
 					//					else if (type.isAnnotation()) {
-					//					} 
+					//					}
 					else if (type.isInterface()) {
 						InterfaceProxy proxy = JSON.parseObject(JSON.toJSONString(value), InterfaceProxy.class);
 						proxy.$_setType(type);
 						value = proxy;
 					}
-				}
-				catch (Throwable e) {
+				} catch (Throwable e) {
 					e.printStackTrace();
 				}
 
 				if (castValue2Type) {
 					try {
-						value = cast(value, type, ParserConfig.getGlobalInstance());
-					}
-					catch (Throwable e) {
+						value = cast(value, type);
+					} catch (Throwable e) {
 						e.printStackTrace();
 					}
 				}
@@ -1402,7 +1497,7 @@ public class MethodUtil {
 			return null;
 		}
 		//排除 private 和 protected 等访问不到的方法，以后可以通过 IDE 插件为这些方法新增代理方法
-		/*
+        /*
 		  public Type $_delegate_$method(Type0 arg0, Type1 arg1...) {
 		    Type returnVal = method(arg0, arg1...)
 		    if (returnVal instanceof Void) {
@@ -1434,8 +1529,7 @@ public class MethodUtil {
 			for (int i = 0; i < genericTypes.length; i++) {
 				try {
 					vs[i] = mockValue(types[i], genericTypes[i]);  //FIXME 这里应该用 ParameterTypes 还是 GenericParameterTypes ?
-				}
-				catch (Exception e) {
+				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
@@ -1456,8 +1550,9 @@ public class MethodUtil {
 	public static Object mockValue(Class type, Type genericType) {
 		return mockValue(type, genericType, 3);
 	}
+
 	public static Object mockValue(Class type, Type genericType, int depth) {
-			//避免缓存穿透
+		//避免缓存穿透
 		//		Object v = DEFAULT_TYPE_VALUE_MAP.get(t);
 		//		if (v != null) {
 		//			return v;
@@ -1538,8 +1633,8 @@ public class MethodUtil {
 
 			// JDK 1.8+
 			if (ChronoLocalDateTime.class.isAssignableFrom(type)) {
-				Date d = new Date((long) (System.currentTimeMillis() * r));
-				return LocalDateTime.of(d.getYear(), d.getMonth(), d.getDayOfMonth(), d.getHours(), d.getMinutes(), d.getSeconds());
+				Date d = new Date((long) (System.currentTimeMillis() * r)); // 这里没有 d.getDayOfMonth 方法
+				return LocalDateTime.of(d.getYear(), d.getMonth(), d.getDay(), d.getHours(), d.getMinutes(), d.getSeconds());
 			}
 			if (ChronoLocalDate.class.isAssignableFrom(type)) {
 				Date d = new Date((long) (System.currentTimeMillis() * r));
@@ -1552,7 +1647,7 @@ public class MethodUtil {
 			if (Date.class.isAssignableFrom(type)) {
 				return new java.sql.Date((long) (System.currentTimeMillis() * r));
 			}
-			
+
 			if (Map.class.isAssignableFrom(type)) {
 				JSONObject obj = new JSONObject(true);
 
@@ -1587,8 +1682,7 @@ public class MethodUtil {
 				Class mt;
 				if (ts == null || ts.length < 1 || ts[0] instanceof Class == false) {
 					mt = int.class;  // return arr;
-				}
-				else {
+				} else {
 					mt = (Class) ts[0];
 				}
 
@@ -1642,8 +1736,7 @@ public class MethodUtil {
 				return arr;
 			}
 
-		}
-		catch (Throwable e) {
+		} catch (Throwable e) {
 			e.printStackTrace();
 		}
 
@@ -1673,12 +1766,10 @@ public class MethodUtil {
 						if (rt == null || rt == void.class || rt == Void.class) {
 							if (name.startsWith("get") || name.startsWith("set") || name.startsWith("add")
 									|| name.startsWith("put") || name.startsWith("remove")) {  // 只留空对象
-							}
-							else {
+							} else {
 								val.put(KEY_CALLBACK, true);
 							}
-						}
-						else {
+						} else {
 							val.put(KEY_TYPE, trimType(rt));  //以下 isAssignableFrom 是为了及时中断，避免死循环
 							val.put(KEY_RETURN, rt.isInterface() ? new JSONObject() : mockValue(rt, ms[j].getGenericReturnType())); //仍然死循环  || t.isAssignableFrom(rt) || rt.isAssignableFrom(t) ? null : mockValue(rt));
 						}
@@ -1693,7 +1784,7 @@ public class MethodUtil {
 				return null;
 			}
 
-			Object v = INSTANCE_GETTER.getInstance(type, null);
+			Object v = INSTANCE_GETTER.getInstance(type, null, true);
 			//				DEFAULT_TYPE_VALUE_MAP.put(c, v);
 
 			try {
@@ -1732,8 +1823,7 @@ public class MethodUtil {
 						}
 
 						fields = nfs;
-					}
-					catch (Throwable e) {
+					} catch (Throwable e) {
 						e.printStackTrace();
 						break;
 					}
@@ -1753,26 +1843,22 @@ public class MethodUtil {
 						if (fv == null && Modifier.isFinal(f.getModifiers()) != true) {
 							f.set(v, mockValue(f.getType(), f.getGenericType(), depth - 1));
 						}
-					}
-					catch (Throwable e) {
+					} catch (Throwable e) {
 						e.printStackTrace();
 					}
 				}
-			}
-			catch (Throwable e) {
+			} catch (Throwable e) {
 				e.printStackTrace();
 			}
 
 			return v;
-		}
-		catch (Throwable e) {
+		} catch (Throwable e) {
 			e.printStackTrace();
 		}
 		//		}
 
 		return null;
 	}
-
 
 
 	@SuppressWarnings("rawtypes")
@@ -1864,7 +1950,6 @@ public class MethodUtil {
 	}
 
 
-
 	/**转为 JSONObject {"type": t, "value": v }
 	 * @param type
 	 * @param value
@@ -1873,6 +1958,7 @@ public class MethodUtil {
 	public static JSONObject parseJSON(Class<?> type, Object value) {
 		return JSON_CALLBACK.parseJSON(type == null ? (value == null ? "Object" : value.getClass().toGenericString()) : type.toGenericString(), value);
 	}
+
 	/**转为 JSONObject {"type": t, "value": v }
 	 * @param type
 	 * @param value
@@ -1883,12 +1969,10 @@ public class MethodUtil {
 		o.put(KEY_TYPE, type);
 		if (value == null || unitauto.JSON.isBooleanOrNumberOrString(value) || value instanceof Enum) {
 			o.put(KEY_VALUE, value);
-		}
-		else {
+		} else {
 			try {
 				o.put(KEY_VALUE, JSON.parse(JSON.toJSONString(value)));  // Context 等不能 toJSONString
-			}
-			catch (Throwable e) {
+			} catch (Throwable e) {
 				e.printStackTrace();
 				o.put(KEY_VALUE, value.toString());
 				o.put(KEY_WARN, e.getMessage());
@@ -1922,9 +2006,11 @@ public class MethodUtil {
 		}
 		return null;
 	}
+
 	public static String trimType(Type type) {
 		return trimType(type == null ? null : type.getTypeName());
 	}
+
 	public static String trimType(String name) {
 		if (name == null || "void".equals(name)) {
 			return null;
@@ -1975,8 +2061,7 @@ public class MethodUtil {
 		if (isEmpty(name, true)) {  //根据值来自动判断
 			if (value == null || defaultType == false) {
 				//nothing
-			}
-			else {
+			} else {
 				type = value.getClass();
 			}
 		} else if (name.endsWith("[]")) {
@@ -2005,7 +2090,7 @@ public class MethodUtil {
 					i ++;
 					// type mismatch, 另外也不需要 Array.set(arr, i, item);
 					if (o != null) {
-						o = cast(o, ct, ParserConfig.getGlobalInstance());
+						o = cast(o, ct);
 					}
 					nc.add(o);
 				}
@@ -2033,7 +2118,7 @@ public class MethodUtil {
 				}
 			} else if (value != null && StringUtil.isEmpty(child, true) == false && "?".equals(child) == false && "Object".equals(child) == false && Collection.class.isAssignableFrom(type)) {
 				try {
-					// 传参进来必须是 Collection，不是就抛异常  value = cast(value, type, ParserConfig.getGlobalInstance());
+					// 传参进来必须是 Collection，不是就抛异常  value = cast(value, type);
 					Collection<?> c = (Collection<?>) value;
 					if (c != null && c.isEmpty() == false) {
 
@@ -2059,7 +2144,7 @@ public class MethodUtil {
 						for (Object o : c) {
 							if (o != null) {
 								Class<?> ct = getType(child, o, true);
-								o = cast(o, ct, ParserConfig.getGlobalInstance());
+								o = cast(o, ct);
 							}
 							nc.add(o);
 						}
@@ -2068,8 +2153,7 @@ public class MethodUtil {
 						c.clear();
 						c.addAll(nc);
 					}
-				}
-				catch (Throwable e) {
+				} catch (Throwable e) {
 					e.printStackTrace();
 				}
 
@@ -2081,6 +2165,10 @@ public class MethodUtil {
 		}
 
 		return type;
+	}
+
+	public static <T> T cast(Object obj, Class<T> type) {
+		return cast(obj, type, null);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -2118,6 +2206,10 @@ public class MethodUtil {
 			return (T) nc;
 		}
 
+		if (config == null) {
+			config = ParserConfig.getGlobalInstance();
+		}
+
 		return TypeUtils.cast(obj, type, config);
 	}
 
@@ -2128,7 +2220,7 @@ public class MethodUtil {
 	 * @param ignoreError
 	 * @return
 	 * @throws ClassNotFoundException
-	 * @throws IOException 
+	 * @throws IOException
 	 */
 	public static Class<?> findClass(String packageOrFileName, String className, boolean ignoreError) throws ClassNotFoundException, IOException {
 		//根目录 Objects.requireNonNull(packageName);
@@ -2178,8 +2270,7 @@ public class MethodUtil {
 		File file;
 		try {
 			file = new File(loader.getResource(fileName).getFile());
-		}
-		catch (Throwable e) {
+		} catch (Throwable e) {
 			if (ignoreError) {
 				return null;
 			}
@@ -2215,8 +2306,7 @@ public class MethodUtil {
 							list.addAll(childList);
 						}
 					}
-				}
-				else {  //如果是class文件
+				} else {  //如果是class文件
 					String name = trim(f.getName());
 					if (name != null && name.endsWith(".class")) {
 						name = name.substring(0, name.length() - ".class".length());
@@ -2240,8 +2330,7 @@ public class MethodUtil {
 										break;
 									}
 								}
-							}
-							catch (Throwable e) {
+							} catch (Throwable e) {
 								if (ignoreError == false) {
 									throw e;
 								}
@@ -2292,6 +2381,7 @@ public class MethodUtil {
 	public static JSONObject parseObject(Object obj) {
 		return parseObject(obj instanceof String ? ((String) obj) : JSON.toJSONString(obj));
 	}
+
 	/**JSON 字符串转有序 JSONObject
 	 * @param json
 	 * @return
@@ -2304,51 +2394,106 @@ public class MethodUtil {
 	/**参数，包括类型和值
 	 */
 	public static class Argument {
-		private Boolean reuse;
+		private String reuse;
 		private String type;
 		private Object value;
 		private Boolean undefined;
 		private Boolean global;
 
+		private Boolean static_;
+		private Boolean tri;
+		private String field;
+		private String constructor;
+		private List<Argument> classArgs;
+
 		public Argument() {
 		}
+
 		public Argument(String type, Object value) {
 			setType(type);
 			setValue(value);
 		}
 
 
-		public Boolean getReuse() {
+		public String getReuse() {
 			return reuse;
 		}
-		public void setReuse(Boolean reuse) {
+
+		public void setReuse(String reuse) {
 			this.reuse = reuse;
 		}
 
 		public String getType() {
 			return type;
 		}
+
 		public void setType(String type) {
 			this.type = type;
 		}
+
 		public Object getValue() {
 			return value;
 		}
+
 		public void setValue(Object value) {
 			this.value = value;
 		}
+
 		public Boolean getUndefined() {
 			return undefined;
 		}
+
 		public void setUndefined(Boolean undefined) {
 			this.undefined = undefined;
 		}
+
 		public Boolean getGlobal() {
 			return global;
 		}
+
 		public void setGlobal(Boolean global) {
 			this.global = global;
 		}
+
+		public Boolean getStatic() {
+			return static_;
+		}
+
+		public void setStatic(Boolean static_) {
+			this.static_ = static_;
+		}
+
+		public Boolean getTry() {
+			return tri;
+		}
+		public void setTry(Boolean tri) {
+			this.tri = tri;
+		}
+
+		public String getField() {
+			return field;
+		}
+
+		public void setField(String field) {
+			this.field = field;
+		}
+
+		public String getConstructor() {
+			return constructor;
+		}
+
+		public void setConstructor(String constructor) {
+			this.constructor = constructor;
+		}
+
+		public List<Argument> getClassArgs() {
+			return classArgs;
+		}
+
+		public void setClassArgs(List<Argument> classArgs) {
+			this.classArgs = classArgs;
+		}
+
 	}
 
 	/**
@@ -2361,6 +2506,7 @@ public class MethodUtil {
 		public InterfaceProxy() {
 			super(true);
 		}
+
 		public InterfaceProxy(int initialCapacity) {
 			super(initialCapacity, true);
 		}
@@ -2563,7 +2709,7 @@ public class MethodUtil {
 			}
 
 			try {
-				value = cast(value, getType(type, value, true), ParserConfig.getGlobalInstance());
+				value = cast(value, getType(type, value, true));
 			} catch (Throwable e) {
 				e.printStackTrace();
 				if (type == null) {

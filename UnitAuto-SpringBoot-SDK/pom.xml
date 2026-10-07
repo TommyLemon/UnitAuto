@@ -5,7 +5,7 @@
 
 	<groupId>unitauto.boot</groupId>
 	<artifactId>unitauto-springboot-sdk</artifactId>
-	<version>3.1.0</version>
+	<version>3.2.1</version>
 	<packaging>jar</packaging>
 
 	<name>UnitAuto-Java-Demo</name>
@@ -56,12 +56,12 @@
 		<dependency>
 			<groupId>com.github.TommyLemon</groupId>
 			<artifactId>unitauto-java</artifactId>
-			<version>3.1.0</version>
+			<version>3.2.1</version>
 		</dependency>
 		<dependency>
 			<groupId>com.github.TommyLemon</groupId>
 			<artifactId>unitauto-jar</artifactId>
-			<version>3.1.0</version>
+			<version>3.2.2</version>
 		</dependency>
 
 	</dependencies>

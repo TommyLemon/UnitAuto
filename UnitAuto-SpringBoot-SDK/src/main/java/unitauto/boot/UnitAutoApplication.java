@@ -84,14 +84,14 @@ public class UnitAutoApplication implements ApplicationContextAware {
 		MethodUtil.INSTANCE_GETTER = new InstanceGetter() {
 
 			@Override
-			public Object getInstance(@NotNull Class<?> clazz, List<Argument> classArgs, Boolean reuse) throws Exception {
+			public Object getInstance(@NotNull Class<?> clazz, List<Argument> classArgs, String reuse, Boolean tri) throws Exception {
 				if (APPLICATION_CONTEXT != null && ApplicationContext.class.isAssignableFrom(clazz) && clazz.isAssignableFrom(APPLICATION_CONTEXT.getClass())) {
 					return APPLICATION_CONTEXT;
 				}
 
 				// 被 Spring 注解的类基本不会自己通过 new 来构造实例	if (reuse == null || reuse) {
 				try {
-					Object bean = APPLICATION_CONTEXT.getBean(clazz);  // 如果有多个实例则用 getBeans 返回第 0 项
+					Object bean = APPLICATION_CONTEXT == null ? null : APPLICATION_CONTEXT.getBean(clazz);  // 如果有多个实例则用 getBeans 返回第 0 项
 					if (bean != null) {
 						return bean;
 					}
@@ -100,7 +100,7 @@ public class UnitAutoApplication implements ApplicationContextAware {
 				}
 				//				}
 
-				return ig.getInstance(clazz, classArgs, reuse);
+				return ig.getInstance(clazz, classArgs, reuse, tri);
 			}
 		};
 
