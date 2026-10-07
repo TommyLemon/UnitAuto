@@ -16,6 +16,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: Cd
+      run: cd UnitAuto-Rust
     - name: Build
       run: cargo build --verbose
     - name: Run tests
